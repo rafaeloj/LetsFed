@@ -14,6 +14,7 @@ class DeevClient(fl.client.NumPyClient):
         cid:             int,
         num_clients:     int,
         dataset:         str,
+        log_foulder:     str,
         no_iid:          bool  = True,
         epoch:           int   = 1,
         isParticipate:   bool  = False,
@@ -28,8 +29,8 @@ class DeevClient(fl.client.NumPyClient):
         self.x_train, self.y_train, self.x_test, self.y_test = self.load_data()
         self.dynamic_engagement                              = isParticipate
         # Models
-        self.model                                       = self.create_model(self.x_train.shape)
-
+        self.model                                           = self.create_model(self.x_train.shape)
+        self.log_foulder                                     = log_foulder
     def load_data(self):
         if self.no_idd:
             logger.log(INFO, "LOAD DATASET WITH DIRICHLET PARTITIONER")
@@ -81,16 +82,17 @@ class DeevClient(fl.client.NumPyClient):
         if config['selected_clients'] != '':
             selected_clients = [int (cid_selected) for cid_selected in config['selected_clients'].split(',')]
 
-        deev_parameters, deev_acc, deev_loss = self._deev_fit(weights=parameters, clients=selected_clients) # Atualiza o modelo global com dados do cliente
-        with open('logs/deev-train.csv', 'a') as train_file:
-            train_file.write(f"{self.cid},{deev_acc},{deev_loss},{self.dynamic_engagement},{config['round']}\n")
+        deev_parameters, acc, loss = self._deev_fit(weights=parameters, clients=selected_clients) # Atualiza o modelo global com dados do cliente
+        model_size = sum([layer.nbytes for layer in deev_parameters])
 
-        fit_response['acc'] = deev_acc
+        with open(f'logs{self.log_foulder}/c-deev-fit.csv', 'a') as filename:
+            filename.write(f'{config['round']},{self.cid},{acc},{loss},{model_size},{self.dynamic_engagement},1\n')
+
+        fit_response['acc'] = acc
         
         return deev_parameters, self.x_train.shape[0], fit_response
 
     def _deev_fit(self, weights, clients):
-        # if True:
         if self.cid in clients and self.dynamic_engagement:
             self.model.set_weights(weights)
             history    = self.model.fit(self.x_train, self.y_train, verbose=1, epochs=self.epoch)
@@ -108,17 +110,14 @@ class DeevClient(fl.client.NumPyClient):
             'cid': self.cid
         }
         loss, acc = self._deev_evaluate(parameters)
-        with open('logs/deev-eval.csv', 'a') as eval_file:
-            eval_file.write(f"{self.cid},{acc},{config['round']}\n")    
+        # want = True if g_acc > l_acc else self.dynamic_engagement
+        with open(f'logs{self.log_foulder}/c-deev-eval.csv', 'a') as filename:
+            filename.write(f'{config['round']},{self.cid},{acc},{loss},{self.dynamic_engagement}\n')
         evaluate_response['acc'] = acc
         return loss, self.x_test.shape[0], evaluate_response
 
     def _deev_evaluate(self, weights):
-        """
-            VALIDAR
-        """
-        if True:
-        # if self.dynamic_engagement:
+        if self.dynamic_engagement:
             self.model.set_weights(weights)
             loss, acc = self.model.evaluate(self.x_test, self.y_test, verbose=0)
             return loss, acc

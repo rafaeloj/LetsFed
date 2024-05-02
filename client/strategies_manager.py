@@ -16,50 +16,16 @@ def get_strategy(
     dirichlet_alpha,
     log_foulder,
 ):
-    match strategy:
-        case 'CIA':
-            return MaverickClient(
-                cid=cid,
-                num_clients=num_clients,
-                dataset=dataset,
-                no_iid=no_idd,
-                epoch=epoch,
-                isParticipate=participate,
-                dirichlet_alpha=dirichlet_alpha,
-                log_foulder = log_foulder
-
-            )
-        case 'POC':
-            return PocClient(
-                cid=cid,
-                num_clients=num_clients,
-                dataset=dataset,
-                no_iid=no_idd,
-                epoch=epoch,
-                isParticipate=participate,
-                dirichlet_alpha=dirichlet_alpha,
-            )
-        case 'DEEV':
-            return DeevClient(
-                cid=cid,
-                num_clients=num_clients,
-                dataset=dataset,
-                no_iid=no_idd,
-                epoch=epoch,
-                isParticipate=participate,
-                dirichlet_alpha=dirichlet_alpha,
-            )
-        case _:
-            return FedAvgClient(
-                cid=cid,
-                num_clients=num_clients,
-                dataset=dataset,
-                no_iid=no_idd,
-                epoch=epoch,
-                isParticipate=participate,
-                dirichlet_alpha=dirichlet_alpha,
-            )
-
+    return MaverickClient(
+        cid=cid,
+        num_clients=num_clients,
+        dataset=dataset,
+        no_iid=no_idd,
+        epoch=epoch,
+        isParticipate=participate,
+        dirichlet_alpha=dirichlet_alpha,
+        log_foulder = log_foulder
+    )
 def main():
     strategy         = os.environ['STRATEGY']
     cid              = int(os.environ['CLIENT_ID'])
@@ -69,7 +35,6 @@ def main():
     no_idd           = os.environ["NO_IDD"] == "True" 
     participate      = os.environ["PARTICIPATE"] == "True"
     dirichlet_alpha  = float(os.environ["DIRICHLET_ALPHA"])
-    select_client_method  = os.environ['SELECT_CLIENT_METHOD']
     foulder             = os.environ['LOG_FOULDER']
 
     fl.client.start_client(

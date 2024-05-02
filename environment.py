@@ -3,19 +3,29 @@ from optparse import OptionParser
 import configparser
 import random
 
-def get_log_foulder_name(select_client_method, clients, engaged, dirichlet):
-    match select_client_method:
-        case 'random':
-            return f'/random/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        case 'worst_performance':
-            return f'/worst/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        case 'best_performance':
-            return f'/best/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        case 'least_selected':
-            return f'/fair/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        case 'deev':
-            return f'/deev/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-
+def get_log_foulder_name(select_client_method,dataset, clients, engaged, dirichlet, strategy ):
+        if select_client_method == 'default':
+            return f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/dynamic'
+        if select_client_method == 'default_1':
+            return f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/random'
+        if select_client_method == 'random':
+            return f'/random/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        if select_client_method == 'worst_performance':
+            return f'/worst/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        if select_client_method == 'best_performance':
+            return f'/best/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        if select_client_method == 'least_selected':
+            return f'/fair/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        if select_client_method == 'deev':
+            return f'/deev/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        if select_client_method == 'None':
+              if strategy == 'poc':
+                  return f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+              if strategy == 'avg':
+                  return f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+              if strategy == 'deev':
+                  return f'/deev/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+            
 def add_server_info(
     clients:              int,
     rounds:               int,
@@ -35,6 +45,8 @@ def add_server_info(
     logging:\n\
       driver: local\n\
     container_name: fl_server\n\
+    profiles:\n\
+      - server\n\
     environment:\n\
       - SERVER_IP=0.0.0.0:9999\n\
       - NUM_CLIENTS={clients}\n\
@@ -80,6 +92,8 @@ def add_client_info(
     image: 'client-flwr:latest'\n\
     logging:\n\
       driver: local\n\
+    profiles:\n\
+      - client\n\
     environment:\n\
       - SERVER_IP=fl_server:9999\n\
       - CLIENT_ID={client}\n\
@@ -139,21 +153,21 @@ def main():
     config = configparser.ConfigParser()
 
     (opt, _) = parser.parse_args()
-    if 'debug' in opt.environment:
-        config.read('config-debug.ini')
-    elif 'FedCIA' in opt.environment:
-        config.read('config-cia.ini')
-    elif 'FedAVG' in opt.environment:
-        config.read('config-avg.ini')
-    elif 'FedPOC' in opt.environment:
-        config.read('config-poc.ini')
-    elif 'FedDEEV' in opt.environment:
-        config.read('config-deev.ini')
-    else:
-        print("Environment not found!!")
-        return
-
-
+    config.read('config.ini')
+    # if 'debug' in opt.environment:
+    #     config.read('config-debug.ini')
+    # elif 'FedCIA' in opt.environment:
+    #     config.read('config-cia.ini')
+    # elif 'FedAVG' in opt.environment:
+    #     config.read('config-avg.ini')
+    # elif 'FedPOC' in opt.environment:
+    #     config.read('config-poc.ini')
+    # elif 'FedDEEV' in opt.environment:
+    #     config.read('config-deev.ini')
+    # else:
+    #     print("Environment not found!!")
+    #     return[
+    
     clients              = config.getint(opt.environment, 'clients', fallback=10)
     local_epochs         = config.getint(opt.environment,'local_epochs', fallback=1)
     dataset              = config.get(opt.environment, 'dataset')
@@ -177,13 +191,16 @@ def main():
     engaged_clients = ','.join([str(x) for x in participate_clients])
     foulder_log = get_log_foulder_name(
         select_client_method=select_client_method,
+        dataset=dataset,
         clients=clients,
         engaged=init_clients,
-        dirichlet=dirichlet_alpha
+        dirichlet=dirichlet_alpha,
+        strategy=strategy.lower()
     )
-    file_name = f'dockercompose-{strategy}-{dataset}-c{clients}-r{rounds}.yaml'
+    select_client_method = select_client_method if not select_client_method == None else 'none'
+    file_name = f'dockercompose-{strategy}-{dataset}-{select_client_method}-c{clients}-r{rounds}-e{init_clients:.2f}-d{dirichlet_alpha}.yaml'.lower()
     with open(file_name, 'w') as dockercompose_file:
-        header = f"version: '3.8'\nservices:\n\n"
+        header = f"services:\n\n"
 
         dockercompose_file.write(header)
 
