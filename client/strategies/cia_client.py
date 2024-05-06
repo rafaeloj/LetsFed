@@ -9,8 +9,10 @@ from datasets.utils.logging import disable_progress_bar
 from strategies.engagement_strategy.base import calculate_criteria
 from strategies.engagement_strategy.accuracy_comparison_strategy import AccuracyComparisonStrategy
 import numpy as np
-
-
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Conv2D, MaxPooling2D, BatchNormalization
+import time
 disable_progress_bar()
 class MaverickClient(fl.client.NumPyClient):
 
@@ -24,6 +26,7 @@ class MaverickClient(fl.client.NumPyClient):
         isParticipate:        bool,
         dirichlet_alpha:      float,
         log_foulder:          str,
+        swap:                 bool,
     ):
         self.miss                                            = 0 # Criar contador de quando mudou de estado
         self.cid                                             = cid
@@ -38,6 +41,8 @@ class MaverickClient(fl.client.NumPyClient):
         # Models
         self.model                                           = self.create_model(self.x_train.shape)
         self.cia_evaluate_model                              = self.create_model(self.x_train.shape)
+
+        self.swap                                            = swap
 
     def load_data(self):
         if self.no_idd:
@@ -103,10 +108,10 @@ class MaverickClient(fl.client.NumPyClient):
             # 'round', 'cid', 'acc', 'loss', 'participate'
             filename.write(f'{config['round']},{self.cid},{model_size},{self.dynamic_engagement},selected\n')
 
-        new_parameters, acc, loss = self._cia_fit(weights=parameters) # Atualiza o modelo global com dados do cliente
+        new_parameters, acc, loss = self._cia_fit(weights=parameters, server_round=config['round']) # Atualiza o modelo global com dados do cliente
         with open(f'logs{self.log_foulder}/c-fit.csv','a') as filename:
             filename.write(f'{config['round']},{self.cid},{acc},{loss},{self.dynamic_engagement}\n')
-        return new_parameters
+        return parameters
 
     def _not_engaged_fit(self, parameters, config, server_selection):
         acc, loss = self._cia_local_fit() # Não atualiza o modelo global
@@ -127,16 +132,22 @@ class MaverickClient(fl.client.NumPyClient):
         loss    = np.mean(history.history['loss'])
         return acc, loss
 
-    def _cia_fit(self, weights):
+    def _cia_fit(self, weights, server_round):
+        start_time = time.time()
         self.model.set_weights(weights)
         history    = self.model.fit(self.x_train, self.y_train, epochs=self.epoch, verbose=0)
         acc        = np.mean(history.history['accuracy'])
         loss       = np.mean(history.history['loss'])
         parameters = self.model.get_weights()
+        end_time = time.time()
+        cost = end_time - start_time
+        with open(f'logs{self.log_foulder}/c-cost-time.csv', 'a') as filename:
+            filename.write(f'{server_round},{self.cid},{cost}')
         return parameters, acc, loss
 
     def evaluate(self, parameters, config):
         if self._is_seleceted_by_server(config['selected_by_server']):
+            self.miss+=1
             return self._engaged_evaluate(parameters=parameters, config=config)
         return self._not_engaged_evaluate(parameters=parameters, config=config, server_selection='not_selected')
 
@@ -168,7 +179,6 @@ class MaverickClient(fl.client.NumPyClient):
             filename.write(f'{config['round']},{self.cid},{l_acc},{l_loss},{self.dynamic_engagement},{server_selection}\n')
 
         want = self._change_engagement(g_acc = g_acc, l_acc = l_acc, config=config)
-        
         evaluation_response = {
             "cid"               : self.cid,
             "dynamic_engagement": self.dynamic_engagement,
@@ -176,7 +186,7 @@ class MaverickClient(fl.client.NumPyClient):
             'acc'               : l_acc
         }
         
-        # self.dynamic_engagement = want # comentar para casos não variavel
+        self.dynamic_engagement = want # comentar para casos não variavel
         return l_loss, self.x_test.shape[0], evaluation_response
 
     def _is_seleceted_by_server(self, select_by_server: str):
@@ -192,13 +202,15 @@ class MaverickClient(fl.client.NumPyClient):
         return cia_loss, cia_accuracy
 
     def _change_engagement(self, g_acc, l_acc, config):
+        if not self.swap:
+            return self.dynamic_engagement
         want = self.dynamic_engagement
         if self._is_seleceted_by_server(config['selected_by_server']) and config['round'] > 1: # comentar para casos não variavel
             want = True if g_acc > l_acc else False # comentar para casos não variavel
             if want:
                 with open(f'logs{self.log_foulder}/c-deev-desired.csv', 'a') as filename: # comentar para casos não variavel
                     # 'round', 'cid', 'participate', 'desired', 'g_acc', 'l_acc' # comentar para casos não variavel
-                    filename.write(f'{config['round']},{self.cid},{self.dynamic_engagement},{want},{g_acc},{l_acc}\n') # comentar para casos não variavel
+                    filename.write(f'{config['round']},{self.cid},{self.dynamic_engagement},{want},{g_acc},{l_acc},{self.miss}\n') # comentar para casos não variavel
         return want
 
     # def _engagement_init(self, g_acc, l_acc):

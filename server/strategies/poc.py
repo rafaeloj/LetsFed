@@ -141,7 +141,7 @@ class FedPOC(fl.server.strategy.FedAvg):
         if len(loss_to_aggregate) == 0:
             with open(f'logs{self.log_foulder}/s-pass-aggregate.csv', 'a') as filename:
                 # 'round', 'selected', 'engaged', 'not_engaged'
-                filename.write(f"{server_round},{';'.join(self.selected_clients)},\n")
+                filename.write(f"{server_round},{';'.join(self.selected_clients)}\n")
             return self._last_eval
 
         loss_aggregated = weighted_loss_avg(loss_to_aggregate)

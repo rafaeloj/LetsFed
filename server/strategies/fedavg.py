@@ -22,14 +22,16 @@ class FedAvg(fl.server.strategy.FedAvg):
         self.exploration = perc
         super().__init__(fraction_fit = 1, min_available_clients = n_clients, min_fit_clients = n_clients, min_evaluate_clients = n_clients)
 
-    def _exploration_clients(self):
+    def _exploration_clients(self, server_round):
+        if server_round == 1:
+            return self.list_of_clients
         # Realiza o sorteio para enviar o modelo aos clientes que não querem participar
         perc = int(len(self.list_of_clients)*self.exploration)
         explored_clients = random.sample(self.list_of_clients, perc)
         return explored_clients
 
     def configure_fit(self, server_round, parameters, client_manager):
-        self.selected_clients = self._exploration_clients()
+        self.selected_clients = self._exploration_clients(server_round)
         
         sample_size, min_num_clients = self.num_fit_clients(
             client_manager.num_available()
@@ -102,6 +104,10 @@ class FedAvg(fl.server.strategy.FedAvg):
             filename.write(f"{server_round},{len(self.selected_clients)},{len(c_engaged)},{len(c_not_engaged)}\n")
     
         if len(loss_to_aggregated) == 0:
+            with open(f'logs{self.log_foulder}/s-pass-aggregate.csv', 'a') as filename:
+                # 'round', 'selected', 'engaged', 'not_engaged'
+                filename.write(f"{server_round},{';'.join(self.selected_clients)}\n")
+
             return self._last_eval, {}
         
         loss_aggregated = weighted_loss_avg(loss_to_aggregated)

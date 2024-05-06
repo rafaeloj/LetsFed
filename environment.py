@@ -3,29 +3,35 @@ from optparse import OptionParser
 import configparser
 import random
 
-def get_log_foulder_name(select_client_method,dataset, clients, engaged, dirichlet, strategy ):
+def get_log_foulder_name(select_client_method,dataset, clients, engaged, dirichlet, strategy,swap):
+        swap_string = ''
+        if not swap:
+          swap_string = '/no_swap'
+
+        log_name = ""
         if select_client_method == 'default':
-            return f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/dynamic'
-        if select_client_method == 'default_1':
-            return f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/random'
-        if select_client_method == 'random':
-            return f'/random/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        if select_client_method == 'worst_performance':
-            return f'/worst/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        if select_client_method == 'best_performance':
-            return f'/best/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        if select_client_method == 'least_selected':
-            return f'/fair/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        if select_client_method == 'deev':
-            return f'/deev/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        if select_client_method == 'None':
+            log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/dynamic'
+        elif select_client_method == 'default_1':
+            log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/random'
+        elif select_client_method == 'random':
+            log_name = f'/random/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif select_client_method == 'worst_performance':
+            log_name = f'/worst/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif select_client_method == 'best_performance':
+            log_name = f'/best/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif select_client_method == 'least_selected':
+            log_name = f'/fair/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif select_client_method == 'deev':
+            log_name = f'/deev/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif select_client_method == 'None':
               if strategy == 'poc':
-                  return f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-              if strategy == 'avg':
-                  return f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-              if strategy == 'deev':
-                  return f'/deev/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-            
+                  log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+              elif strategy == 'avg':
+                  log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+              elif strategy == 'deev':
+                  log_name = f'/deev/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'        
+        return log_name+f'{swap_string}'
+
 def add_server_info(
     clients:              int,
     rounds:               int,
@@ -87,6 +93,7 @@ def add_client_info(
     dirichlet_alpha: float,
     select_client_method: str,
     foulder_log:          str,
+    swap:                 bool,
 ):
     client_str = f"  client-{client}:\n\
     image: 'client-flwr:latest'\n\
@@ -106,6 +113,7 @@ def add_client_info(
       - DIRICHLET_ALPHA={dirichlet_alpha}\n\
       - SELECT_CLIENT_METHOD={select_client_method}\n\
       - LOG_FOULDER={foulder_log}\n\
+      - SWAP={swap}\n\
     volumes:\n\
       - ./logs{foulder_log}:/logs{foulder_log}:rw\n\
       - ./client/strategies_manager.py:/client/strategies_manager.py:r\n\
@@ -182,6 +190,7 @@ def main():
     exploitation         = config.getfloat(opt.environment, 'exploitation', fallback=0.0)
     exploration          = config.getfloat(opt.environment, 'exploration', fallback=0.0)
     least_select_factor  = config.getfloat(opt.environment, 'least_select_factor', fallback=0.0)
+    swap                 = config.getboolean(opt.environment, 'swap', fallback=True)
     perc_of_clients      = perc_of_clients[0]
     dirichlet_alpha      = dirichlet_alpha[0]
     decay                = decay[0]
@@ -190,12 +199,13 @@ def main():
     participate_clients = start_clients(clients, init_clients)
     engaged_clients = ','.join([str(x) for x in participate_clients])
     foulder_log = get_log_foulder_name(
-        select_client_method=select_client_method,
-        dataset=dataset,
-        clients=clients,
-        engaged=init_clients,
-        dirichlet=dirichlet_alpha,
-        strategy=strategy.lower()
+        select_client_method = select_client_method,
+        dataset              = dataset,
+        clients              = clients,
+        engaged              = init_clients,
+        dirichlet            = dirichlet_alpha,
+        strategy             = strategy.lower(),
+        swap                 = swap,
     )
     select_client_method = select_client_method if not select_client_method == None else 'none'
     file_name = f'dockercompose-{strategy}-{dataset}-{select_client_method}-c{clients}-r{rounds}-e{init_clients:.2f}-d{dirichlet_alpha}.yaml'.lower()
@@ -236,6 +246,7 @@ def main():
                 dirichlet_alpha=dirichlet_alpha,
                 select_client_method=select_client_method,
                 foulder_log = foulder_log,
+                swap = swap,
             )
             
             dockercompose_file.write(client_str)

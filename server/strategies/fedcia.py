@@ -293,8 +293,6 @@ class FedCIA(fl.server.strategy.FedAvg):
                         evaluate_res.num_examples,
                         evaluate_res.loss,
                     ))
-        if len(cia_parameters) == 0:
-            logger.log(INFO, "WTF CARALHO NAO E PRA PARAR AQUI")
         loss_aggregated = weighted_loss_avg(cia_parameters)
         return loss_aggregated
 

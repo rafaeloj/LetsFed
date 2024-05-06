@@ -15,6 +15,7 @@ def get_strategy(
     participate,
     dirichlet_alpha,
     log_foulder,
+    swap,
 ):
     return MaverickClient(
         cid=cid,
@@ -24,7 +25,8 @@ def get_strategy(
         epoch=epoch,
         isParticipate=participate,
         dirichlet_alpha=dirichlet_alpha,
-        log_foulder = log_foulder
+        log_foulder = log_foulder,
+        swap        = swap,
     )
 def main():
     strategy         = os.environ['STRATEGY']
@@ -35,7 +37,8 @@ def main():
     no_idd           = os.environ["NO_IDD"] == "True" 
     participate      = os.environ["PARTICIPATE"] == "True"
     dirichlet_alpha  = float(os.environ["DIRICHLET_ALPHA"])
-    foulder             = os.environ['LOG_FOULDER']
+    foulder          = os.environ['LOG_FOULDER']
+    swap             = os.environ['SWAP'] == 'True'
 
     fl.client.start_client(
         server_address=os.environ['SERVER_IP'],
@@ -48,7 +51,8 @@ def main():
             no_idd          = no_idd,
             participate     = participate,
             dirichlet_alpha = dirichlet_alpha,
-            log_foulder          = foulder,
+            log_foulder     = foulder,
+            swap            = swap,
         ).to_client()
     )
 
