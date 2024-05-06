@@ -1,4 +1,5 @@
 logs*
 all-cases
 teste*
-__pycache__
+server/strategies/__pycache__/
+client/strategies/__pycache__/
