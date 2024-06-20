@@ -1,0 +1,388 @@
+services:
+
+  server:
+    image: 'server-flwr:latest'
+    logging:
+      driver: local
+    container_name: fl_server
+    profiles:
+      - server
+    environment:
+      - SERVER_IP=0.0.0.0:9999
+      - NUM_CLIENTS=10
+      - NUM_ROUNDS=30
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - PERC_OF_CLIENTS=0.3
+      - DECAY=0.001
+      - ENGAGED_CLIENTS=0,1,5,9
+      - SELECT_CLIENT_METHOD=default_1
+      - EXPLOITATION=0.0
+      - EXPLORATION=0.5
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - LEAST_SELECT_FACTOR=0.1
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./server/strategies_manager.py:/app/strategies_manager.py:r
+      - ./server/strategies/drivers:/server/strategies/drivers/:r
+      - ./server/strategies:/app/strategies/:r
+      - ./utils:/app/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==manager
+    
+
+  client-0:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=0
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=True
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-1:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=1
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=True
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-2:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=2
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=False
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-3:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=3
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=False
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-4:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=4
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=False
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-5:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=5
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=True
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-6:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=6
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=False
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-7:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=7
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=False
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-8:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=8
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=False
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+
+  client-9:
+    image: 'client-flwr:latest'
+    logging:
+      driver: local
+    profiles:
+      - client
+    environment:
+      - SERVER_IP=fl_server:9999
+      - CLIENT_ID=9
+      - NUM_CLIENTS=10
+      - DATASET=MNIST
+      - STRATEGY=CIA
+      - LOCAL_EPOCHS=1
+      - NO_IDD=True
+      - PARTICIPATE=True
+      - DIRICHLET_ALPHA=0.1
+      - SELECT_CLIENT_METHOD=default_1
+      - LOG_FOULDER=/default/MNIST/10/engaged_0.4/dirichlet_0.1/random
+      - SWAP=True
+      - ROUNDS=30
+    volumes:
+      - ./logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:/logs/default/MNIST/10/engaged_0.4/dirichlet_0.1/random:rw
+      - ./client/strategies:/client/strategies/:r
+      - ./client/strategies/drivers:/client/strategies/drivers/:r
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r
+      - ./utils:/utils/:r
+    networks:
+      - default
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role==worker
+          
+

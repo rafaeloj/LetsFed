@@ -3,33 +3,33 @@ from optparse import OptionParser
 import configparser
 import random
 
-def get_log_foulder_name(select_client_method,dataset, clients, engaged, dirichlet, strategy,swap):
+def get_log_foulder_name(select_client_method,dataset, clients, engaged, dirichlet, strategy, swap):
         swap_string = ''
         if not swap:
           swap_string = '/no_swap'
 
         log_name = ""
-        if select_client_method == 'default':
-            log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/dynamic'
-        elif select_client_method == 'default_1':
-            log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/random'
-        elif select_client_method == 'random':
-            log_name = f'/random/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif select_client_method == 'worst_performance':
-            log_name = f'/worst/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif select_client_method == 'best_performance':
-            log_name = f'/best/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif select_client_method == 'least_selected':
-            log_name = f'/fair/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif select_client_method == 'deev':
-            log_name = f'/deev/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif select_client_method == 'None':
-              if strategy == 'poc':
-                  log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-              elif strategy == 'avg':
-                  log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-              elif strategy == 'deev':
-                  log_name = f'/deev/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'        
+        if strategy == 'cia':
+          if select_client_method == 'default':
+              log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/dynamic'
+          elif select_client_method == 'default_1':
+              log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/random'
+          elif select_client_method == 'random':
+              log_name = f'/random/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+          elif select_client_method == 'worst_performance':
+              log_name = f'/worst/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+          elif select_client_method == 'best_performance':
+              log_name = f'/best/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+          elif select_client_method == 'least_selected':
+              log_name = f'/fair/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+          elif select_client_method == 'deev':
+              log_name = f'/deev/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif strategy == 'poc':
+            log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif strategy == 'avg':
+            log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
+        elif strategy == 'deev':
+            log_name = f'/deev/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'        
         return log_name+f'{swap_string}'
 
 def add_server_info(
@@ -70,7 +70,9 @@ def add_server_info(
     volumes:\n\
       - ./logs{foulder_log}:/logs{foulder_log}:rw\n\
       - ./server/strategies_manager.py:/app/strategies_manager.py:r\n\
+      - ./server/strategies/drivers:/server/strategies/drivers/:r\n\
       - ./server/strategies:/app/strategies/:r\n\
+      - ./utils:/app/utils/:r\n\
     networks:\n\
       - default\n\
     deploy:\n\
@@ -94,6 +96,7 @@ def add_client_info(
     select_client_method: str,
     foulder_log:          str,
     swap:                 bool,
+    rounds:                int,
 ):
     client_str = f"  client-{client}:\n\
     image: 'client-flwr:latest'\n\
@@ -114,11 +117,13 @@ def add_client_info(
       - SELECT_CLIENT_METHOD={select_client_method}\n\
       - LOG_FOULDER={foulder_log}\n\
       - SWAP={swap}\n\
+      - ROUNDS={rounds}\n\
     volumes:\n\
       - ./logs{foulder_log}:/logs{foulder_log}:rw\n\
-      - ./client/strategies_manager.py:/client/strategies_manager.py:r\n\
       - ./client/strategies:/client/strategies/:r\n\
-      - ./client/strategies/engagement_strategy:/client/strategies/engagement_strategy/\n\
+      - ./client/strategies/drivers:/client/strategies/drivers/:r\n\
+      - ./client/strategies_manager.py:/client/strategies_manager.py:r\n\
+      - ./utils:/utils/:r\n\
     networks:\n\
       - default\n\
     deploy:\n\
@@ -134,26 +139,6 @@ def start_clients(n_clients, init_clients) -> list:
     n_clients_to_start = int(n_clients*init_clients)
     return random.sample(range(n_clients), n_clients_to_start)
 
-# Penetration rate
-# variar a quantidade de clientes participando
-
-"""
-  --n_clients = 50 (FIXA)
-  --init-clients = [100, 0, 25]
-  --dirichlet-alpha = 0.1, 0.7
-  --dataset = [MNIST, CIFAR10]
-  --
-  ## CIA
-  -> Variar métodos de seleção
-
-  ## POC
-  --poc = 0.5
-  ## DEEV
-  --decay = 0.005
-  ## FEDAVG
-
-"""
-
 def main():
     parser = OptionParser()
     parser.add_option("-e", "--environment", dest="environment", type='str')
@@ -161,20 +146,7 @@ def main():
     config = configparser.ConfigParser()
 
     (opt, _) = parser.parse_args()
-    config.read('config.ini')
-    # if 'debug' in opt.environment:
-    #     config.read('config-debug.ini')
-    # elif 'FedCIA' in opt.environment:
-    #     config.read('config-cia.ini')
-    # elif 'FedAVG' in opt.environment:
-    #     config.read('config-avg.ini')
-    # elif 'FedPOC' in opt.environment:
-    #     config.read('config-poc.ini')
-    # elif 'FedDEEV' in opt.environment:
-    #     config.read('config-deev.ini')
-    # else:
-    #     print("Environment not found!!")
-    #     return[
+    config.read('config-debug.ini')
     
     clients              = config.getint(opt.environment, 'clients', fallback=10)
     local_epochs         = config.getint(opt.environment,'local_epochs', fallback=1)
@@ -182,7 +154,7 @@ def main():
     rounds               = config.getint(opt.environment, 'rounds', fallback=10)
     strategy             = config.get(opt.environment, 'strategy', fallback='CIA')
     no_iid               = config.getboolean(opt.environment, 'no_iid', fallback=True)
-    init_clients         = config.getfloat(opt.environment, 'init_clients', fallback=0.2)
+    # init_clients         = config.getfloat(opt.environment, 'init_clients', fallback=0.2)
     dirichlet_alpha      = config.getfloat(opt.environment, "dirichlet_alpha", fallback=0.1),
     select_client_method = config.get(opt.environment, 'select_client_method', fallback='random')
     perc_of_clients      = config.getfloat(opt.environment, "perc_of_clients", fallback=0.0),
@@ -196,19 +168,20 @@ def main():
     decay                = decay[0]
   
 
-    participate_clients = start_clients(clients, init_clients)
+    # participate_clients = start_clients(clients, init_clients)
+    participate_clients = [0,1,5,9]
     engaged_clients = ','.join([str(x) for x in participate_clients])
     foulder_log = get_log_foulder_name(
         select_client_method = select_client_method,
         dataset              = dataset,
         clients              = clients,
-        engaged              = init_clients,
+        engaged              = '0.4',
         dirichlet            = dirichlet_alpha,
         strategy             = strategy.lower(),
         swap                 = swap,
     )
     select_client_method = select_client_method if not select_client_method == None else 'none'
-    file_name = f'dockercompose-{strategy}-{dataset}-{select_client_method}-c{clients}-r{rounds}-e{init_clients:.2f}-d{dirichlet_alpha}.yaml'.lower()
+    file_name = f'dockercompose-{strategy}-{dataset}-{select_client_method}-c{clients}-r{rounds}-e{0.4:.2f}-d{dirichlet_alpha}.yaml'.lower()
     with open(file_name, 'w') as dockercompose_file:
         header = f"services:\n\n"
 
@@ -247,6 +220,7 @@ def main():
                 select_client_method=select_client_method,
                 foulder_log = foulder_log,
                 swap = swap,
+                rounds = rounds,
             )
             
             dockercompose_file.write(client_str)

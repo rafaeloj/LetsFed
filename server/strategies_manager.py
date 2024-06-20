@@ -17,7 +17,6 @@ def get_strategy(
     exploitation: float,
     exploration: float,
     least_select_factor: float,
-    log_foulder:         str,
 ):
         if strategy == 'CIA':
             return FedCIA(
@@ -29,14 +28,12 @@ def get_strategy(
                 exploration          = exploration,
                 least_select_factor  = least_select_factor, # Seleção 'justa'
                 decay                = decay,
-                log_foulder          = log_foulder
             )
         if strategy == 'POC':
             return FedPOC(
                 n_clients        = n_clients,
                 rounds           = rounds,
                 fraction_clients = fraction_clients,
-                log_foulder      = log_foulder,
                 perc_of_clients  = perc_of_clients,
             )
         if strategy == 'DEEV':
@@ -45,13 +42,11 @@ def get_strategy(
                 rounds           = rounds,
                 fraction_clients = fraction_clients,
                 perc_of_clients  = perc_of_clients,
-                log_foulder      = log_foulder,
                 decay            = decay,
             )
         if strategy == 'AVG':
             return FedAvg(
                     n_clients = n_clients,
-                    log_foulder = log_foulder,
                     rounds = rounds,
                     perc = perc_of_clients
             )
@@ -67,13 +62,7 @@ def main():
     exploitation     = float(os.environ['EXPLOITATION'])
     exploration      = float(os.environ['EXPLORATION'])
     least_select_factor = float(os.environ['LEAST_SELECT_FACTOR'])
-    foulder             = os.environ['LOG_FOULDER']
 
-    if not os.path.exists(foulder):
-        os.makedirs(foulder)
-
-    for filename in os.listdir(foulder):
-        os.remove(f'{foulder}/{filename}')
     fl.server.start_server(
         server_address=os.environ['SERVER_IP'],
         config=fl.server.ServerConfig(num_rounds=rounds),
@@ -89,7 +78,6 @@ def main():
             exploitation         = exploitation,
             exploration          = exploration,
             least_select_factor  = least_select_factor,
-            log_foulder          = foulder
         )
     )
 
