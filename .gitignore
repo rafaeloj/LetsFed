@@ -1,3 +1,5 @@
 logs*
 teste*
 *__pycache__*
+*.png
+*.svg
