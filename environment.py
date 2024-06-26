@@ -3,7 +3,7 @@ from optparse import OptionParser
 import configparser
 import random
 
-def get_log_foulder_name(select_client_method,dataset, clients, engaged, dirichlet, strategy, swap):
+def get_LOG_FOLDER_name(select_client_method,dataset, clients, engaged, dirichlet, strategy, swap):
         swap_string = ''
         if not swap:
           swap_string = '/no_swap'
@@ -44,7 +44,7 @@ def add_server_info(
     exploitation:         float,
     exploration:          float,
     least_select_factor:  float,
-    foulder_log:          str,
+    folder_log:          str,
 ):
     server_str = f"  server:\n\
     image: 'server-flwr:latest'\n\
@@ -66,10 +66,10 @@ def add_server_info(
       - SELECT_CLIENT_METHOD={select_client_method}\n\
       - EXPLOITATION={exploitation}\n\
       - EXPLORATION={exploration}\n\
-      - LOG_FOULDER={foulder_log}\n\
+      - LOG_FOLDER={folder_log}\n\
       - LEAST_SELECT_FACTOR={least_select_factor}\n\
     volumes:\n\
-      - ./logs{foulder_log}:/logs{foulder_log}:rw\n\
+      - ./logs{folder_log}:/logs{folder_log}:rw\n\
       - ./server/strategies_manager.py:/app/strategies_manager.py:r\n\
       - ./server/strategies/drivers:/server/strategies/drivers/:r\n\
       - ./server/strategies:/app/strategies/:r\n\
@@ -101,7 +101,7 @@ def add_client_info(
     participate:     bool,
     dirichlet_alpha: float,
     select_client_method: str,
-    foulder_log:          str,
+    folder_log:          str,
     swap:                 bool,
     rounds:                int,
 ):
@@ -123,11 +123,11 @@ def add_client_info(
       - PARTICIPATE={participate}\n\
       - DIRICHLET_ALPHA={dirichlet_alpha}\n\
       - SELECT_CLIENT_METHOD={select_client_method}\n\
-      - LOG_FOULDER={foulder_log}\n\
+      - LOG_FOLDER={folder_log}\n\
       - SWAP={swap}\n\
       - ROUNDS={rounds}\n\
     volumes:\n\
-      - ./logs{foulder_log}:/logs{foulder_log}:rw\n\
+      - ./logs{folder_log}:/logs{folder_log}:rw\n\
       - ./client/strategies:/client/strategies/:r\n\
       - ./client/strategies/drivers:/client/strategies/drivers/:r\n\
       - ./client/strategies_manager.py:/client/strategies_manager.py:r\n\
@@ -185,7 +185,7 @@ def main():
     # participate_clients = start_clients(clients, init_clients)
     participate_clients = [0,1,5,9]
     engaged_clients = ','.join([str(x) for x in participate_clients])
-    foulder_log = get_log_foulder_name(
+    folder_log = get_LOG_FOLDER_name(
         select_client_method = select_client_method,
         dataset              = dataset,
         clients              = clients,
@@ -213,7 +213,7 @@ def main():
             exploitation=exploitation,
             exploration=exploration,
             least_select_factor=least_select_factor,
-            foulder_log = foulder_log
+            folder_log = folder_log
         )
 
         dockercompose_file.write(server_str)
@@ -232,7 +232,7 @@ def main():
                 participate=participate,
                 dirichlet_alpha=dirichlet_alpha,
                 select_client_method=select_client_method,
-                foulder_log = foulder_log,
+                folder_log = folder_log,
                 swap = swap,
                 rounds = rounds,
             )

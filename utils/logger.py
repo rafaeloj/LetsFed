@@ -3,11 +3,10 @@ from typing import Dict
 
 class Logger():
     def __init__(self, logger_foulder):
-        self.logger_foulder = logger_foulder
+        self.logger_foulder = f"/logs{logger_foulder}"
 
     def _log(self, filename, data, header=None):
-        file_path = f"logs{self.logger_foulder}{filename}"
-        # print(f"SAVE FILE: {file_path} with header: {header}")
+        file_path = f"{self.logger_foulder}{filename}"
         if header != None:
             with open(file_path, 'w') as file:
                 file.write(f"{','.join(header)}\n")
@@ -16,17 +15,15 @@ class Logger():
 
         with open(file_path, 'a') as file:
             file.write(f"{','.join([f'{d}' for d in data])}\n")
-
     def log(self, filename, data, header = None):
+
         if type(header) == list and len(header) != len(data):
             print("Log aggregate problem")
             exit(992)
 
-        file_path = f"logs{self.logger_foulder}{filename}"
+        file_path = f"{self.logger_foulder}{filename}"
         if not os.path.exists(file_path):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            # print("FILE NOT EXIST")
-            # print("Creating...")
             self._log(filename, data, header = header)
             return
 
@@ -59,4 +56,5 @@ class Logger():
         
         self.log(filename = filename, data = rows, header = headers)
 
-my_logger = Logger(os.environ['LOG_FOULDER'])
+
+my_logger = Logger(os.environ['LOG_FOLDER'])

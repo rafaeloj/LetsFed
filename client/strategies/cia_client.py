@@ -94,6 +94,19 @@ class MaverickClient(fl.client.NumPyClient):
             return train['img'], train['label'], test['img'], test['label']
         
     def create_model(self, input_shape):
+        if self.dataset.lower() == "cifar10":            
+            deep_cnn = tf.keras.layers.Sequential()
+            deep_cnn.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu',kernel_initializer='he_uniform', input_shape=(input_shape[1], 1)))
+            deep_cnn.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu',kernel_initializer='he_uniform'))
+            deep_cnn.add(tf.keras.layers.Dropout(0.6))
+            deep_cnn.add(tf.keras.layers.MaxPooling1D(pool_size=2))
+            deep_cnn.add(tf.keras.layers.Flatten())
+            deep_cnn.add(tf.keras.layers.Dense(50, activation='relu'))
+            deep_cnn.add(tf.keras.layers.Dense(10, activation='softmax'))
+        
+            deep_cnn.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+            return deep_cnn
         model = tf.keras.models.Sequential([
             tf.keras.layers.Input(shape=input_shape[1:]),
             tf.keras.layers.Flatten(),

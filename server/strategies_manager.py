@@ -4,6 +4,7 @@ from strategies.fedavg import FedAvg
 from strategies.fedcia import FedCIA
 from strategies.poc import FedPOC
 from strategies.deev import FedDEEV
+from utils.logger import my_logger
 
 def get_strategy(
     strategy,
@@ -63,6 +64,11 @@ def main():
     exploration      = float(os.environ['EXPLORATION'])
     least_select_factor = float(os.environ['LEAST_SELECT_FACTOR'])
 
+    my_logger.log(
+        '/s-teste.csv',
+        data = [0, 'TESTE'],
+        header = ['round', 'server_selection'],
+    )
     fl.server.start_server(
         server_address=os.environ['SERVER_IP'],
         config=fl.server.ServerConfig(num_rounds=rounds),
