@@ -11,11 +11,11 @@ class Logger():
         if header != None:
             with open(file_path, 'w') as file:
                 file.write(f"{','.join(header)}\n")
-                file.write(f"{','.join([f"{d}" for d in data])}\n")
+                file.write(f"{','.join([f'{d}' for d in data])}\n")
             return
 
         with open(file_path, 'a') as file:
-            file.write(f"{','.join([f"{d}" for d in data])}\n")
+            file.write(f"{','.join([f'{d}' for d in data])}\n")
 
     def log(self, filename, data, header = None):
         if type(header) == list and len(header) != len(data):
@@ -24,6 +24,7 @@ class Logger():
 
         file_path = f"logs{self.logger_foulder}{filename}"
         if not os.path.exists(file_path):
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             # print("FILE NOT EXIST")
             # print("Creating...")
             self._log(filename, data, header = header)

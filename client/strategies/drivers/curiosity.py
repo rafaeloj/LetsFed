@@ -71,4 +71,4 @@ class CuriosityDriver(Driver):
     def calc_value(self, client):
         """ A vontate é com base na quantidade de rounds que o client deseja participar. Quanto mais rounds maior é a vontade """
         # return 1
-        return SIGMOID(self.current_round / (CURIOSITY*100)) * WILLING_PERC
+        return self.current_round / (CURIOSITY*100) * WILLING_PERC

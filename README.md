@@ -1,14 +1,26 @@
-# FedCIA: Federated Client Independable Aggregation
+### Build
+```
+  ~$ ./build.sh
+```
 
-## Command Line Options
+## Run
+```
+  ~$ ./experiments.sh
+```
 
-This section details the available command line options for the program.
+## Mudar parâmetros
+```
+  config-debug.ini
+```
+
+
+~Caso mudar algum parâmetro atualize os nomes dos arquivos em `./experiments.sh`
 
 ### Options
 
 - `-c`, `--clients`
   - **Description**: Specifies the number of clients to be used.
-  - **Default**: `0`
+  - **Default**: `10`
   - **Type**: Integer
 
 - `-e`, `--local-epochs`
@@ -20,11 +32,11 @@ This section details the available command line options for the program.
   - **Description**: Defines which dataset to use for training.
   - **Default**: `mnist`
   - **Type**: String
-  - **Available**: `'mnist'`, `'cifar10'`, `'fashion_mnist'`, `'sasha/dog-food'`, `'zh-plus/tiny-imagenet'` and any Flower federated dataset
+  - **Available**: `'mnist'`, `'cifar10'`, `'fashion_mnist'`, `'sasha/dog-food'`, `'zh-plus/tiny-imagenet'`, and any Flower federated dataset
 
 - `-r`, `--rounds`
   - **Description**: Determines the number of rounds of training.
-  - **Default**: `100`
+  - **Default**: `10`
   - **Type**: Integer
 
 - `-s`, `--strategy`
@@ -34,19 +46,10 @@ This section details the available command line options for the program.
 
 - `--no-iid`
   - **Description**: A flag to set the dataset distribution among clients to be non-i.i.d.
-  - **Default**: `False`
+  - **Default**: `True`
   - **Action**: `store_true` (This option does not require a value, it's either present or not.)
 
 - `--init-clients`
-  - **Description**: Sets the number of initial clients that participate of federated proccess.
+  - **Description**: Sets the number of initial clients that participate in the federated process.
   - **Default**: `2`
   - **Type**: Integer
-
-### Usage
-
-Here is a simple example of how to use these options in the command line:
-
-```bash
-~$ python environment.py --clients 10 --local-epochs 5 --dataset MNIST --rounds 50 --strategy CIA --init-clients 3
-```
-

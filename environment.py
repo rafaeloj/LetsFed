@@ -50,6 +50,7 @@ def add_server_info(
     image: 'server-flwr:latest'\n\
     logging:\n\
       driver: local\n\
+    runtime: nvidia\n\
     container_name: fl_server\n\
     profiles:\n\
       - server\n\
@@ -77,6 +78,12 @@ def add_server_info(
       - default\n\
     deploy:\n\
       replicas: 1\n\
+      resources:\n\
+        reservations:\n\
+          devices:\n\
+            - driver: nvidia\n\
+              count: 1\n\
+              capabilities: [gpu]\n\
       placement:\n\
         constraints:\n\
           - node.role==manager\n\
@@ -102,6 +109,7 @@ def add_client_info(
     image: 'client-flwr:latest'\n\
     logging:\n\
       driver: local\n\
+    runtime: nvidia\n\
     profiles:\n\
       - client\n\
     environment:\n\
@@ -128,6 +136,12 @@ def add_client_info(
       - default\n\
     deploy:\n\
       replicas: 1\n\
+      resources:\n\
+        reservations:\n\
+          devices:\n\
+            - driver: nvidia\n\
+              count: 1\n\
+              capabilities: [gpu]\n\
       placement:\n\
         constraints:\n\
           - node.role==worker\n\
