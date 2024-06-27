@@ -41,14 +41,20 @@ class SelectionDriver(Driver):
             client_to_send_model = top_clients + self._exploration_clients(server=server)
 
 
-        if not 1 in [info[0] for info in client_to_send_model]:
-            client_to_send_model = client_to_send_model + [(1, True)]
-        if not 2 in [info[0] for info in client_to_send_model]:
-            client_to_send_model = client_to_send_model + [(2, True)]
+        # if not 1 in [info[0] for info in client_to_send_model]:
+        #     client_to_send_model = client_to_send_model + [(1, True)]
+        # if not 2 in [info[0] for info in client_to_send_model]:
+        #     client_to_send_model = client_to_send_model + [(2, True)]
 
 
-            
-        server.current_selection = client_to_send_model
+        if len(client_to_send_model) < server.n_clients *server.perc_of_:
+            faltantes = (server.n_clients *server.perc_of_) - len(client_to_send_model)
+            not_select = [
+                i for i in range(server.n_clients) if i not in [int(info[0]) for info in client_to_send_model]
+            ]
+            clientes_faltantes = random.sample(not_select, faltantes)
+            conjunto_faltante = [(c, True) for c in clientes_faltantes]
+        server.current_selection = client_to_send_model + conjunto_faltante
 
     def _exploration_clients(self, server):
         # Realiza o sorteio para enviar o modelo aos clientes que não querem participar

@@ -326,10 +326,10 @@ class MaverickClient(fl.client.NumPyClient):
     def make_decision(self, parameters, config):
         self.drivers_results = {}
         if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
-            if self.cid == 1 or self.cid == 2:
-                self.dynamic_engagement = True
-                self.want = True
-                return
+            # if self.cid == 1 or self.cid == 2:
+            #     self.dynamic_engagement = True
+            #     self.want = True
+            #     return
 
             if self.behaviors['curiosity_driver'].state == EXPLORING:
                 self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
