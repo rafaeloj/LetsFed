@@ -45,6 +45,9 @@ class SelectionDriver(Driver):
             client_to_send_model = client_to_send_model + [(1, True)]
         if not 2 in [info[0] for info in client_to_send_model]:
             client_to_send_model = client_to_send_model + [(2, True)]
+
+
+            
         server.current_selection = client_to_send_model
 
     def _exploration_clients(self, server):
