@@ -1,15 +1,17 @@
 #!/bin/bash
 
 cases=(
-    'FedAVG debug'
     'FedCIA debug'
+    'FedCIA debug random'
+    'FedAVG debug'
     'FedDEEV debug'
     'FedPOC debug'
 )
 
 file_docker_compose=(
-    'dockercompose-avg-cifar10-random-c25-r200-e0.40-d0.1.yaml'
+    'dockercompose-cia-cifar10-default-c25-r200-e0.40-d0.1.yaml'
     'dockercompose-cia-cifar10-default_1-c25-r200-e0.40-d0.1.yaml'
+    'dockercompose-avg-cifar10-random-c25-r200-e0.40-d0.1.yaml'
     'dockercompose-deev-cifar10-random-c25-r200-e0.40-d0.1.yaml'
     'dockercompose-poc-cifar10-random-c25-r200-e0.40-d0.1.yaml'
 )

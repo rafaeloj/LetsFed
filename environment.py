@@ -183,7 +183,7 @@ def main():
   
 
     # participate_clients = start_clients(clients, init_clients)
-    participate_clients = [0,1,5,9]
+    participate_clients = [0,1,5,9,10,13]
     engaged_clients = ','.join([str(x) for x in participate_clients])
     folder_log = get_LOG_FOLDER_name(
         select_client_method = select_client_method,

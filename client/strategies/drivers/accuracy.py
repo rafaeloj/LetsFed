@@ -33,7 +33,6 @@ class AccuracyDriver(Driver):
             self.history.append(willing)
             return willing
         
-        # if not is_select_by_server(str(client.cid), server_selection):
         self.model.set_weights(parameters)
         _, tmp_accuracy = self.model.evaluate(client.x_test, client.y_test,verbose=0)
         _, client_accuracy = client.model.evaluate(client.x_test, client.y_test,verbose=0)

@@ -1,16 +1,15 @@
 from .driver import Driver
 from random import randint
-
 IDLE = 0
 EXPLORING = 1
 EXPLORED = 2
 CURIOSITY = 0.1
 WILLING_PERC = 0.80
 class CuriosityDriver(Driver):
-    def __init__(self):
+    def __init__(self, r_intention=0):
         self.history       = []
         self.state         = IDLE # Type: idle, exploring, explored
-        self.current_round = 0
+        self.current_round = r_intention
     
     def get_name(self):
         return "curiosity_driver"
@@ -65,6 +64,7 @@ class CuriosityDriver(Driver):
             Finaliza o processo de explocação
         """
         self.set_idle()
+        self.state = IDLE
         client.dynamic_engagement = False
         client.want = False
 

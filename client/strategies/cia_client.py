@@ -55,6 +55,9 @@ class MaverickClient(fl.client.NumPyClient):
         self.drivers_results                                 = {b_name: 0 for b_name, _ in self.behaviors.items()}
         self.willing: float                                  = 0.0
         self.rounds_intention                                = 0
+        if self.dynamic_engagement:
+            self.rounds_intention = self.rounds*0.1
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
     def set_behaviors(self):
         drivers: List[Driver] = [
             AccuracyDriver(input_shape = self.x_train.shape),
@@ -322,28 +325,36 @@ class MaverickClient(fl.client.NumPyClient):
 
     def make_decision(self, parameters, config):
         self.drivers_results = {}
-        if self.cid == 1 or self.cid == 2:
-            self.dynamic_engagement = True
-            self.want = True
-            return
+        if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+            if self.cid == 1 or self.cid == 2:
+                self.dynamic_engagement = True
+                self.want = True
+                return
 
-        if self.behaviors['curiosity_driver'].state == EXPLORING:
-            if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+            if self.behaviors['curiosity_driver'].state == EXPLORING:
                 self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
-        elif self.behaviors['curiosity_driver'].state == IDLE:
-            if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+            elif self.behaviors['curiosity_driver'].state == IDLE:
                 value = self.behaviors["accuracy_driver"].analyze(self, parameters=parameters, config=config)
                 self.drivers_results['accuracy_driver'] = value
+                my_logger.log(
+                    "/c-curiosity-cp.csv",
+                    data=[config['round'], self.cid, value, TRESHOULD],
+                    header=["round", 'cid', 'value', 'treshould'],
+                )
                 if value > TRESHOULD:
                     self.dynamic_engagement = True
                     self.want = True
                     self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
 
-        self.rounds_intention = self.behaviors['curiosity_driver'].current_round
-        self.drivers_results['curiosity_driver'] = self.rounds_intention
+            self.rounds_intention = self.behaviors['curiosity_driver'].current_round
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
         if self.behaviors['curiosity_driver'].state == EXPLORED:
             self.behaviors['curiosity_driver'].finish(self)
-
+        my_logger.log(
+            "/d-curiosity.csv",
+            data=[config['round'], self.cid, self.behaviors['curiosity_driver'].state, self.behaviors['curiosity_driver'].current_round],
+            header=["round", 'cid', 'value', 'treshould'],
+        )
         return
 
         values = []
