@@ -15,6 +15,55 @@ class SelectionDriver(Driver):
             server.current_selection = server.engaged_clients + server.not_engaged_clients
             return
         
+        client_to_send_model = []
+        engaged = []
+        not_engaged = []
+        engaged =  self._deev_engaged(server = server, server_round = server_round)
+        
+        if server.select_client_method == 'default':
+            not_engaged = self._deev_invert_not_engaged(server = server, server_round = server_round)
+        if server.select_client_method == 'default_1':
+            not_engaged = self._exploration_clients(server=server)
+        max_clients = server.n_clients*.3
+
+        if len(engaged + not_engaged) > max_clients:
+            if len(engaged) > max_clients and len(not_engaged) == 0:
+                while len(client_to_send_model) < max_clients:
+                    client_to_send_model.append(engaged.pop(0))
+            elif len(not_engaged) > max_clients and len(engaged) == 0:
+                while len(client_to_send_model) < max_clients:
+                    client_to_send_model.append(not_engaged.pop(0))
+            else:
+                # if len(engaged) > 0:
+                #     client_to_send_model.append(engaged.pop(0))
+                # if len(not_engaged) > 0:
+                #     client_to_send_model.append(not_engaged.pop(0))
+                
+                while len(client_to_send_model) < max_clients and (len(engaged) > 0 or len(not_engaged) > 0):
+                    if len(engaged) > 0:
+                        client_to_send_model.append(engaged.pop(0))
+                    if len(not_engaged) > 0:
+                        client_to_send_model.append(not_engaged.pop(0))
+        else:
+            client_to_send_model = engaged + not_engaged
+        # if not 1 in [info[0] for info in client_to_send_model]:
+        #     client_to_send_model = client_to_send_model + [(1, True)]
+        # if not 2 in [info[0] for info in client_to_send_model]:
+        #     client_to_send_model = client_to_send_model + [(2, True)]
+
+
+        # if len(client_to_send_model) < server.n_clients *0.3:
+        #     faltantes = (server.n_clients *0.3) - len(client_to_send_model)
+        #     not_select = [
+        #         i for i in range(server.n_clients) if i not in [int(info[0]) for info in client_to_send_model]
+        #     ]
+        #     clientes_faltantes = random.sample(not_select, faltantes)
+        #     conjunto_faltante = [(c, True) for c in clientes_faltantes]
+        #     client_to_send_model = client_to_send_model + conjunto_faltante
+
+        server.current_selection = client_to_send_model
+
+    def _r_robin(server):
         engaged_clients_cid = [int(c[0]) for c in server.engaged_clients]
         # Pega a quantidade de clientes que querem participar dentro do contador
         how_many_time_selected_client_engaged_index = server.how_many_time_selected[engaged_clients_cid]
@@ -32,32 +81,34 @@ class SelectionDriver(Driver):
                     cid_value_index
                 ]
             ] += 1
+        
         # To pegand o indice dos clientes que foram selecionados
         top_clients = [(engaged_clients_cid[cid], None) for cid in top_values_of_cid]
-        # return top_clients
-        if server.select_client_method == 'default':
-            client_to_send_model = top_clients + self._exploration_clients_dynamic(server=server,server_round=server_round)
-        if server.select_client_method == 'default_1':
-            client_to_send_model = top_clients + self._exploration_clients(server=server)
+        return top_clients
+    def _deev_engaged(self, server, server_round):
+        selected_clients = []
+        for idx_accuracy in range(len(server.engaged_clients_acc)):
+            if server.engaged_clients_acc[idx_accuracy][1] < server.engaged_clients_acc_avg:
+                selected_clients.append(server.engaged_clients[idx_accuracy])
+
+        # if server.decay_factor > 0.0:
+        #     the_chosen_ones  = len(selected_clients) * (1 - server.decay_factor)**int(server_round)
+        #     selected_clients = selected_clients[ : math.ceil(the_chosen_ones)]
+
+        return selected_clients
 
 
-        # if not 1 in [info[0] for info in client_to_send_model]:
-        #     client_to_send_model = client_to_send_model + [(1, True)]
-        # if not 2 in [info[0] for info in client_to_send_model]:
-        #     client_to_send_model = client_to_send_model + [(2, True)]
+    def _deev_invert_not_engaged(self, server, server_round):
+        selected_clients = []
+        for idx_accuracy in range(len(server.not_engaged_clients_acc)):
+            if server.not_engaged_clients_acc[idx_accuracy][1] > server.not_engaged_clients_acc_avg:
+                selected_clients.append(server.not_engaged_clients[idx_accuracy])
 
+        if server.decay_factor > 0.0:
+            the_chosen_ones  = len(selected_clients) * (1 - server.decay_factor)**int(server_round)
+            selected_clients = selected_clients[ : math.ceil(the_chosen_ones)]
 
-        if len(client_to_send_model) < server.n_clients *0.3:
-            faltantes = (server.n_clients *0.3) - len(client_to_send_model)
-            not_select = [
-                i for i in range(server.n_clients) if i not in [int(info[0]) for info in client_to_send_model]
-            ]
-            clientes_faltantes = random.sample(not_select, faltantes)
-            conjunto_faltante = [(c, True) for c in clientes_faltantes]
-            client_to_send_model = client_to_send_model + conjunto_faltante
-
-        server.current_selection = client_to_send_model
-
+        return selected_clients
     def _exploration_clients(self, server):
         # Realiza o sorteio para enviar o modelo aos clientes que não querem participar
         if len(server.not_engaged_clients) == 1:
@@ -65,6 +116,7 @@ class SelectionDriver(Driver):
         perc = int(len(server.not_engaged_clients)*server.exploration)
         explored_clients = random.sample(server.not_engaged_clients, perc)
         return explored_clients
+
 
     def _exploration_clients_dynamic(self, server, server_round):
         selected_clients = []
