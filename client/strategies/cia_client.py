@@ -19,7 +19,6 @@ import numpy as np
 import time
 # disable_progress_bar()
 
-TRESHOULD = 0.5
 
 class MaverickClient(fl.client.NumPyClient):
 
@@ -34,12 +33,19 @@ class MaverickClient(fl.client.NumPyClient):
         dirichlet_alpha:      float,
         swap:                 bool,
         rounds:               int,
+        solution:             str,
+        method:               str,
+        exploitation: float,
+        exploration: float,
+        least_select_factor: float,
+        decay: float,
+        threshold: float,
     ):
         self.miss                                            = 0 # Criar contador de quando mudou de estado
         self.cid                                             = cid
         self.num_clients                                     = num_clients
         self.epoch                                           = epoch
-        self.no_idd                                          = no_iid
+        self.no_iid                                          = no_iid
         self.dataset                                         = dataset.lower()
         self.dirichlet_alpha                                 = dirichlet_alpha
         self.x_train, self.y_train, self.x_test, self.y_test = self.load_data()
@@ -50,17 +56,23 @@ class MaverickClient(fl.client.NumPyClient):
         self.swap                                            = swap
         self.rounds                                          = rounds
         self.want                                            = self.dynamic_engagement
-
+        self.method                                          = method
+        self.solution                                        = solution
         self.behaviors: Dict[str, Driver]                         = self.set_behaviors()
         self.drivers_results                                 = {b_name: 0 for b_name, _ in self.behaviors.items()}
         self.willing: float                                  = 0.0
         self.rounds_intention                                = 0
+        self.exploitation                                    = exploitation
+        self.exploration                                     = exploration
+        self.least_select_factor                             = least_select_factor
+        self.decay                                           = decay
+        self.threshold                                       = threshold
         if self.dynamic_engagement:
             self.rounds_intention = self.rounds*0.1
             self.drivers_results['curiosity_driver'] = self.rounds_intention
     def set_behaviors(self):
         drivers: List[Driver] = [
-            AccuracyDriver(input_shape = self.x_train.shape),
+            AccuracyDriver(input_shape = self.x_train.shape, model=''),
             CuriosityDriver(),
         ]
         return {
@@ -69,7 +81,7 @@ class MaverickClient(fl.client.NumPyClient):
         }
 
     def load_data(self):
-        if self.no_idd:
+        if self.no_iid:
             logger.log(INFO, "LOAD DATASET WITH DIRICHLET PARTITIONER")
             partitioner_train = DirichletPartitioner(num_partitions=self.num_clients, partition_by="label",
                                     alpha=self.dirichlet_alpha, min_partition_size=self.num_clients/2,
@@ -127,51 +139,15 @@ class MaverickClient(fl.client.NumPyClient):
     def get_parameters(self, config):
         return self.model.get_weights()
 
-    def log_fit(self, data):
-        my_logger.log(
-            "/c-bw.csv",
-            data = [
-                data['server_round'], self.cid, data['size'], self.dynamic_engagement, data['server_selection']
-            ],
-            header = [
-                'round', 'cid', 'size', 'dynamic_engagement', 'is_selected'
-            ]
-        )
-
-        my_logger.fit("/c-fit.csv", data = [
-            data['server_round'], self.cid, data['acc'], data['loss'], self.dynamic_engagement, data['server_selection']
-        ])
-
-        my_logger.log(
-            '/c-cost-time.csv',
-            data = [
-                data['server_round'],
-                self.cid,
-                data['cost'],
-                self.dynamic_engagement,
-                data['server_selection']
-            ],
-            header = [
-                'round',
-                'cid',
-                'cost',
-                'dynamic_engagement',
-                'is_selected']
-        )
-
     def fit(self, parameters, config):
         fit_response = {
             'cid': self.cid,
             "dynamic_engagement": self.dynamic_engagement,
         }
-        history = self.debug_model.fit(self.x_train, self.y_train, epochs=1, verbose=0)
-        acc     = np.mean(history.history['accuracy'])
-        loss    = np.mean(history.history['loss'])
-        my_logger.log(
-            "/c-local-model-fit.csv",
-            data=[config['round'], self.cid, acc, loss],
-            header=["round", 'cid', 'acc', 'loss'],
-        )
+        history = self.debug_model.fit(self.x_train, self.y_train, epochs=self.epoch, verbose=0)
+        self.l_fit_acc     = np.mean(history.history['accuracy'])
+        self.l_fit_loss    = np.mean(history.history['loss'])
+
         if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
             return self._engaged_fit(parameters=parameters, config=config), self.x_train.shape[0], fit_response
 
@@ -184,14 +160,11 @@ class MaverickClient(fl.client.NumPyClient):
         model_size = sum([layer.nbytes for layer in parameters])
         new_parameters, acc, loss, cost = self._global_fit(weights=parameters, server_round=config['round']) # Atualiza o modelo global com dados do cliente
 
-        self.log_fit({
-            'server_round': config['round'],
-            'size': model_size,
-            'server_selection': 'selected',
-            'acc': acc,
-            'loss': loss,
-            'cost': cost,
-        })
+        self.g_fit_acc = np.mean(acc)
+        self.g_fit_loss = np.mean(loss)
+        self.cost = cost
+        self.model_size = model_size
+
         return new_parameters
 
     def _not_engaged_fit(self, parameters, config, server_selection):
@@ -204,15 +177,10 @@ class MaverickClient(fl.client.NumPyClient):
 
         model_size = sum([layer.nbytes for layer in self.model.get_weights()])
 
-        self.log_fit({
-            'server_round': config['round'],
-            'size': model_size,
-            'server_selection': server_selection,
-            'acc': acc,
-            'loss': loss,
-            'cost': cost,
-        })
-
+        self.g_fit_acc = np.mean(acc)
+        self.g_fit_loss = np.mean(loss)
+        self.cost = cost
+        self.model_size = model_size
         return parameters
 
     def _global_fit(self, weights, server_round):
@@ -224,46 +192,94 @@ class MaverickClient(fl.client.NumPyClient):
         parameters = self.model.get_weights()
         end_time = time.time()
         cost = end_time - start_time
-
+        
         return parameters, acc, loss, cost
 
-    def log_evaluate(self, data):
-        my_logger.evaluate("/c-eval.csv", [
-            data['server_round'], self.cid, data['acc'], data['loss'], self.dynamic_engagement, data['server_selection']
-        ])
-        
-        my_logger.drivers(
-            "/c-drivers.csv",
-            {
-                "drivers": self.drivers_results,
-                'server_round': data['server_round'],
-                "cid": self.cid,
-                "is_selected": data['server_selection'],
-                'willing': self.willing
-            }
-        )
-        if 'old_dynamic_engagement' in data:
-            if data['old_dynamic_engagement'] != self.dynamic_engagement:
-                my_logger.log(
-                    filename = "/c-change-desired.csv",
-                    data = [
-                        data['server_round'], self.cid, data['old_dynamic_engagement'], self.want, data['acc'], data['r_intention'], self.miss
-                    ],
-                    header = ['round', 'cid', 'dynamic_engagement', 'desire', 'acc', 'r_intention', 'n_round_to_swap']
-                )
-                self.miss = 0
-
     def evaluate(self, parameters, config):
-        loss, acc = self.debug_model.evaluate(self.x_test, self.y_test)
-        my_logger.log(
-            "/c-local-model-eval.csv",
-            data=[config['round'], self.cid, acc, loss],
-            header=['round', 'cid', 'acc', 'loss']
-        )
-        if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+        loss = None
+        shape = None
+        eval_resp = None
+        
+        
+        l_loss, l_acc = self.debug_model.evaluate(self.x_test, self.y_test)
+        self.l_eval_acc = np.mean(l_acc)
+        self.l_eval_loss = np.mean(l_loss)
+        is_select = is_select_by_server(str(self.cid), config['selected_by_server'].split(','))
+        if is_select:
             self.miss+=1
-            return self._engaged_evaluate(parameters=parameters, config=config)
-        return self._not_engaged_evaluate(parameters=parameters, config=config, server_selection='not_selected')
+            loss, shape, eval_resp = self._engaged_evaluate(parameters=parameters, config=config)
+        else:
+            loss, shape, eval_resp = self._not_engaged_evaluate(parameters=parameters, config=config, server_selection='not_selected')
+
+        my_logger.log(
+            '/c-data.csv',
+            header = [
+                'round',
+                'cid',
+                'solution',
+                'method',
+                'g_eval_acc',
+                'g_eval_loss',
+                'l_eval_acc',
+                'l_eval_loss',
+                'g_fit_acc',
+                'g_fit_loss',
+                'l_fit_acc',
+                'l_fit_loss',
+                'dynamic_engagement',
+                'old_dynamic_engagement',
+                'is_selected',
+                'desire',
+                'size',
+                'cost',
+                'willing',
+                'r_intention',
+                'miss',
+                'epoch',
+                'dirichlet_alpha',
+                'no_iid',
+                'dataset',
+                'exploitation',
+                'exploration',
+                'least_select_factor',
+                'decay',
+                'threshold',
+            ],
+            data = [
+                config['round'],
+                self.cid,
+                self.solution,
+                self.method,
+                self.g_eval_acc,
+                self.g_eval_loss,
+                self.l_eval_acc,
+                self.l_eval_loss,
+                self.g_fit_acc,
+                self.g_fit_loss,
+                self.l_fit_acc,
+                self.l_fit_loss,
+                self.dynamic_engagement,
+                self.old_dynamic_engagement,
+                is_select,
+                self.want,
+                self.model_size,
+                self.cost,
+                self.willing,
+                self.r_intention,
+                self.miss,
+                self.epoch,
+                self.dirichlet_alpha,
+                self.no_iid,
+                self.dataset,
+                self.exploitation,
+                self.exploration,
+                self.least_select_factor,
+                self.decay,
+                self.threshold,
+            ]
+        )
+
+        return loss, shape, eval_resp
 
     def _engaged_evaluate(self, parameters, config):
         if not self.dynamic_engagement:
@@ -282,15 +298,10 @@ class MaverickClient(fl.client.NumPyClient):
             'acc'               : acc,
             'r_intention'       : self.rounds_intention
         }
-
-        self.log_evaluate({
-            'server_round': config['round'],
-            'server_selection': 'selected',
-            'acc': acc,
-            'loss': loss,
-            'r_intention'           : self.rounds_intention,
-            'old_dynamic_engagement': old_dynamic_engagent,
-        })
+        self.g_eval_loss = np.mean(loss)
+        self.g_eval_acc = np.mean(acc)
+        self.r_intention = self.rounds_intention
+        self.old_dynamic_engagement = old_dynamic_engagent
 
         return loss, self.x_test.shape[0], evaluation_response
 
@@ -298,15 +309,11 @@ class MaverickClient(fl.client.NumPyClient):
         l_loss, l_acc = self.model.evaluate(self.x_test, self.y_test)
         old_dynamic_engagent = self.dynamic_engagement
         self.make_decision(parameters = parameters, config = config)
-
-        self.log_evaluate({
-            'server_round': config['round'],
-            'server_selection': server_selection,
-            'acc': l_acc,
-            'loss': l_loss,
-            'old_dynamic_engagement': old_dynamic_engagent,
-            'r_intention'       : self.rounds_intention
-        })
+        
+        self.g_eval_acc = np.mean(l_acc)
+        self.g_eval_loss = np.mean(l_loss)
+        self.r_intention = self.rounds_intention
+        self.old_dynamic_engagement = old_dynamic_engagent
 
         evaluation_response = {
             "cid"               : self.cid,
@@ -326,10 +333,6 @@ class MaverickClient(fl.client.NumPyClient):
     def make_decision(self, parameters, config):
         self.drivers_results = {}
         if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
-            # if self.cid == 1 or self.cid == 2:
-            #     self.dynamic_engagement = True
-            #     self.want = True
-            #     return
 
             if self.behaviors['curiosity_driver'].state == EXPLORING:
                 self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
@@ -338,10 +341,10 @@ class MaverickClient(fl.client.NumPyClient):
                 self.drivers_results['accuracy_driver'] = value
                 my_logger.log(
                     "/c-curiosity-cp.csv",
-                    data=[config['round'], self.cid, value, TRESHOULD],
-                    header=["round", 'cid', 'value', 'treshould'],
+                    data=[config['round'], self.cid, value, self.threshold],
+                    header=["round", 'cid', 'value', 'threshold'],
                 )
-                if value > TRESHOULD:
+                if value > self.threshold:
                     self.dynamic_engagement = True
                     self.want = True
                     self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
@@ -353,7 +356,7 @@ class MaverickClient(fl.client.NumPyClient):
         my_logger.log(
             "/d-curiosity.csv",
             data=[config['round'], self.cid, self.behaviors['curiosity_driver'].state, self.behaviors['curiosity_driver'].current_round],
-            header=["round", 'cid', 'value', 'treshould'],
+            header=["round", 'cid', 'value', 'threshold'],
         )
         return
 
@@ -368,7 +371,7 @@ class MaverickClient(fl.client.NumPyClient):
 
         ## Se ficar aqui passa 1 round sem participar
         self.willing = sum(values)
-        if self.willing >= TRESHOULD:
+        if self.willing >= self.threshold:
             self.want = True
             self.dynamic_engagement = True
             return 

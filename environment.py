@@ -3,35 +3,6 @@ from optparse import OptionParser
 import configparser
 import random
 
-def get_LOG_FOLDER_name(select_client_method,dataset, clients, engaged, dirichlet, strategy, swap):
-        swap_string = ''
-        if not swap:
-          swap_string = '/no_swap'
-
-        log_name = ""
-        if strategy == 'cia':
-          if select_client_method == 'default':
-              log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/dynamic'
-          elif select_client_method == 'default_1':
-              log_name = f'/default/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}/random'
-          elif select_client_method == 'random':
-              log_name = f'/random/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-          elif select_client_method == 'worst_performance':
-              log_name = f'/worst/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-          elif select_client_method == 'best_performance':
-              log_name = f'/best/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-          elif select_client_method == 'least_selected':
-              log_name = f'/fair/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-          elif select_client_method == 'deev':
-              log_name = f'/deev/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif strategy == 'poc':
-            log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif strategy == 'avg':
-            log_name = f'/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'
-        elif strategy == 'deev':
-            log_name = f'/deev/{strategy}/{dataset}/{clients}/engaged_{engaged}/dirichlet_{dirichlet}'        
-        return log_name+f'{swap_string}'
-
 def add_server_info(
     clients:              int,
     rounds:               int,
@@ -39,18 +10,24 @@ def add_server_info(
     strategy:             str,
     perc_of_clients:      float,
     decay:                float,
-    engaged_clients:      str,
-    select_client_method: str,
     exploitation:         float,
     exploration:          float,
     least_select_factor:  float,
-    folder_log:          str,
+    select_client_method: str,
+    engaged_clients:      str,
+    gpu:                  bool,
+    threshold:            float,
+    local_epochs:    int,
+    no_iid:          bool,
+    dirichlet_alpha: float,
+    swap:                 bool,
+    # model:                str,
 ):
     server_str = f"  server:\n\
     image: 'server-flwr:latest'\n\
     logging:\n\
       driver: local\n\
-    runtime: nvidia\n\
+    {'runtime: nvidia' if gpu else ''}\n\
     container_name: fl_server\n\
     profiles:\n\
       - server\n\
@@ -60,16 +37,20 @@ def add_server_info(
       - NUM_ROUNDS={rounds}\n\
       - DATASET={dataset}\n\
       - STRATEGY={strategy}\n\
+      - LOCAL_EPOCHS={local_epochs}\n\
       - PERC_OF_CLIENTS={perc_of_clients}\n\
       - DECAY={decay}\n\
+      - SWAP={swap}\n\
+      - NO_IID={no_iid}\n\
+      - DIRICHLET_ALPHA={dirichlet_alpha}\n\
       - ENGAGED_CLIENTS={engaged_clients}\n\
       - SELECT_CLIENT_METHOD={select_client_method}\n\
       - EXPLOITATION={exploitation}\n\
       - EXPLORATION={exploration}\n\
-      - LOG_FOLDER={folder_log}\n\
       - LEAST_SELECT_FACTOR={least_select_factor}\n\
+      - THRESHOLD={threshold}\n\
     volumes:\n\
-      - ./logs{folder_log}:/logs{folder_log}:rw\n\
+      - ./logs:/logs:rw\n\
       - ./server/strategies_manager.py:/app/strategies_manager.py:r\n\
       - ./server/strategies/drivers:/server/strategies/drivers/:r\n\
       - ./server/strategies:/app/strategies/:r\n\
@@ -78,12 +59,12 @@ def add_server_info(
       - default\n\
     deploy:\n\
       replicas: 1\n\
-      resources:\n\
-        reservations:\n\
-          devices:\n\
-            - driver: nvidia\n\
-              count: 1\n\
-              capabilities: [gpu]\n\
+      {'resources:' if gpu else ''}\n\
+        {'reservations:' if gpu else ''}\n\
+          {'devices:' if gpu else ''}\n\
+            {'- driver: nvidia' if gpu else ''}\n\
+            {'- count: 1' if gpu else ''}\n\
+            {'- capabilities: [gpu]' if gpu else ''}\n\
       placement:\n\
         constraints:\n\
           - node.role==manager\n\
@@ -97,19 +78,25 @@ def add_client_info(
     dataset:         str,
     strategy:        str,
     local_epochs:    int,
-    no_idd:          bool,
+    no_iid:          bool,
     participate:     bool,
     dirichlet_alpha: float,
     select_client_method: str,
-    folder_log:          str,
     swap:                 bool,
-    rounds:                int,
+    rounds:               int,
+    model:                str,
+    gpu:                  bool,
+    decay:                float,
+    exploitation:         float,
+    exploration:          float,
+    least_select_factor:  float,
+    threshold:            float,
 ):
     client_str = f"  client-{client}:\n\
     image: 'client-flwr:latest'\n\
     logging:\n\
       driver: local\n\
-    runtime: nvidia\n\
+    {'runtime: nvidia' if gpu else ''}\n\
     profiles:\n\
       - client\n\
     environment:\n\
@@ -119,15 +106,20 @@ def add_client_info(
       - DATASET={dataset}\n\
       - STRATEGY={strategy}\n\
       - LOCAL_EPOCHS={local_epochs}\n\
-      - NO_IDD={no_idd}\n\
+      - NO_IID={no_iid}\n\
       - PARTICIPATE={participate}\n\
       - DIRICHLET_ALPHA={dirichlet_alpha}\n\
       - SELECT_CLIENT_METHOD={select_client_method}\n\
-      - LOG_FOLDER={folder_log}\n\
+      - EXPLOITATION={exploitation}\n\
+      - EXPLORATION={exploration}\n\
+      - LEAST_SELECT_FACTOR={least_select_factor}\n\
+      - DECAY={decay}\n\
       - SWAP={swap}\n\
       - ROUNDS={rounds}\n\
+      - MODEL={model}\n\
+      - THRESHOLD={threshold}\n\
     volumes:\n\
-      - ./logs{folder_log}:/logs{folder_log}:rw\n\
+      - ./logs:/logs:rw\n\
       - ./client/strategies:/client/strategies/:r\n\
       - ./client/strategies/drivers:/client/strategies/drivers/:r\n\
       - ./client/strategies_manager.py:/client/strategies_manager.py:r\n\
@@ -136,12 +128,12 @@ def add_client_info(
       - default\n\
     deploy:\n\
       replicas: 1\n\
-      resources:\n\
-        reservations:\n\
-          devices:\n\
-            - driver: nvidia\n\
-              count: 1\n\
-              capabilities: [gpu]\n\
+      {'resources:' if gpu else ''}\n\
+        {'reservations:' if gpu else ''}\n\
+          {'devices:' if gpu else ''}\n\
+            {'- driver: nvidia' if gpu else ''}\n\
+            {'- count: 1' if gpu else ''}\n\
+            {'- capabilities: [gpu]' if gpu else ''}\n\
       placement:\n\
         constraints:\n\
           - node.role==worker\n\
@@ -156,10 +148,12 @@ def start_clients(n_clients, init_clients) -> list:
 def main():
     parser = OptionParser()
     parser.add_option("-e", "--environment", dest="environment", type='str')
+    parser.add_option("-g", "--gpu",action="store_true", dest="gpu")
 
     config = configparser.ConfigParser()
 
     (opt, _) = parser.parse_args()
+    print(opt.gpu)
     config.read('config-debug.ini')
     
     clients              = config.getint(opt.environment, 'clients', fallback=10)
@@ -177,25 +171,19 @@ def main():
     exploration          = config.getfloat(opt.environment, 'exploration', fallback=0.0)
     least_select_factor  = config.getfloat(opt.environment, 'least_select_factor', fallback=0.0)
     swap                 = config.getboolean(opt.environment, 'swap', fallback=True)
+    model                = config.get(opt.environment, 'model', fallback=None)
+    threshold            = config.getfloat(opt.environment, 'threshold', fallback=1)
     perc_of_clients      = perc_of_clients[0]
     dirichlet_alpha      = dirichlet_alpha[0]
     decay                = decay[0]
-  
+    # threshold            = threshold
 
     # participate_clients = start_clients(clients, init_clients)
-    participate_clients = [0,1,5,9,10,13]
+    participate_clients = [0,1,2,3,4]
     engaged_clients = ','.join([str(x) for x in participate_clients])
-    folder_log = get_LOG_FOLDER_name(
-        select_client_method = select_client_method,
-        dataset              = dataset,
-        clients              = clients,
-        engaged              = '0.4',
-        dirichlet            = dirichlet_alpha,
-        strategy             = strategy.lower(),
-        swap                 = swap,
-    )
+
     select_client_method = select_client_method if not select_client_method == None else 'none'
-    file_name = f'dockercompose-{strategy}-{dataset}-{select_client_method}-c{clients}-r{rounds}-e{0.4:.2f}-d{dirichlet_alpha}.yaml'.lower()
+    file_name = f'dockercompose-{strategy}-{dataset}-{select_client_method}-c{clients}-r{rounds}-le{local_epochs}-p{perc_of_clients:.2f}-exp{exploration:.2f}-lsf{least_select_factor:.2f}-dec{decay:.2f}-thr{threshold}.yaml'.lower()
     with open(file_name, 'w') as dockercompose_file:
         header = f"services:\n\n"
 
@@ -213,7 +201,12 @@ def main():
             exploitation=exploitation,
             exploration=exploration,
             least_select_factor=least_select_factor,
-            folder_log = folder_log
+            gpu       = opt.gpu,
+            threshold = threshold,
+            local_epochs=local_epochs,
+            no_iid=no_iid,
+            dirichlet_alpha=dirichlet_alpha,
+            swap = swap,
         )
 
         dockercompose_file.write(server_str)
@@ -228,13 +221,19 @@ def main():
                 dataset=dataset,
                 strategy=strategy,
                 local_epochs=local_epochs,
-                no_idd=no_iid,
+                no_iid=no_iid,
                 participate=participate,
                 dirichlet_alpha=dirichlet_alpha,
                 select_client_method=select_client_method,
-                folder_log = folder_log,
                 swap = swap,
                 rounds = rounds,
+                model = model,
+                gpu       = opt.gpu,
+                decay = decay,
+                exploitation = exploitation,
+                exploration = exploration,
+                least_select_factor = least_select_factor,
+                threshold = threshold,
             )
             
             dockercompose_file.write(client_str)

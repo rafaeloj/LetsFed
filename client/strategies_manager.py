@@ -16,45 +16,84 @@ def get_strategy(
     num_clients,
     dataset,
     epoch,
-    no_idd,
+    no_iid,
     participate,
     dirichlet_alpha,
     swap,
     rounds,
+    solution,
+    method,
+    exploitation: float,
+    exploration: float,
+    least_select_factor: float,
+    decay: float,
+    threshold: float,
+    # model,
 ):
     return MaverickClient(
         cid=cid,
         num_clients=num_clients,
         dataset=dataset,
-        no_iid=no_idd,
+        no_iid=no_iid,
         epoch=epoch,
         isParticipate=participate,
         dirichlet_alpha=dirichlet_alpha,
         swap        = swap,
-        rounds = rounds
+        rounds = rounds,
+        solution = solution,
+        method = method,
+        exploitation = exploitation,
+        exploration = exploration,
+        least_select_factor = least_select_factor,
+        decay = decay,
+        threshold = threshold,
+        # model = model,
     )
 def main():
-    cid              = int(os.environ['CLIENT_ID'])
-    num_clients      = int(os.environ['NUM_CLIENTS'])
-    dataset          = os.environ['DATASET']
-    local_epochs     = int(os.environ['LOCAL_EPOCHS'])
-    no_idd           = os.environ["NO_IDD"] == "True" 
-    participate      = os.environ["PARTICIPATE"] == "True"
-    dirichlet_alpha  = float(os.environ["DIRICHLET_ALPHA"])
-    swap             = os.environ['SWAP'] == 'True'
-    rounds            = int(os.environ['ROUNDS'])
+    cid                 = int(os.environ['CLIENT_ID'])
+    num_clients         = int(os.environ['NUM_CLIENTS'])
+    dataset             = os.environ['DATASET']
+    local_epochs        = int(os.environ['LOCAL_EPOCHS'])
+    no_iid              = os.environ["NO_IID"] == "True" 
+    participate         = os.environ["PARTICIPATE"] == "True"
+    dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
+    swap                = os.environ['SWAP'] == 'True'
+    rounds              = int(os.environ['ROUNDS'])
+    solution            = os.environ["STRATEGY"]
+    method              = os.environ["SELECT_CLIENT_METHOD"]
+    decay               = float(os.environ["DECAY"])
+    exploitation        = float(os.environ['EXPLOITATION'])
+    exploration         = float(os.environ['EXPLORATION'])
+    least_select_factor = float(os.environ['LEAST_SELECT_FACTOR'])
+    threshold           = float(os.environ['THRESHOLD'])
+    # model             = os.environ['MODEL']
+    
+    local_epochs        = int(os.environ['LOCAL_EPOCHS'])
+    dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
+    no_iid              = os.environ["NO_IID"] == "True" 
+    threshold           = float(os.environ['THRESHOLD'])
+    dataset             = os.environ['DATASET']    
+    
     fl.client.start_client(
         server_address=os.environ['SERVER_IP'],
         client=get_strategy(
-            cid             = cid,
-            num_clients     = num_clients,
-            dataset         = dataset,
-            epoch           = local_epochs,
-            no_idd          = no_idd,
-            participate     = participate,
-            dirichlet_alpha = dirichlet_alpha,
-            swap            = swap,
-            rounds          = rounds,
+            cid                 = cid,
+            num_clients         = num_clients,
+            dataset             = dataset,
+            epoch               = local_epochs,
+            no_iid              = no_iid,
+            participate         = participate,
+            dirichlet_alpha     = dirichlet_alpha,
+            swap                = swap,
+            rounds              = rounds,
+            solution            = solution,
+            method              = method,
+            decay               = decay,
+            exploitation        = exploitation,
+            exploration         = exploration,
+            least_select_factor = least_select_factor,
+            threshold           = threshold,
+            # model           = model,
         ).to_client()
     )
 

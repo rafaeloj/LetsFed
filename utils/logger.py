@@ -57,4 +57,4 @@ class Logger():
         self.log(filename = filename, data = rows, header = headers)
 
 
-my_logger = Logger(os.environ['LOG_FOLDER'])
+my_logger = Logger("")

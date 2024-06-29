@@ -10,6 +10,11 @@ class FedDEEV(fl.server.strategy.FedAvg):
     def __init__(
         self,
         n_clients:        int,
+        epoch: int,
+        dirichlet_alpha: float,
+        no_iid: bool,
+        dataset: str,
+        threshold: float,
         rounds:           int,
         fraction_clients: float = 1.0,
         perc_of_clients:  float = 0.5,
@@ -22,9 +27,17 @@ class FedDEEV(fl.server.strategy.FedAvg):
         self.list_of_accuracies = []
         self.selected_clients   = []
         
+
+        self.epoch = epoch
+        self.dirichlet_alpha = dirichlet_alpha
+        self.no_iid = no_iid
+        self.dataset = dataset
+        self.threshold = threshold
+
         ## DEEV
         self.perc_of_clients    = perc_of_clients
         self.decay_factor       = decay
+
         super().__init__(fraction_fit = self.frac_clients, min_available_clients = n_clients, min_fit_clients = n_clients, min_evaluate_clients = n_clients)
 
     def __select_clients(self, server_round):
@@ -41,12 +54,6 @@ class FedDEEV(fl.server.strategy.FedAvg):
             the_chosen_ones  = len(self.selected_clients) * (1 - self.decay_factor)**int(server_round)
             self.selected_clients = self.selected_clients[ : math.ceil(the_chosen_ones)]
 
-    def log_fit(self, data):
-        my_logger.log(
-            '/s-clients-selected.csv',
-            data = [data['server_round'], ';'.join(self.selected_clients)],
-            header = ['round', 'server_selection'],
-        )
     def configure_fit(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         self.__select_clients(server_round=server_round)
         sample_size, min_num_clients = self.num_fit_clients(
@@ -70,7 +77,6 @@ class FedDEEV(fl.server.strategy.FedAvg):
         return [(client, fit_ins) for client in clients]
 
     def aggregate_fit(self, server_round: int, results, failures):
-        self.log_fit({'server_round': server_round})
         deev_parameters = self._deev_aggregated_fit(results = results, server_round=server_round)
         return deev_parameters, {}
 
@@ -88,17 +94,6 @@ class FedDEEV(fl.server.strategy.FedAvg):
         self._last_fit = parameters_aggregated
         return parameters_aggregated
 
-    def log_eval(self, data):
-        my_logger.aggregate_eval("/s-infos.csv",[
-            data['server_round'], data['n_selected'], data['n_engaged'], data['n_not_engaged']
-        ])
-
-        if data['pass']:
-            my_logger.log(
-                "/s-pass-aggregate.csv",
-                data=[data['server_round'], ";".join(self.selected_clients)],
-                header=['round', 'selected_clients']
-            )
     def configure_evaluate(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         config = {
             'round': server_round,
@@ -152,14 +147,57 @@ class FedDEEV(fl.server.strategy.FedAvg):
 
         self.average_accuracy   = np.mean(accs)
 
+        # Update status
+        self.clients_intentions      = list(range(self.n_clients))
+        for cid in c_engaged + c_not_engaged:
+            self.clients_intentions[int(cid)] = True if cid in c_engaged else False
+        
         should_pass = len(loss_to_aggregate) == 0
-        self.log_eval({
-            'server_round': server_round,
-            'n_selected': len(self.selected_clients),
-            'n_engaged': len(c_engaged),
-            'n_not_engaged': len(c_not_engaged),
-            'pass': should_pass
-        })
+        my_logger.log(
+            '/s-data.csv',
+            header = [
+                'round',
+                'solution',
+                'method',
+                'n_selected',
+                'n_engaged',
+                'n_not_engaged',
+                'selection',
+                'r_intetion',
+                'r_robin',
+                'skip_round',
+                'epoch',
+                'dirichlet_alpha',
+                'no_iid',
+                'dataset',
+                'exploitation',
+                'exploration',
+                'least_select_factor',
+                'decay',
+                'threshold',
+            ],
+            data = [
+                server_round,
+                "DEEV",
+                None,
+                len(self.selected_clients),
+                len(c_engaged),
+                len(c_not_engaged),
+                '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
+                None,
+                None,
+                should_pass,
+                self.epoch,
+                self.dirichlet_alpha,
+                self.no_iid,
+                self.dataset,
+                None,
+                None,
+                None,
+                self.decay_factor,
+                self.threshold,
+            ]
+        )
         if should_pass:
             return self._last_eval
         

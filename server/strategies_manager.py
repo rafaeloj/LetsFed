@@ -18,6 +18,11 @@ def get_strategy(
     exploitation: float,
     exploration: float,
     least_select_factor: float,
+    epoch,
+    dirichlet_alpha,
+    no_iid,
+    dataset,
+    threshold,
 ):
         if strategy == 'CIA':
             return FedCIA(
@@ -29,6 +34,12 @@ def get_strategy(
                 exploration          = exploration,
                 least_select_factor  = least_select_factor, # Seleção 'justa'
                 decay                = decay,
+                solution             = strategy,
+                epoch = epoch,
+                dirichlet_alpha = dirichlet_alpha,
+                no_iid = no_iid,
+                dataset = dataset,
+                threshold = threshold,
             )
         if strategy == 'POC':
             return FedPOC(
@@ -36,6 +47,11 @@ def get_strategy(
                 rounds           = rounds,
                 fraction_clients = fraction_clients,
                 perc_of_clients  = perc_of_clients,
+                dataset= dataset,
+                dirichlet_alpha= dirichlet_alpha,
+                epoch= epoch,
+                no_iid=no_iid,
+                threshold=threshold,
             )
         if strategy == 'DEEV':
             return FedDEEV(
@@ -44,12 +60,22 @@ def get_strategy(
                 fraction_clients = fraction_clients,
                 perc_of_clients  = perc_of_clients,
                 decay            = decay,
+                epoch = epoch,
+                dirichlet_alpha = dirichlet_alpha,
+                no_iid = no_iid,
+                dataset = dataset,
+                threshold = threshold,
             )
         if strategy == 'AVG':
             return FedAvg(
                     n_clients = n_clients,
                     rounds = rounds,
-                    perc = perc_of_clients
+                    perc = perc_of_clients,
+                epoch = epoch,
+                dirichlet_alpha = dirichlet_alpha,
+                no_iid = no_iid,
+                dataset = dataset,
+                threshold = threshold,
             )
 def main():
     strategy         = os.environ['STRATEGY']
@@ -58,12 +84,16 @@ def main():
     fraction_clients = 1
     perc_of_client   = float(os.environ["PERC_OF_CLIENTS"])
     decay            = float(os.environ["DECAY"])
-    select_client_method = os.environ["SELECT_CLIENT_METHOD"]
-    engaged_clients  = [int(x) for x in os.environ['ENGAGED_CLIENTS'].split(',')]
     exploitation     = float(os.environ['EXPLOITATION'])
     exploration      = float(os.environ['EXPLORATION'])
     least_select_factor = float(os.environ['LEAST_SELECT_FACTOR'])
-
+    select_client_method = os.environ["SELECT_CLIENT_METHOD"]
+    engaged_clients     = [int(x) for x in os.environ['ENGAGED_CLIENTS'].split(',')]
+    local_epochs        = int(os.environ['LOCAL_EPOCHS'])
+    dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
+    no_iid              = os.environ["NO_IID"] == "True" 
+    threshold           = float(os.environ['THRESHOLD'])
+    dataset             = os.environ['DATASET']
     my_logger.log(
         '/s-teste.csv',
         data = [0, 'TESTE'],
@@ -84,6 +114,11 @@ def main():
             exploitation         = exploitation,
             exploration          = exploration,
             least_select_factor  = least_select_factor,
+            epoch  = local_epochs,
+            dirichlet_alpha = dirichlet_alpha,
+            no_iid = no_iid,
+            threshold = threshold,
+            dataset = dataset,
         )
     )
 

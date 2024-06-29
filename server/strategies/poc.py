@@ -9,6 +9,11 @@ class FedPOC(fl.server.strategy.FedAvg):
         self,
         n_clients:        int,
         rounds:           int,
+        epoch: int,
+        dirichlet_alpha: float,
+        no_iid: bool,
+        dataset: str,
+        threshold: float,
         fraction_clients: float = 1.0,
         perc_of_clients:  float = 0.5,
     ):
@@ -19,6 +24,13 @@ class FedPOC(fl.server.strategy.FedAvg):
         self.list_of_accuracies = []
         self.selected_clients   = []
         self.perc_of_clients    = perc_of_clients
+
+        self.epoch = epoch
+        self.dirichlet_alpha = dirichlet_alpha
+        self.no_iid = no_iid
+        self.dataset = dataset
+        self.threshold = threshold
+
         super().__init__(fraction_fit = self.frac_clients, min_available_clients = n_clients, min_fit_clients = n_clients, min_evaluate_clients = n_clients)
 
     def __select_clients(self, server_round):
@@ -28,13 +40,6 @@ class FedPOC(fl.server.strategy.FedAvg):
         self.selected_clients = []
         clients2select        = int(float(self.n_clients) * float(self.perc_of_clients))
         self.selected_clients = self.list_of_clients[:clients2select]
-    
-    def log_fit(self, data):
-        my_logger.log(
-            '/s-clients-selected.csv',
-            data = [data['server_round'], ';'.join(self.selected_clients)],
-            header = ['round', 'server_selection'],
-        )
 
     def configure_fit(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         self.__select_clients(server_round)
@@ -62,7 +67,6 @@ class FedPOC(fl.server.strategy.FedAvg):
 
     def aggregate_fit(self, server_round: int, results, failures):
         poc_parameters = self._poc_aggregated_fit(results = results, server_round=server_round)
-        self.log_fit({'server_round': server_round})
         return poc_parameters, {}
 
     def _poc_aggregated_fit(self, results, server_round):
@@ -81,17 +85,6 @@ class FedPOC(fl.server.strategy.FedAvg):
         self._last_fit = parameters_aggregated
         return parameters_aggregated
 
-    def log_eval(self, data):
-        my_logger.aggregate_eval("/s-infos.csv",[
-            data['server_round'], data['n_selected'], data['n_engaged'], data['n_not_engaged']
-        ])
-
-        if data['pass']:
-            my_logger.log(
-                "/s-pass-aggregate.csv",
-                data=[data['server_round'], ";".join(self.selected_clients)],
-                header=['round', 'selected_clients']
-            )
 
     def configure_evaluate(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         if self.fraction_evaluate == 0.0:
@@ -144,14 +137,57 @@ class FedPOC(fl.server.strategy.FedAvg):
 
         self.list_of_clients    = [str(client[0]) for client in local_list_clients]
 
+        # Update status
+        self.clients_intentions      = list(range(self.n_clients))
+        for cid in c_engaged + c_not_engaged:
+            self.clients_intentions[int(cid)] = True if cid in c_engaged else False
+
         should_pass = len(loss_to_aggregate) == 0
-        self.log_eval({
-            'server_round': server_round,
-            'n_selected': len(self.selected_clients),
-            'n_engaged': len(c_engaged),
-            'n_not_engaged': len(c_not_engaged),
-            'pass': should_pass
-        })
+        my_logger.log(
+            '/s-data.csv',
+            header = [
+                'round',
+                'solution',
+                'method',
+                'n_selected',
+                'n_engaged',
+                'n_not_engaged',
+                'selection',
+                'r_intetion',
+                'r_robin',
+                'skip_round',
+                'epoch',
+                'dirichlet_alpha',
+                'no_iid',
+                'dataset',
+                'exploitation',
+                'exploration',
+                'least_select_factor',
+                'decay',
+                'threshold',
+            ],
+            data = [
+                server_round,
+                "POC",
+                None,
+                len(self.selected_clients),
+                len(c_engaged),
+                len(c_not_engaged),
+                '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
+                None,
+                None,
+                should_pass,
+                self.epoch,
+                self.dirichlet_alpha,
+                self.no_iid,
+                self.dataset,
+                None,
+                None,
+                None,
+                None,
+                self.threshold,
+            ]
+        )
         if should_pass:
             return self._last_eval
     
