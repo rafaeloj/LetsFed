@@ -278,6 +278,7 @@ class MaverickClient(fl.client.NumPyClient):
                 self.threshold,
             ]
         )
+        eval_resp['fit_acc'] = self.g_fit_acc
 
         return loss, shape, eval_resp
 

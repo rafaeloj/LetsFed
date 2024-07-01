@@ -1,18 +1,35 @@
 from .driver import Driver
 import tensorflow as tf
-from utils.select_by_server import is_select_by_server
+# from utils.select_by_server import is_select_by_server
 
 WILLING_PERC = 1.0
 
 class AccuracyDriver(Driver):
-    def __init__(self, input_shape):
-        self._create_model(input_shape = input_shape)
+    def __init__(self, input_shape, model):
+        self._create_model(input_shape = input_shape, model = model)
         self.history = []
     
     def get_name(self):
         return "accuracy_driver"
 
-    def _create_model(self, input_shape):
+    def _create_model(self, input_shape, model):
+        if model == 'cnn':
+            print("CREATE CNN")
+            print(input_shape)
+            print("CREATE CNN")
+            self.model = tf.keras.models.Sequential([
+                tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), activation='relu', kernel_initializer='he_uniform', input_shape=input_shape[1:]),
+                tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), activation='relu', kernel_initializer='he_uniform'),
+                tf.keras.layers.Dropout(0.6),
+                tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+                
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(50, activation='relu'),
+                tf.keras.layers.Dense(10, activation='softmax'),
+            ])
+            self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+            return
         self.model = tf.keras.models.Sequential([
             tf.keras.layers.Input(shape=input_shape[1:]),
             tf.keras.layers.Flatten(),

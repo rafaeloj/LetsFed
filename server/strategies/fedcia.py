@@ -191,6 +191,7 @@ class FedCIA(fl.server.strategy.FedAvg):
                 'want': eval_res.metrics['want'],
                 'loss': eval_res.loss,
                 'acc': eval_res.metrics['acc'],
+                'fit_acc': eval_res.metrics['fit_acc'],
                 'dynamic_engagement': eval_res.metrics['dynamic_engagement'],
                 'r_intention': eval_res.metrics['r_intention']
             }
@@ -219,7 +220,7 @@ class FedCIA(fl.server.strategy.FedAvg):
         self.engaged_clients         = [(client_info['cid'], client_info['want'], client_info['dynamic_engagement']) for client_info in clients_info if client_info['want']]
         self.engaged_clients_acc     = [(client_info['cid'], client_info['acc']) for client_info in clients_info if client_info['want']]
         self.not_engaged_clients     = [(client_info['cid'], client_info['want'], client_info['dynamic_engagement']) for client_info in clients_info if not client_info['want']]
-        self.not_engaged_clients_acc = [(client_info['cid'], client_info['acc']) for client_info in clients_info if not client_info['want']]
+        self.not_engaged_clients_acc = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if not client_info['want']]
         self.r_intetions             = np.array([client_info['r_intention'] for client_info in clients_info])
         # atualizar
         for client_info in self.engaged_clients:

@@ -62,8 +62,6 @@ def add_server_info(
       {'resources:' if gpu else ''}\n\
         {'reservations:' if gpu else ''}\n\
           {'devices:' if gpu else ''}\n\
-            {'- driver: nvidia' if gpu else ''}\n\
-            {'- count: 1' if gpu else ''}\n\
             {'- capabilities: [gpu]' if gpu else ''}\n\
       placement:\n\
         constraints:\n\
@@ -131,8 +129,6 @@ def add_client_info(
       {'resources:' if gpu else ''}\n\
         {'reservations:' if gpu else ''}\n\
           {'devices:' if gpu else ''}\n\
-            {'- driver: nvidia' if gpu else ''}\n\
-            {'- count: 1' if gpu else ''}\n\
             {'- capabilities: [gpu]' if gpu else ''}\n\
       placement:\n\
         constraints:\n\
