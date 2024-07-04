@@ -16,9 +16,12 @@ class FedDEEV(fl.server.strategy.FedAvg):
         dataset: str,
         threshold: float,
         rounds:           int,
-        fraction_clients: float = 1.0,
-        perc_of_clients:  float = 0.5,
-        decay:            float = 0,
+        fraction_clients: float,
+        perc_of_clients:  float,
+        decay:            float,
+        model_type:       str,
+        init_clients: float,
+        config_test: str,
     ):
         self.n_clients          = n_clients
         self.frac_clients       = fraction_clients
@@ -26,14 +29,15 @@ class FedDEEV(fl.server.strategy.FedAvg):
         self.list_of_clients    = []
         self.list_of_accuracies = []
         self.selected_clients   = []
-        
+        self.init_clients = init_clients
 
         self.epoch = epoch
         self.dirichlet_alpha = dirichlet_alpha
         self.no_iid = no_iid
         self.dataset = dataset
         self.threshold = threshold
-
+        self.model_type = model_type
+        self.config_test = config_test
         ## DEEV
         self.perc_of_clients    = perc_of_clients
         self.decay_factor       = decay
@@ -63,7 +67,7 @@ class FedDEEV(fl.server.strategy.FedAvg):
         self.clients_last_round = self.selected_clients
         config = {
 			"selected_by_server" : ','.join(self.selected_clients),
-            'round'          : server_round,
+            'rounds'          : server_round,
         }
 
         fit_ins = FitIns(parameters, config)
@@ -96,7 +100,7 @@ class FedDEEV(fl.server.strategy.FedAvg):
 
     def configure_evaluate(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         config = {
-            'round': server_round,
+            'rounds': server_round,
 			"selected_by_server" : ','.join(self.selected_clients),
         }
 
@@ -155,48 +159,29 @@ class FedDEEV(fl.server.strategy.FedAvg):
         should_pass = len(loss_to_aggregate) == 0
         my_logger.log(
             '/s-data.csv',
-            header = [
-                'round',
-                'solution',
-                'method',
-                'n_selected',
-                'n_engaged',
-                'n_not_engaged',
-                'selection',
-                'r_intetion',
-                'r_robin',
-                'skip_round',
-                'epoch',
-                'dirichlet_alpha',
-                'no_iid',
-                'dataset',
-                'exploitation',
-                'exploration',
-                'least_select_factor',
-                'decay',
-                'threshold',
-            ],
-            data = [
-                server_round,
-                "DEEV",
-                None,
-                len(self.selected_clients),
-                len(c_engaged),
-                len(c_not_engaged),
-                '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
-                None,
-                None,
-                should_pass,
-                self.epoch,
-                self.dirichlet_alpha,
-                self.no_iid,
-                self.dataset,
-                None,
-                None,
-                None,
-                self.decay_factor,
-                self.threshold,
-            ]
+            data = {
+                'rounds': server_round,
+                'strategy': 'deev',
+                'model_type': self.model_type,
+                'select_client_method': None,
+                'n_selected': len(self.selected_clients),
+                'n_engaged': len(c_engaged),
+                'n_not_engaged': len(c_not_engaged),
+                'selection': '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
+                'r_intetion': None,
+                'r_robin': None,
+                'skip_round': should_pass,
+                'local_epochs': self.epoch,
+                'dirichlet_alpha': self.dirichlet_alpha,
+                'no_iid': self.no_iid,
+                'dataset': self.dataset.lower(),
+                'exploitation': None,
+                'exploration': None,
+                'decay': self.decay_factor,
+                'threshold': self.threshold,
+                'init_clients': self.init_clients,
+                'config_test': self.config_test,
+            }
         )
         if should_pass:
             return self._last_eval

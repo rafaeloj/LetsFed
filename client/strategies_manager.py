@@ -28,7 +28,9 @@ def get_strategy(
     least_select_factor: float,
     decay: float,
     threshold: float,
-    # model,
+    model_type,
+    init_clients: float,
+    config_test: str,
 ):
     return MaverickClient(
         cid=cid,
@@ -47,7 +49,9 @@ def get_strategy(
         least_select_factor = least_select_factor,
         decay = decay,
         threshold = threshold,
-        # model = model,
+        model_type = model_type,
+        init_clients = init_clients,
+        config_test = config_test,
     )
 def main():
     cid                 = int(os.environ['CLIENT_ID'])
@@ -67,12 +71,14 @@ def main():
     least_select_factor = float(os.environ['LEAST_SELECT_FACTOR'])
     threshold           = float(os.environ['THRESHOLD'])
     # model             = os.environ['MODEL']
-    
+    init_clients        = float(os.environ['INIT_CLIENTS'])
     local_epochs        = int(os.environ['LOCAL_EPOCHS'])
     dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
     no_iid              = os.environ["NO_IID"] == "True" 
     threshold           = float(os.environ['THRESHOLD'])
-    dataset             = os.environ['DATASET']    
+    dataset             = os.environ['DATASET']
+    model_type          = os.environ['MODEL_TYPE']
+    config_test         = os.environ["CONFIG_TEST"]
     
     fl.client.start_client(
         server_address=os.environ['SERVER_IP'],
@@ -93,7 +99,9 @@ def main():
             exploration         = exploration,
             least_select_factor = least_select_factor,
             threshold           = threshold,
-            # model           = model,
+            model_type          = model_type,
+            init_clients        = init_clients,
+            config_test         = config_test,
         ).to_client()
     )
 

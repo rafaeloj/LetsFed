@@ -5,30 +5,35 @@ import tensorflow as tf
 WILLING_PERC = 1.0
 
 class AccuracyDriver(Driver):
-    def __init__(self, input_shape, model):
-        self._create_model(input_shape = input_shape, model = model)
+    def __init__(self, input_shape, model_type):
+        self._create_model(input_shape = input_shape, model_type = model_type)
         self.history = []
     
     def get_name(self):
         return "accuracy_driver"
 
-    def _create_model(self, input_shape, model):
-        if model == 'cnn':
-            print("CREATE CNN")
-            print(input_shape)
-            print("CREATE CNN")
+    def _create_model(self, input_shape, model_type):
+        if model_type == "cnn":
             self.model = tf.keras.models.Sequential([
-                tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), activation='relu', kernel_initializer='he_uniform', input_shape=input_shape[1:]),
-                tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 3), activation='relu', kernel_initializer='he_uniform'),
-                tf.keras.layers.Dropout(0.6),
-                tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-                
+                tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape[1:]),
+                tf.keras.layers.MaxPooling2D((2, 2)),
+                tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+                tf.keras.layers.MaxPooling2D((2, 2)),
+                tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+                tf.keras.layers.MaxPooling2D((2, 2)),
+                tf.keras.layers.Dropout(0.25),
                 tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(50, activation='relu'),
+                tf.keras.layers.Dense(512, activation='relu'),
+                tf.keras.layers.Dropout(0.5),
                 tf.keras.layers.Dense(10, activation='softmax'),
             ])
-            self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
+            self.model.compile(
+                optimizer='adam',
+                loss='sparse_categorical_crossentropy',
+                metrics=['accuracy']
+            )
             return
         self.model = tf.keras.models.Sequential([
             tf.keras.layers.Input(shape=input_shape[1:]),
@@ -39,10 +44,11 @@ class AccuracyDriver(Driver):
             tf.keras.layers.Dense(10, activation='softmax'),
 
         ])
-        self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
+        self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    
     def analyze(self, client, parameters, config):       
-        server_round = config['round']
+        server_round = config['rounds']
 
 
         willing = 0

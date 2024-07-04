@@ -35,11 +35,14 @@ class MaverickClient(fl.client.NumPyClient):
         rounds:               int,
         solution:             str,
         method:               str,
+        init_clients:         float,
         exploitation: float,
         exploration: float,
         least_select_factor: float,
         decay: float,
         threshold: float,
+        model_type: str,
+        config_test: str,
     ):
         self.miss                                            = 0 # Criar contador de quando mudou de estado
         self.cid                                             = cid
@@ -51,6 +54,7 @@ class MaverickClient(fl.client.NumPyClient):
         self.x_train, self.y_train, self.x_test, self.y_test = self.load_data()
         self.dynamic_engagement                              = isParticipate
         # Models
+        self.model_type                                      = model_type
         self.model                                           = self.create_model(self.x_train.shape)
         self.debug_model                                     = self.create_model(self.x_train.shape)
         self.swap                                            = swap
@@ -67,12 +71,14 @@ class MaverickClient(fl.client.NumPyClient):
         self.least_select_factor                             = least_select_factor
         self.decay                                           = decay
         self.threshold                                       = threshold
+        self.init_clients                                    = init_clients
+        self.config_test                                     = config_test
         if self.dynamic_engagement:
             self.rounds_intention = self.rounds*0.1
             self.drivers_results['curiosity_driver'] = self.rounds_intention
     def set_behaviors(self):
         drivers: List[Driver] = [
-            AccuracyDriver(input_shape = self.x_train.shape, model=''),
+            AccuracyDriver(input_shape = self.x_train.shape, model_type=self.model_type),
             CuriosityDriver(),
         ]
         return {
@@ -109,19 +115,28 @@ class MaverickClient(fl.client.NumPyClient):
             return train['img'], train['label'], test['img'], test['label']
         
     def create_model(self, input_shape):
-        if self.dataset.lower() == "cifar10":            
-            deep_cnn = tf.keras.layers.Sequential()
-            deep_cnn.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu',kernel_initializer='he_uniform', input_shape=(input_shape[1], 1)))
-            deep_cnn.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu',kernel_initializer='he_uniform'))
-            deep_cnn.add(tf.keras.layers.Dropout(0.6))
-            deep_cnn.add(tf.keras.layers.MaxPooling1D(pool_size=2))
-            deep_cnn.add(tf.keras.layers.Flatten())
-            deep_cnn.add(tf.keras.layers.Dense(50, activation='relu'))
-            deep_cnn.add(tf.keras.layers.Dense(10, activation='softmax'))
-        
-            deep_cnn.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-            return deep_cnn
+        if self.model_type == "cnn":
+            model = tf.keras.models.Sequential([
+                tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape[1:]),
+                tf.keras.layers.MaxPooling2D((2, 2)),
+                tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+                tf.keras.layers.MaxPooling2D((2, 2)),
+                tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+                tf.keras.layers.MaxPooling2D((2, 2)),
+                tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(512, activation='relu'),
+                tf.keras.layers.Dropout(0.5),
+                tf.keras.layers.Dense(10, activation='softmax'),
+            ])
+            model.compile(
+                optimizer='adam',
+                loss='sparse_categorical_crossentropy',
+                metrics=['accuracy']
+            )
+            return model
         model = tf.keras.models.Sequential([
             tf.keras.layers.Input(shape=input_shape[1:]),
             tf.keras.layers.Flatten(),
@@ -158,7 +173,7 @@ class MaverickClient(fl.client.NumPyClient):
             return self._not_engaged_fit(parameters=parameters, config=config, server_selection='selected') 
         
         model_size = sum([layer.nbytes for layer in parameters])
-        new_parameters, acc, loss, cost = self._global_fit(weights=parameters, server_round=config['round']) # Atualiza o modelo global com dados do cliente
+        new_parameters, acc, loss, cost = self._global_fit(weights=parameters, server_round=config['rounds']) # Atualiza o modelo global com dados do cliente
 
         self.g_fit_acc = np.mean(acc)
         self.g_fit_loss = np.mean(loss)
@@ -213,70 +228,41 @@ class MaverickClient(fl.client.NumPyClient):
 
         my_logger.log(
             '/c-data.csv',
-            header = [
-                'round',
-                'cid',
-                'solution',
-                'method',
-                'g_eval_acc',
-                'g_eval_loss',
-                'l_eval_acc',
-                'l_eval_loss',
-                'g_fit_acc',
-                'g_fit_loss',
-                'l_fit_acc',
-                'l_fit_loss',
-                'dynamic_engagement',
-                'old_dynamic_engagement',
-                'is_selected',
-                'desire',
-                'size',
-                'cost',
-                'willing',
-                'r_intention',
-                'miss',
-                'epoch',
-                'dirichlet_alpha',
-                'no_iid',
-                'dataset',
-                'exploitation',
-                'exploration',
-                'least_select_factor',
-                'decay',
-                'threshold',
-            ],
-            data = [
-                config['round'],
-                self.cid,
-                self.solution,
-                self.method,
-                self.g_eval_acc,
-                self.g_eval_loss,
-                self.l_eval_acc,
-                self.l_eval_loss,
-                self.g_fit_acc,
-                self.g_fit_loss,
-                self.l_fit_acc,
-                self.l_fit_loss,
-                self.dynamic_engagement,
-                self.old_dynamic_engagement,
-                is_select,
-                self.want,
-                self.model_size,
-                self.cost,
-                self.willing,
-                self.r_intention,
-                self.miss,
-                self.epoch,
-                self.dirichlet_alpha,
-                self.no_iid,
-                self.dataset,
-                self.exploitation,
-                self.exploration,
-                self.least_select_factor,
-                self.decay,
-                self.threshold,
-            ]
+            data = {
+                'rounds': config['rounds'], 
+                'cid': self.cid, 
+                'strategy': self.solution.lower(), 
+                'select_client_method': self.method.lower(), 
+                'model_type': self.model_type.lower(), 
+                'g_eval_acc': self.g_eval_acc, 
+                'g_eval_loss': self.g_eval_loss, 
+                'l_eval_acc': self.l_eval_acc, 
+                'l_eval_loss': self.l_eval_loss, 
+                'g_fit_acc': self.g_fit_acc, 
+                'g_fit_loss': self.g_fit_loss, 
+                'l_fit_acc': self.l_fit_acc, 
+                'l_fit_loss': self.l_fit_loss, 
+                'dynamic_engagement': self.dynamic_engagement, 
+                'old_dynamic_engagement': self.old_dynamic_engagement, 
+                'is_selected': is_select, 
+                'desire': self.want, 
+                'size': self.model_size, 
+                'cost': self.cost, 
+                'willing': self.willing, 
+                'r_intention': self.r_intention, 
+                'miss': self.miss, 
+                'local_epochs': self.epoch, 
+                'dirichlet_alpha': self.dirichlet_alpha, 
+                'no_iid': self.no_iid, 
+                'dataset': self.dataset.lower(), 
+                'exploitation': self.exploitation, 
+                'exploration': self.exploration, 
+                'least_select_factor': self.least_select_factor, 
+                'decay': self.decay, 
+                'threshold': self.threshold, 
+                'init_clients': self.init_clients,
+                'config_test': self.config_test,
+            }
         )
         eval_resp['fit_acc'] = self.g_fit_acc
 
@@ -342,8 +328,12 @@ class MaverickClient(fl.client.NumPyClient):
                 self.drivers_results['accuracy_driver'] = value
                 my_logger.log(
                     "/c-curiosity-cp.csv",
-                    data=[config['round'], self.cid, value, self.threshold],
-                    header=["round", 'cid', 'value', 'threshold'],
+                    data={
+                        "round": config['rounds'],
+                        'cid': self.cid,
+                        'value': value,
+                        'threshold': self.threshold,
+                    },
                 )
                 if value > self.threshold:
                     self.dynamic_engagement = True
@@ -356,8 +346,12 @@ class MaverickClient(fl.client.NumPyClient):
             self.behaviors['curiosity_driver'].finish(self)
         my_logger.log(
             "/d-curiosity.csv",
-            data=[config['round'], self.cid, self.behaviors['curiosity_driver'].state, self.behaviors['curiosity_driver'].current_round],
-            header=["round", 'cid', 'value', 'threshold'],
+            data = {
+                "round": config['rounds'],
+                'cid': self.cid,
+                'value': self.behaviors['curiosity_driver'].state,
+                'threshold': self.behaviors['curiosity_driver'].current_round,
+            },
         )
         return
 

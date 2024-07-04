@@ -7,7 +7,7 @@ class SelectionDriver(Driver):
         self.selection = selection_method
 
     def run(self, server, parameters, config):
-        self._select_clients(server=server, server_round=config['round'])
+        self._select_clients(server=server, server_round=config['rounds'])
 
     def _select_clients(self, server, server_round):
         """Menos selecionados com exploração randomica ou utilizando o deev"""
@@ -16,14 +16,7 @@ class SelectionDriver(Driver):
             return
         
         not_engaged = []
-        
         engaged = server.engaged_clients
-        # tmp_engaged =  
-        # max_clients = server.n_clients*.5
-        # if len(tmp_engaged) > max_clients:
-        #     while len(engaged) < max_clients:
-        #         engaged.append(tmp_engaged.pop(0))
-
 
         if server.select_client_method == 'default':
             not_engaged = self._deev_not_engaged(server = server, server_round = server_round)
@@ -32,23 +25,6 @@ class SelectionDriver(Driver):
         if server.select_client_method == 'r_robin':
             not_engaged = self._r_robin_not_engaged(server = server)
 
-        
-        # if not 1 in [info[0] for info in client_to_send_model]:
-        #     client_to_send_model = client_to_send_model + [(1, True)]
-        # if not 2 in [info[0] for info in client_to_send_model]:
-        #     client_to_send_model = client_to_send_model + [(2, True)]
-
-
-        # if len(client_to_send_model) < server.n_clients *0.3:
-        #     faltantes = (server.n_clients *0.3) - len(client_to_send_model)
-        #     not_select = [
-        #         i for i in range(server.n_clients) if i not in [int(info[0]) for info in client_to_send_model]
-        #     ]
-        #     clientes_faltantes = random.sample(not_select, faltantes)
-        #     conjunto_faltante = [(c, True) for c in clientes_faltantes]
-        #     client_to_send_model = client_to_send_model + conjunto_faltante
-        # if len(engaged) < 2:
-        #     engaged = random.sample(server.engaged_clients,2)
         server.selected_clients = engaged + not_engaged
     
     def _r_robin_not_engaged(self, server):
@@ -60,7 +36,8 @@ class SelectionDriver(Driver):
         sort_indexes = np.argsort(how_many_time_selected_client_not_engaged_index)
         
         # Pegando o top menos chamados
-        top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_not_engaged_index)*server.least_select_factor)]
+        # top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_not_engaged_index)*server.least_select_factor)]
+        top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_not_engaged_index)*server.exploration)]
 
         # Update score
         for cid_value_index in top_values_of_cid:
@@ -83,7 +60,8 @@ class SelectionDriver(Driver):
         sort_indexes = np.argsort(how_many_time_selected_client_engaged_index)
         
         # Pegando o top menos chamados
-        top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_engaged_index)*server.least_select_factor)]
+        # top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_engaged_index)*server.least_select_factor)]
+        top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_engaged_index)*server.exploration)]
 
         # Update score
         for cid_value_index in top_values_of_cid:
@@ -139,13 +117,14 @@ class SelectionDriver(Driver):
             the_chosen_ones  = len(selected_clients) * (1 - server.decay_factor)**int(server_round)
             selected_clients = selected_clients[ : math.ceil(the_chosen_ones)]
 
-        return selected_clients
+        return selected_clients[:int(len(selected_clients)*server.exploration)]
+        # return selected_clients
 
     def _random_select(self, server, server_round):
         if server_round == 1:
             return server.engaged_clients
         # Sorteia N clientes da lista de clientes interessados
-        perc = int(len(server.engaged_clients)*0.5)
+        perc = int(len(server.engaged_clients)*server.exploration)
         select_clients = random.sample(server.engaged_clients, perc)
         
         client_to_send_model = select_clients + server._exploration_clients()

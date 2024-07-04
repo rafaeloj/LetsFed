@@ -16,6 +16,9 @@ class FedAvg(fl.server.strategy.FedAvg):
             no_iid: bool,
             dataset: str,
             threshold: float,
+            model_type: str,
+            init_clients: float,
+            config_test: str,
         ):
         self.n_clients = n_clients
         self.rounds = rounds
@@ -27,6 +30,9 @@ class FedAvg(fl.server.strategy.FedAvg):
         self.no_iid = no_iid
         self.dataset = dataset
         self.threshold = threshold
+        self.model_type = model_type
+        self.init_clients = init_clients
+        self.config_test = config_test
 
         super().__init__(fraction_fit = 1, min_available_clients = n_clients, min_fit_clients = n_clients, min_evaluate_clients = n_clients)
 
@@ -40,12 +46,9 @@ class FedAvg(fl.server.strategy.FedAvg):
 
     def configure_fit(self, server_round, parameters, client_manager):
         self.selected_clients = self._exploration_clients(server_round)
-        
-        sample_size, min_num_clients = self.num_fit_clients(
-            client_manager.num_available()
-        )
+
         config = {
-            'round'          : server_round,
+            'rounds'          : server_round,
 			"selected_by_server" : ','.join(self.selected_clients),
         }
 
@@ -78,7 +81,7 @@ class FedAvg(fl.server.strategy.FedAvg):
             
     def configure_evaluate(self, server_round, parameters, client_manager: ClientManager):
         config = {
-            'round': server_round,
+            'rounds': server_round,
 			"selected_by_server" : ','.join(self.selected_clients),
         }
         evaluate_ins = EvaluateIns(parameters, config)
@@ -114,48 +117,29 @@ class FedAvg(fl.server.strategy.FedAvg):
         
         my_logger.log(
             '/s-data.csv',
-            header = [
-                'round',
-                'solution',
-                'method',
-                'n_selected',
-                'n_engaged',
-                'n_not_engaged',
-                'selection',
-                'r_intetion',
-                'r_robin',
-                'skip_round',
-                'epoch',
-                'dirichlet_alpha',
-                'no_iid',
-                'dataset',
-                'exploitation',
-                'exploration',
-                'least_select_factor',
-                'decay',
-                'threshold',
-            ],
-            data = [
-                server_round,
-                "AVG",
-                "random",
-                len(self.selected_clients),
-                len(c_engaged),
-                len(c_not_engaged),
-                '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
-                None,
-                None,
-                should_pass,
-                self.epoch,
-                self.dirichlet_alpha,
-                self.no_iid,
-                self.dataset,
-                None,
-                self.exploration,
-                None,
-                None,
-                self.threshold,
-            ]
+            data = {
+                'rounds': server_round,
+                'strategy': 'avg',
+                'model_type': self.model_type.lower(),
+                'select_client_method': 'random',
+                'n_selected': len(self.selected_clients),
+                'n_engaged': len(c_engaged),
+                'n_not_engaged': len(c_not_engaged),
+                'selection': '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
+                'r_intetion': None,
+                'r_robin': None,
+                'skip_round': should_pass,
+                'local_epochs': self.epoch,
+                'dirichlet_alpha': self.dirichlet_alpha,
+                'no_iid': self.no_iid,
+                'dataset': self.dataset.lower(),
+                'exploitation': None,
+                'exploration': self.exploration,
+                'decay': None,
+                'threshold': self.threshold,
+                'init_clients': self.init_clients,
+                'config_test': self.config_test,
+            },
         )
 
         if should_pass:

@@ -26,6 +26,9 @@ class FedCIA(fl.server.strategy.FedAvg):
         no_iid: bool,
         dataset: float,
         threshold: float,
+        model_type: str,
+        init_clients: float,
+        config_test: str,
     ):
         self.n_clients = n_clients
         self.rounds = rounds
@@ -34,10 +37,11 @@ class FedCIA(fl.server.strategy.FedAvg):
         self.not_engaged_clients  = [(cid, False) for cid in range(n_clients) if cid not in engaged_clients]
         self.clients_intentions      = list(range(self.n_clients))
         self.solution = solution
+        self.init_clients = init_clients
         for client_info in self.engaged_clients + self.not_engaged_clients:
             self.clients_intentions[client_info[0]] = client_info[1]
         self.select_client_method = select_client_method
-        self.least_select_factor  = least_select_factor
+        # self.least_select_factor  = least_select_factor
         self.decay_factor         = decay
         # Select
         self.selected_clients = []
@@ -46,13 +50,14 @@ class FedCIA(fl.server.strategy.FedAvg):
         self.exploitation = exploitation ## Ta errado o termo mas não consegui pensar em outro nome
         self.exploration = exploration
         
-        
+        self.model_type = model_type
         self.epoch = epoch
         self.dirichlet_alpha = dirichlet_alpha
         self.no_iid = no_iid
         self.dataset = dataset
         self.decay = decay
         self.threshold = threshold
+        self.config_test = config_test
         # least select
         self.how_many_time_selected = np.array([0 for _ in range(n_clients)])
         self.how_many_time_selected_not_engaged = np.array([0 for _ in range(n_clients)])
@@ -78,7 +83,7 @@ class FedCIA(fl.server.strategy.FedAvg):
             num_clients=sample_size, min_num_clients=min_num_clients
         )
         config = {
-            'round': server_round,
+            'rounds': server_round,
         }
 
         self.behaviors['selection_driver'].run(self, parameters = parameters, config = config)
@@ -110,7 +115,7 @@ class FedCIA(fl.server.strategy.FedAvg):
 
     def configure_evaluate(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         config = {
-            'round': server_round,
+            'rounds': server_round,
             'selected_by_server': ','.join([str(client[0]) for client in self.selected_clients])
         }
 
@@ -128,49 +133,29 @@ class FedCIA(fl.server.strategy.FedAvg):
         cia_loss_aggregated = self._cia_aggregate_evaluate(results = results)
         my_logger.log(
             '/s-data.csv',
-            header = [
-                'round',
-                'solution',
-                'method',
-                'n_selected',
-                'n_engaged',
-                'n_not_engaged',
-                'selection',
-                'r_intetion',
-                'r_robin',
-                'skip_round',
-                'epoch',
-                'dirichlet_alpha',
-                'no_iid',
-                'dataset',
-                'exploitation',
-                'exploration',
-                'least_select_factor',
-                'decay',
-                'threshold',
-            ],
-            data = [
-                server_round,
-                self.solution,
-                self.select_client_method,
-                len(self.selected_clients),
-                len(self.engaged_clients),
-                len(self.not_engaged_clients),
-                '|'.join([f"{str(client[0])}:{self.clients_intentions[client[0]]}" for client in self.selected_clients]),
-                '|'.join([str(x) for x in self.r_intetions.tolist()]),
-                '|'.join([str(x) for x in self.how_many_time_selected.tolist()]),
-                False,
-                self.epoch,
-                self.dirichlet_alpha,
-                self.no_iid,
-                self.dataset,
-                self.exploitation,
-                self.exploration,
-                self.least_select_factor,
-                self.decay,
-                self.threshold,
-            ]
-
+            data = {
+                'rounds': server_round,
+                'strategy': self.solution.lower(),
+                'model_type': self.model_type.lower(),
+                'select_client_method': self.select_client_method.lower(),
+                'n_selected': len(self.selected_clients),
+                'n_engaged': len(self.engaged_clients),
+                'n_not_engaged': len(self.not_engaged_clients),
+                'selection': '|'.join([f"{str(client[0])}:{self.clients_intentions[client[0]]}" for client in self.selected_clients]),
+                'r_intetion': '|'.join([str(x) for x in self.r_intetions.tolist()]),
+                'r_robin': '|'.join([str(x) for x in self.how_many_time_selected.tolist()]),
+                'skip_round': False,
+                'local_epochs': self.epoch,
+                'dirichlet_alpha': self.dirichlet_alpha,
+                'no_iid': self.no_iid,
+                'dataset': self.dataset.lower(),
+                'exploitation': self.exploitation,
+                'exploration': self.exploration,
+                'decay': self.decay,
+                'threshold': self.threshold,
+                'init_clients': self.init_clients,
+                'config_test': self.config_test,
+            },
         )
         return cia_loss_aggregated, {}
 

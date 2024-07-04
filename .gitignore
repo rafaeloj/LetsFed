@@ -1,5 +1,10 @@
 logs*
 teste*
-*__pycache__*
+*.pyc
+*.cpython*
+client/strategies/drivers/__pycache__/accuracy.cpython-312.pyc
 *.png
 *.svg
+client/strategies/drivers/__pycache__/accuracy.cpython-312.pyc
+client/strategies/drivers/__pycache__/curiosity.cpython-312.pyc
+server/strategies/drivers/__pycache__/selection.cpython-312.pyc

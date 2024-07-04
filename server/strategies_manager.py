@@ -23,6 +23,9 @@ def get_strategy(
     no_iid,
     dataset,
     threshold,
+    model_type,
+    init_clients,
+    config_test: str,
 ):
         if strategy == 'CIA':
             return FedCIA(
@@ -40,18 +43,24 @@ def get_strategy(
                 no_iid = no_iid,
                 dataset = dataset,
                 threshold = threshold,
+                model_type = model_type,
+                init_clients = init_clients,
+                config_test = config_test,
             )
         if strategy == 'POC':
             return FedPOC(
                 n_clients        = n_clients,
                 rounds           = rounds,
                 fraction_clients = fraction_clients,
-                perc_of_clients  = perc_of_clients,
+                perc_of_clients  = exploration,
                 dataset= dataset,
                 dirichlet_alpha= dirichlet_alpha,
                 epoch= epoch,
                 no_iid=no_iid,
                 threshold=threshold,
+                model_type = model_type,
+                init_clients = init_clients,
+                config_test = config_test,
             )
         if strategy == 'DEEV':
             return FedDEEV(
@@ -65,17 +74,23 @@ def get_strategy(
                 no_iid = no_iid,
                 dataset = dataset,
                 threshold = threshold,
+                model_type = model_type,
+                init_clients = init_clients,
+                config_test = config_test,
             )
         if strategy == 'AVG':
             return FedAvg(
                     n_clients = n_clients,
                     rounds = rounds,
-                    perc = perc_of_clients,
+                    perc = exploration,
                 epoch = epoch,
                 dirichlet_alpha = dirichlet_alpha,
                 no_iid = no_iid,
                 dataset = dataset,
                 threshold = threshold,
+                model_type = model_type,
+                init_clients = init_clients,
+                config_test = config_test,
             )
 def main():
     strategy         = os.environ['STRATEGY']
@@ -94,10 +109,15 @@ def main():
     no_iid              = os.environ["NO_IID"] == "True" 
     threshold           = float(os.environ['THRESHOLD'])
     dataset             = os.environ['DATASET']
+    model_type          = os.environ['MODEL_TYPE']
+    init_clients        = float(os.environ['INIT_CLIENTS'])
+    config_test         = os.environ['CONFIG_TEST']
     my_logger.log(
         '/s-teste.csv',
-        data = [0, 'TESTE'],
-        header = ['round', 'server_selection'],
+        data = {
+             'rounds': 0,
+             'server': 'on'
+        },
     )
     fl.server.start_server(
         server_address=os.environ['SERVER_IP'],
@@ -119,6 +139,9 @@ def main():
             no_iid = no_iid,
             threshold = threshold,
             dataset = dataset,
+            model_type           = model_type,
+            init_clients = init_clients,
+            config_test = config_test,
         )
     )
 
