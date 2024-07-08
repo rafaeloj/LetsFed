@@ -29,7 +29,7 @@ class Logger():
         'skip_round': bool,
         'local_epochs': int,
         'dirichlet_alpha': float,
-        'no_iid': bool,
+        'non_iid': bool,
         'dataset': str,
         'exploitation': float,
         'exploration': float,

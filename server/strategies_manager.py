@@ -20,7 +20,7 @@ def get_strategy(
     least_select_factor: float,
     epoch,
     dirichlet_alpha,
-    no_iid,
+    non_iid,
     dataset,
     threshold,
     model_type,
@@ -40,7 +40,7 @@ def get_strategy(
                 solution             = strategy,
                 epoch = epoch,
                 dirichlet_alpha = dirichlet_alpha,
-                no_iid = no_iid,
+                non_iid = non_iid,
                 dataset = dataset,
                 threshold = threshold,
                 model_type = model_type,
@@ -56,7 +56,7 @@ def get_strategy(
                 dataset= dataset,
                 dirichlet_alpha= dirichlet_alpha,
                 epoch= epoch,
-                no_iid=no_iid,
+                non_iid=non_iid,
                 threshold=threshold,
                 model_type = model_type,
                 init_clients = init_clients,
@@ -71,7 +71,7 @@ def get_strategy(
                 decay            = decay,
                 epoch = epoch,
                 dirichlet_alpha = dirichlet_alpha,
-                no_iid = no_iid,
+                non_iid = non_iid,
                 dataset = dataset,
                 threshold = threshold,
                 model_type = model_type,
@@ -85,7 +85,7 @@ def get_strategy(
                     perc = exploration,
                 epoch = epoch,
                 dirichlet_alpha = dirichlet_alpha,
-                no_iid = no_iid,
+                non_iid = non_iid,
                 dataset = dataset,
                 threshold = threshold,
                 model_type = model_type,
@@ -106,7 +106,7 @@ def main():
     engaged_clients     = [int(x) for x in os.environ['ENGAGED_CLIENTS'].split(',')]
     local_epochs        = int(os.environ['LOCAL_EPOCHS'])
     dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
-    no_iid              = os.environ["NO_IID"] == "True" 
+    non_iid              = os.environ["non_iid"] == "True" 
     threshold           = float(os.environ['THRESHOLD'])
     dataset             = os.environ['DATASET']
     model_type          = os.environ['MODEL_TYPE']
@@ -136,7 +136,7 @@ def main():
             least_select_factor  = least_select_factor,
             epoch  = local_epochs,
             dirichlet_alpha = dirichlet_alpha,
-            no_iid = no_iid,
+            non_iid = non_iid,
             threshold = threshold,
             dataset = dataset,
             model_type           = model_type,

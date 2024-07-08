@@ -13,7 +13,7 @@ class FedAvg(fl.server.strategy.FedAvg):
             perc,
             epoch: int,
             dirichlet_alpha: float,
-            no_iid: bool,
+            non_iid: bool,
             dataset: str,
             threshold: float,
             model_type: str,
@@ -27,7 +27,7 @@ class FedAvg(fl.server.strategy.FedAvg):
         self.exploration = perc
         self.epoch = epoch
         self.dirichlet_alpha = dirichlet_alpha
-        self.no_iid = no_iid
+        self.non_iid = non_iid
         self.dataset = dataset
         self.threshold = threshold
         self.model_type = model_type
@@ -131,7 +131,7 @@ class FedAvg(fl.server.strategy.FedAvg):
                 'skip_round': should_pass,
                 'local_epochs': self.epoch,
                 'dirichlet_alpha': self.dirichlet_alpha,
-                'no_iid': self.no_iid,
+                'non_iid': self.non_iid,
                 'dataset': self.dataset.lower(),
                 'exploitation': None,
                 'exploration': self.exploration,

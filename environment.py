@@ -2,7 +2,9 @@ import os
 from optparse import OptionParser
 import configparser
 import random
-from flwr_datasets import FederatedDataset, DirichletPartitioner, IidPartitioner
+from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
+
+from utils import DSManager
 
 def add_server_info(
     clients:              int,
@@ -19,7 +21,7 @@ def add_server_info(
     gpu:                  bool,
     threshold:            float,
     local_epochs:    int,
-    no_iid:          bool,
+    non_iid:          bool,
     dirichlet_alpha: float,
     swap:                 bool,
     model_type:                str,
@@ -44,7 +46,7 @@ def add_server_info(
       - PERC_OF_CLIENTS={perc_of_clients}\n\
       - DECAY={decay}\n\
       - SWAP={swap}\n\
-      - NO_IID={no_iid}\n\
+      - non_iid={non_iid}\n\
       - DIRICHLET_ALPHA={dirichlet_alpha}\n\
       - ENGAGED_CLIENTS={','.join([str(c) for c in engaged_clients])}\n\
       - SELECT_CLIENT_METHOD={select_client_method}\n\
@@ -82,7 +84,7 @@ def add_client_info(
     dataset:         str,
     strategy:        str,
     local_epochs:    int,
-    no_iid:          bool,
+    non_iid:          bool,
     participate:     bool,
     dirichlet_alpha: float,
     select_client_method: str,
@@ -112,7 +114,7 @@ def add_client_info(
       - DATASET={dataset}\n\
       - STRATEGY={strategy}\n\
       - LOCAL_EPOCHS={local_epochs}\n\
-      - NO_IID={no_iid}\n\
+      - non_iid={non_iid}\n\
       - PARTICIPATE={participate}\n\
       - DIRICHLET_ALPHA={dirichlet_alpha}\n\
       - SELECT_CLIENT_METHOD={select_client_method}\n\
@@ -152,36 +154,23 @@ def start_clients(n_clients, init_clients) -> list:
     return random.sample(range(n_clients), n_clients_to_start)
 
 
-def save_data(n_clients, dirichlet, dataset, no_iid):
-    partitioner = DirichletPartitioner(
-      num_partitions=n_clients,
-      partition_by="label",
-      alpha=dirichlet,
-      min_partition_size=10,
-      self_balancing=False,
-    )
-    fds = FederatedDataset(dataset=dataset, partitioners={"train": partitioner})
-    # fds_eval = FederatedDataset(dataset=self.dataset, partitioners={"test": partitioner})
-    # fds.load_partition(0)
-    if no_iid:
-        partitioner_train = DirichletPartitioner(
-            num_partitions=self.num_clients,
-            partition_by="label",
-            alpha=self.dirichlet_alpha,
-            self_balancing=False
-        )
-    else:
-        partitioner_train =  IidPartitioner(num_partitions=n_clients)
-      
-    train_data = fds.load_split('train').with_format("numpy")
-    partitioner.dataset = train_data
-    for d in range(n_clients):
-        # if d == 10:
-        #     break
-        print(f'logs/{d}-data-train.csv')
-        partitioner.load_partition(d).save_to_disk(f'logs/{d}-data-train')
-        partitioner.load_partition(d).save_to_disk(f'logs/{d}-data-train')
-# partitioner.is_dataset_assigned()
+def load_data(dataset, non_iid, clients, dirichlet_alpha):
+    partitioner = IidPartitioner(num_partitions=clients)
+    if non_iid:
+      partitioner = DirichletPartitioner(
+          num_partitions=clients,
+          alpha=dirichlet_alpha,
+          partition_by="label",
+          self_balancing=False
+      )
+    ds = DSManager({
+        'train': partitioner,
+        'test': IidPartitioner(num_partitions=clients),
+    })
+    if os.path.exists(f'logs/{dataset}/non_iid-{non_iid}/clients-{clients}'):
+        return
+    ds.load_hugginface(dataset)
+    ds.save_locally(f'logs/{dataset}/non_iid-{non_iid}/clients-{clients}')
 
 def main():
     parser = OptionParser()
@@ -198,7 +187,7 @@ def main():
     dataset              = config.get(opt.environment, 'dataset')
     rounds               = config.getint(opt.environment, 'rounds', fallback=10)
     strategy             = config.get(opt.environment, 'strategy', fallback='CIA')
-    no_iid               = config.getboolean(opt.environment, 'no_iid', fallback=True)
+    non_iid               = config.getboolean(opt.environment, 'non_iid', fallback=True)
     init_clients         = config.getfloat(opt.environment, 'init_clients', fallback=0.2)
     dirichlet_alpha      = config.getfloat(opt.environment, "dirichlet_alpha", fallback=0.1),
     select_client_method = config.get(opt.environment, 'select_client_method', fallback='random')
@@ -215,6 +204,7 @@ def main():
     decay                = decay[0]
     # threshold            = threshold
 
+    load_data(dataset=dataset, non_iid=non_iid, clients=clients, dirichlet_alpha=dirichlet_alpha)
     with open("init_clients.txt", 'r+') as f:
         lines = f.read()
         if len(lines) == 0:
@@ -253,7 +243,7 @@ def main():
             gpu       = opt.gpu,
             threshold = threshold,
             local_epochs=local_epochs,
-            no_iid=no_iid,
+            non_iid=non_iid,
             dirichlet_alpha=dirichlet_alpha,
             model_type = model_type,
             swap = swap,
@@ -273,7 +263,7 @@ def main():
                 dataset=dataset,
                 strategy=strategy,
                 local_epochs=local_epochs,
-                no_iid=no_iid,
+                non_iid=non_iid,
                 participate=participate,
                 dirichlet_alpha=dirichlet_alpha,
                 select_client_method=select_client_method,

@@ -3,9 +3,10 @@ import tensorflow as tf
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
 from flwr.common.logger import logger
-logger.disabled = True
+# logger.disabled = True
 from logging import INFO
 from flwr_datasets.utils import divide_dataset
+from datasets import load_from_disk
 from datasets.utils.logging import disable_progress_bar
 from datasets import load_from_disk
 import os
@@ -29,7 +30,7 @@ class MaverickClient(fl.client.NumPyClient):
         cid:                  int,
         num_clients:          int,
         dataset:              str,
-        no_iid:               bool,
+        non_iid:               bool,
         epoch:                int,
         isParticipate:        bool,
         dirichlet_alpha:      float,
@@ -50,7 +51,7 @@ class MaverickClient(fl.client.NumPyClient):
         self.cid                                             = cid
         self.num_clients                                     = num_clients
         self.epoch                                           = epoch
-        self.no_iid                                          = no_iid
+        self.non_iid                                          = non_iid
         self.dataset                                         = dataset.lower()
         self.dirichlet_alpha                                 = dirichlet_alpha
         self.x_train, self.y_train, self.x_test, self.y_test = self.load_data()
@@ -89,10 +90,11 @@ class MaverickClient(fl.client.NumPyClient):
         }
 
     def load_data(self):
-        pickle_file = os.path.exists(f'logs/{self.cid}-data-train')
-        if not pickle_file:
+        path = f'logs/{self.dataset.upper()}/non_iid-{self.non_iid}/clients-{self.num_clients}'
+        folder = os.path.exists(f'{path}/{self.cid}-data-train')
+        if not folder:
             logger.log(0, 'DOWNLOAD DATA FROM FLWR DATASET')
-            if self.no_iid:
+            if self.non_iid:
                 logger.log(INFO, "LOAD DATASET WITH DIRICHLET PARTITIONER")
                 partitioner_train = DirichletPartitioner(num_partitions=self.num_clients, partition_by="label",
                                         alpha=self.dirichlet_alpha,
@@ -107,14 +109,13 @@ class MaverickClient(fl.client.NumPyClient):
             partitioner_test = IidPartitioner(num_partitions=self.num_clients)
             fds_eval         = FederatedDataset(dataset=self.dataset, partitioners={"test": partitioner_test})
             test             = fds_eval.load_partition(self.cid).with_format("numpy")
-            train.save_to_disk(f'logs/{self.cid}-data-train')
-            test.save_to_disk(f'logs/{self.cid}-data-test')
+            train.save_to_disk(f'{path}/{self.cid}-data-train')
+            test.save_to_disk(f'{path}/{self.cid}-data-test')
         else:
             print("LOAD DATA FROM LOCAL STORAGE")
             logger.log(INFO, 'LOAD DATA FROM LOCAL STORAGE')
-            test = load_from_disk(f'logs/{self.cid}-data-test')
-            train = load_from_disk(f'logs/{self.cid}-data-train')
-
+            test = load_from_disk(f'{path}/{self.cid}-data-test')
+            train = load_from_disk(f'{path}/{self.cid}-data-train')
 
         # partition       = fds.load_partition(self.cid)
         # division    = [0.8, 0.2]
@@ -272,7 +273,7 @@ class MaverickClient(fl.client.NumPyClient):
                 'miss': self.miss, 
                 'local_epochs': self.epoch, 
                 'dirichlet_alpha': self.dirichlet_alpha, 
-                'no_iid': self.no_iid, 
+                'non_iid': self.non_iid, 
                 'dataset': self.dataset.lower(), 
                 'exploitation': self.exploitation, 
                 'exploration': self.exploration, 

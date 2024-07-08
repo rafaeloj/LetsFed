@@ -16,7 +16,7 @@ def get_strategy(
     num_clients,
     dataset,
     epoch,
-    no_iid,
+    non_iid,
     participate,
     dirichlet_alpha,
     swap,
@@ -36,7 +36,7 @@ def get_strategy(
         cid=cid,
         num_clients=num_clients,
         dataset=dataset,
-        no_iid=no_iid,
+        non_iid=non_iid,
         epoch=epoch,
         isParticipate=participate,
         dirichlet_alpha=dirichlet_alpha,
@@ -58,7 +58,7 @@ def main():
     num_clients         = int(os.environ['NUM_CLIENTS'])
     dataset             = os.environ['DATASET']
     local_epochs        = int(os.environ['LOCAL_EPOCHS'])
-    no_iid              = os.environ["NO_IID"] == "True" 
+    non_iid              = os.environ["non_iid"] == "True" 
     participate         = os.environ["PARTICIPATE"] == "True"
     dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
     swap                = os.environ['SWAP'] == 'True'
@@ -74,7 +74,7 @@ def main():
     init_clients        = float(os.environ['INIT_CLIENTS'])
     local_epochs        = int(os.environ['LOCAL_EPOCHS'])
     dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
-    no_iid              = os.environ["NO_IID"] == "True" 
+    non_iid              = os.environ["non_iid"] == "True" 
     threshold           = float(os.environ['THRESHOLD'])
     dataset             = os.environ['DATASET']
     model_type          = os.environ['MODEL_TYPE']
@@ -87,7 +87,7 @@ def main():
             num_clients         = num_clients,
             dataset             = dataset,
             epoch               = local_epochs,
-            no_iid              = no_iid,
+            non_iid              = non_iid,
             participate         = participate,
             dirichlet_alpha     = dirichlet_alpha,
             swap                = swap,
