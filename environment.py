@@ -2,6 +2,7 @@ import os
 from optparse import OptionParser
 import configparser
 import random
+from flwr_datasets import FederatedDataset, DirichletPartitioner, IidPartitioner
 
 def add_server_info(
     clients:              int,
@@ -26,7 +27,7 @@ def add_server_info(
     config_test: str,
 ):
     server_str = f"  server:\n\
-    {'image: server-flwr:latest' if gpu else 'image: server-flwr:latest'}\n\
+    {'image: server-flwr:latest' if gpu else 'image: server-flwr-cpu:latest'}\n\
     logging:\n\
       driver: local\n\
     {'runtime: nvidia' if gpu else ''}\n\
@@ -149,6 +150,38 @@ def add_client_info(
 def start_clients(n_clients, init_clients) -> list:
     n_clients_to_start = int(n_clients*init_clients)
     return random.sample(range(n_clients), n_clients_to_start)
+
+
+def save_data(n_clients, dirichlet, dataset, no_iid):
+    partitioner = DirichletPartitioner(
+      num_partitions=n_clients,
+      partition_by="label",
+      alpha=dirichlet,
+      min_partition_size=10,
+      self_balancing=False,
+    )
+    fds = FederatedDataset(dataset=dataset, partitioners={"train": partitioner})
+    # fds_eval = FederatedDataset(dataset=self.dataset, partitioners={"test": partitioner})
+    # fds.load_partition(0)
+    if no_iid:
+        partitioner_train = DirichletPartitioner(
+            num_partitions=self.num_clients,
+            partition_by="label",
+            alpha=self.dirichlet_alpha,
+            self_balancing=False
+        )
+    else:
+        partitioner_train =  IidPartitioner(num_partitions=n_clients)
+      
+    train_data = fds.load_split('train').with_format("numpy")
+    partitioner.dataset = train_data
+    for d in range(n_clients):
+        # if d == 10:
+        #     break
+        print(f'logs/{d}-data-train.csv')
+        partitioner.load_partition(d).save_to_disk(f'logs/{d}-data-train')
+        partitioner.load_partition(d).save_to_disk(f'logs/{d}-data-train')
+# partitioner.is_dataset_assigned()
 
 def main():
     parser = OptionParser()

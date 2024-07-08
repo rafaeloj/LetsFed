@@ -16,6 +16,3 @@ while IFS= read -r container; do
         docker rm -f "$container_id"
     fi
 done <<< "$containers"
-
-# Cuidado ao descomentar esse cara aqui...
-#docker system prune -a

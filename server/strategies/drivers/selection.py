@@ -16,7 +16,7 @@ class SelectionDriver(Driver):
             return
         
         not_engaged = []
-        engaged = server.engaged_clients
+        engaged = self._poc_engaged(server=server)
 
         if server.select_client_method == 'default':
             not_engaged = self._deev_not_engaged(server = server, server_round = server_round)
@@ -51,7 +51,7 @@ class SelectionDriver(Driver):
         top_clients = [(not_engaged_clients_cid[cid], None) for cid in top_values_of_cid]
         return top_clients
 
-    def _r_robin_engaged(server):
+    def _r_robin_engaged(self,server):
         engaged_clients_cid = [int(c[0]) for c in server.engaged_clients]
         # Pega a quantidade de clientes que querem participar dentro do contador
         how_many_time_selected_client_engaged_index = server.how_many_time_selected[engaged_clients_cid]
@@ -61,7 +61,7 @@ class SelectionDriver(Driver):
         
         # Pegando o top menos chamados
         # top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_engaged_index)*server.least_select_factor)]
-        top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_engaged_index)*server.exploration)]
+        top_values_of_cid  = sort_indexes[:int(len(how_many_time_selected_client_engaged_index)*0.30)]
 
         # Update score
         for cid_value_index in top_values_of_cid:
@@ -86,6 +86,16 @@ class SelectionDriver(Driver):
             selected_clients = selected_clients[ : math.ceil(the_chosen_ones)]
 
         return selected_clients
+
+    def _poc_engaged(self, server):
+        selected_clients = []
+        order_list = sorted(server.engaged_clients_acc, key=lambda t: t[1])
+        cids = [cid for cid, acc in order_list]
+        clients2select        = int(len(cids) * 0.33)
+        for cid, acc in order_list:
+            selected_clients.append((cid, server.clients_intentions[cid]))
+        # selected_clients = server.engaged_clients[:clients2select]
+        return selected_clients[:clients2select]
 
     def _deev_invert_not_engaged(self, server, server_round):
         selected_clients = []
@@ -117,8 +127,8 @@ class SelectionDriver(Driver):
             the_chosen_ones  = len(selected_clients) * (1 - server.decay_factor)**int(server_round)
             selected_clients = selected_clients[ : math.ceil(the_chosen_ones)]
 
-        return selected_clients[:int(len(selected_clients)*server.exploration)]
-        # return selected_clients
+        # return selected_clients[:int(len(selected_clients)*server.exploration)]
+        return selected_clients
 
     def _random_select(self, server, server_round):
         if server_round == 1:

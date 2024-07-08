@@ -3,7 +3,7 @@ from typing import Dict
 
 class Logger():
     def __init__(self, logger_foulder):
-        self.logger_foulder = f"/logs{logger_foulder}"
+        self.logger_foulder = f"./logs{logger_foulder}"
 
     def _log(self, filename, data, header=None):
         file_path = f"{self.logger_foulder}{filename}"

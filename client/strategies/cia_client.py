@@ -7,8 +7,10 @@ logger.disabled = True
 from logging import INFO
 from flwr_datasets.utils import divide_dataset
 from datasets.utils.logging import disable_progress_bar
+from datasets import load_from_disk
 import os
 import sys
+import pandas as pd
 sys.path.append(os.path.abspath('../../'))
 
 from utils.select_by_server import is_select_by_server
@@ -87,24 +89,41 @@ class MaverickClient(fl.client.NumPyClient):
         }
 
     def load_data(self):
-        if self.no_iid:
-            logger.log(INFO, "LOAD DATASET WITH DIRICHLET PARTITIONER")
-            partitioner_train = DirichletPartitioner(num_partitions=self.num_clients, partition_by="label",
-                                    alpha=self.dirichlet_alpha, min_partition_size=self.num_clients/2,
-                                    self_balancing=False)
+        pickle_file = os.path.exists(f'logs/{self.cid}-data-train')
+        if not pickle_file:
+            logger.log(0, 'DOWNLOAD DATA FROM FLWR DATASET')
+            if self.no_iid:
+                logger.log(INFO, "LOAD DATASET WITH DIRICHLET PARTITIONER")
+                partitioner_train = DirichletPartitioner(num_partitions=self.num_clients, partition_by="label",
+                                        alpha=self.dirichlet_alpha,
+                                        self_balancing=False)
+            else:
+                logger.log(INFO, "LOAD DATASET WITH IID PARTITIONER")
+                partitioner_train =  IidPartitioner(num_partitions=self.num_clients)
+            fds              = FederatedDataset(dataset=self.dataset, partitioners={"train": partitioner_train})
+            
+
+            train            = fds.load_partition(self.cid).with_format("numpy")
+            partitioner_test = IidPartitioner(num_partitions=self.num_clients)
+            fds_eval         = FederatedDataset(dataset=self.dataset, partitioners={"test": partitioner_test})
+            test             = fds_eval.load_partition(self.cid).with_format("numpy")
+            train.save_to_disk(f'logs/{self.cid}-data-train')
+            test.save_to_disk(f'logs/{self.cid}-data-test')
         else:
-            logger.log(INFO, "LOAD DATASET WITH IID PARTITIONER")
-            partitioner_train =  IidPartitioner(num_partitions=self.num_clients)
-        fds              = FederatedDataset(dataset=self.dataset, partitioners={"train": partitioner_train})
-        
-
-        train            = fds.load_partition(self.cid).with_format("numpy")
-        partitioner_test = IidPartitioner(num_partitions=self.num_clients)
-        fds_eval         = FederatedDataset(dataset=self.dataset, partitioners={"test": partitioner_test})
-        test             = fds_eval.load_partition(self.cid).with_format("numpy")
+            print("LOAD DATA FROM LOCAL STORAGE")
+            logger.log(INFO, 'LOAD DATA FROM LOCAL STORAGE')
+            test = load_from_disk(f'logs/{self.cid}-data-test')
+            train = load_from_disk(f'logs/{self.cid}-data-train')
 
 
+        # partition       = fds.load_partition(self.cid)
+        # division    = [0.8, 0.2]
+        # train, test = divide_dataset(dataset=partition.with_format("numpy"), division=division)
 
+        if self.dataset == 'mnist':
+            return train['image'], train['label'], test['image'], test['label']
+        elif self.dataset == 'cifar10':
+            return train['img'], train['label'], test['img'], test['label']
         # partition       = fds.load_partition(self.cid)
         # division    = [0.8, 0.2]
         # train, test = divide_dataset(dataset=partition.with_format("numpy"), division=division)
@@ -326,15 +345,15 @@ class MaverickClient(fl.client.NumPyClient):
             elif self.behaviors['curiosity_driver'].state == IDLE:
                 value = self.behaviors["accuracy_driver"].analyze(self, parameters=parameters, config=config)
                 self.drivers_results['accuracy_driver'] = value
-                my_logger.log(
-                    "/c-curiosity-cp.csv",
-                    data={
-                        "round": config['rounds'],
-                        'cid': self.cid,
-                        'value': value,
-                        'threshold': self.threshold,
-                    },
-                )
+                # my_logger.log(
+                #     "/c-curiosity-cp.csv",
+                #     data={
+                #         "round": config['rounds'],
+                #         'cid': self.cid,
+                #         'value': value,
+                #         'threshold': self.threshold,
+                #     },
+                # )
                 if value > self.threshold:
                     self.dynamic_engagement = True
                     self.want = True
@@ -344,15 +363,15 @@ class MaverickClient(fl.client.NumPyClient):
             self.drivers_results['curiosity_driver'] = self.rounds_intention
         if self.behaviors['curiosity_driver'].state == EXPLORED:
             self.behaviors['curiosity_driver'].finish(self)
-        my_logger.log(
-            "/d-curiosity.csv",
-            data = {
-                "round": config['rounds'],
-                'cid': self.cid,
-                'value': self.behaviors['curiosity_driver'].state,
-                'threshold': self.behaviors['curiosity_driver'].current_round,
-            },
-        )
+        # my_logger.log(
+        #     "/d-curiosity.csv",
+        #     data = {
+        #         "round": config['rounds'],
+        #         'cid': self.cid,
+        #         'value': self.behaviors['curiosity_driver'].state,
+        #         'threshold': self.behaviors['curiosity_driver'].current_round,
+        #     },
+        # )
         return
 
         values = []
