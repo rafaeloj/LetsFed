@@ -102,13 +102,13 @@ class MaverickClient(fl.client.NumPyClient):
             else:
                 logger.log(INFO, "LOAD DATASET WITH IID PARTITIONER")
                 partitioner_train =  IidPartitioner(num_partitions=self.num_clients)
-            fds              = FederatedDataset(dataset=self.dataset, partitioners={"train": partitioner_train})
+            partitioner_test = IidPartitioner(num_partitions=self.num_clients)
             
 
-            train            = fds.load_partition(self.cid).with_format("numpy")
-            partitioner_test = IidPartitioner(num_partitions=self.num_clients)
-            fds_eval         = FederatedDataset(dataset=self.dataset, partitioners={"test": partitioner_test})
-            test             = fds_eval.load_partition(self.cid).with_format("numpy")
+            fds              = FederatedDataset(dataset=self.dataset, partitioners={"train": partitioner_train, "test": partitioner_test})
+
+            train            = fds.load_partition(partition_id = self.cid, split = 'train').with_format("numpy")
+            test             = fds.load_partition(partition_id = self.cid, split = 'test').with_format("numpy")
             train.save_to_disk(f'{path}/{self.cid}-data-train')
             test.save_to_disk(f'{path}/{self.cid}-data-test')
         else:
@@ -116,18 +116,6 @@ class MaverickClient(fl.client.NumPyClient):
             logger.log(INFO, 'LOAD DATA FROM LOCAL STORAGE')
             test = load_from_disk(f'{path}/{self.cid}-data-test')
             train = load_from_disk(f'{path}/{self.cid}-data-train')
-
-        # partition       = fds.load_partition(self.cid)
-        # division    = [0.8, 0.2]
-        # train, test = divide_dataset(dataset=partition.with_format("numpy"), division=division)
-
-        if self.dataset == 'mnist':
-            return train['image'], train['label'], test['image'], test['label']
-        elif self.dataset == 'cifar10':
-            return train['img'], train['label'], test['img'], test['label']
-        # partition       = fds.load_partition(self.cid)
-        # division    = [0.8, 0.2]
-        # train, test = divide_dataset(dataset=partition.with_format("numpy"), division=division)
 
         if self.dataset == 'mnist':
             return train['image'], train['label'], test['image'], test['label']
