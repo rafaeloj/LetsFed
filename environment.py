@@ -205,24 +205,20 @@ def main():
     # threshold            = threshold
 
     load_data(dataset=dataset, non_iid=non_iid, clients=clients, dirichlet_alpha=dirichlet_alpha)
-    with open("init_clients.txt", 'r+') as f:
-        lines = f.read()
-        if len(lines) == 0:
-          engaged_clients = start_clients(clients, init_clients)
-          # print(f'clients: {engaged_clients}')
-          f.write(','.join([str(c) for c in engaged_clients]))
-        else:
-          engaged_clients = [int(x) for x in lines.split(',')]
-
-          new_engaged_clients = start_clients(clients, init_clients)
-          # print(f'current: {engaged_clients}')
-          if len(engaged_clients) < len(new_engaged_clients):
-              # print(f"old: {engaged_clients}")
-              # print(f"new: {new_engaged_clients}")
-              engaged_clients = new_engaged_clients
-              f.seek(0)
-              f.write(','.join([str(c) for c in engaged_clients]))
-
+    file = f'./init_clients-{init_clients}.txt'
+    if os.path.exists(file):
+        print('IC from file')
+        with open(file, 'r+') as f:
+            lines = f.read()
+            engaged_clients = [int(x) for x in lines.split(',')]
+        print(f'ic: {init_clients} -> {engaged_clients}')
+    else:
+        print('Generating IC file')
+        with open(file, 'w+') as f:
+            engaged_clients = start_clients(clients, init_clients)
+            f.write(','.join([str(c) for c in engaged_clients]))
+        print(f'ic: {init_clients} -> {engaged_clients}')
+                      
     select_client_method = select_client_method if not select_client_method == None else 'none'
     file_name = f'dockercompose-{strategy}-{dataset}-{init_clients}-{select_client_method}-c{clients}-r{rounds}-le{local_epochs}-p{perc_of_clients:.2f}-exp{exploration:.2f}-lsf{least_select_factor:.2f}-dec{decay:.2f}-thr{threshold}.yaml'.lower()
     with open(file_name, 'w') as dockercompose_file:
