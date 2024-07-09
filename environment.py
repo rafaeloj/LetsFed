@@ -155,6 +155,8 @@ def start_clients(n_clients, init_clients) -> list:
 
 
 def load_data(dataset, non_iid, clients, dirichlet_alpha):
+    if os.path.exists(f'logs/{dataset}/non_iid-{non_iid}/clients-{clients}'):
+        return
     partitioner = IidPartitioner(num_partitions=clients)
     if non_iid:
       partitioner = DirichletPartitioner(
@@ -167,8 +169,6 @@ def load_data(dataset, non_iid, clients, dirichlet_alpha):
         'train': partitioner,
         'test': IidPartitioner(num_partitions=clients),
     })
-    if os.path.exists(f'logs/{dataset}/non_iid-{non_iid}/clients-{clients}'):
-        return
     ds.load_hugginface(dataset)
     ds.save_locally(f'logs/{dataset}/non_iid-{non_iid}/clients-{clients}')
 
