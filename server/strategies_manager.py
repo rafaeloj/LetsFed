@@ -26,6 +26,7 @@ def get_strategy(
     model_type,
     init_clients,
     config_test: str,
+    select_client_method_to_engaged: str,
 ):
         if strategy == 'CIA':
             return FedCIA(
@@ -46,6 +47,7 @@ def get_strategy(
                 model_type = model_type,
                 init_clients = init_clients,
                 config_test = config_test,
+                select_client_method_to_engaged = select_client_method_to_engaged,
             )
         if strategy == 'POC':
             return FedPOC(
@@ -112,6 +114,7 @@ def main():
     model_type          = os.environ['MODEL_TYPE']
     init_clients        = float(os.environ['INIT_CLIENTS'])
     config_test         = os.environ['CONFIG_TEST']
+    select_client_method_to_engaged = os.environ['SELECT_CLIENT_METHOD_TO_ENGAGED']
     my_logger.log(
         '/s-teste.csv',
         data = {
@@ -142,6 +145,7 @@ def main():
             model_type           = model_type,
             init_clients = init_clients,
             config_test = config_test,
+            select_client_method_to_engaged = select_client_method_to_engaged,
         )
     )
 

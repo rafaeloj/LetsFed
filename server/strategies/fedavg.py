@@ -122,6 +122,7 @@ class FedAvg(fl.server.strategy.FedAvg):
                 'strategy': 'avg',
                 'model_type': self.model_type.lower(),
                 'select_client_method': 'random',
+                'select_client_method_to_engaged': 'random',
                 'n_selected': len(self.selected_clients),
                 'n_engaged': len(c_engaged),
                 'n_not_engaged': len(c_not_engaged),
@@ -139,6 +140,7 @@ class FedAvg(fl.server.strategy.FedAvg):
                 'threshold': self.threshold,
                 'init_clients': self.init_clients,
                 'config_test': self.config_test,
+                'forget_clients': None,
             },
         )
 

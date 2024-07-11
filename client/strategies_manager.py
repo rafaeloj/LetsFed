@@ -54,54 +54,54 @@ def get_strategy(
         config_test = config_test,
     )
 def main():
-    cid                 = int(os.environ['CLIENT_ID'])
-    num_clients         = int(os.environ['NUM_CLIENTS'])
-    dataset             = os.environ['DATASET']
-    local_epochs        = int(os.environ['LOCAL_EPOCHS'])
-    non_iid              = os.environ["non_iid"] == "True" 
-    participate         = os.environ["PARTICIPATE"] == "True"
-    dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
-    swap                = os.environ['SWAP'] == 'True'
-    rounds              = int(os.environ['ROUNDS'])
-    solution            = os.environ["STRATEGY"]
-    method              = os.environ["SELECT_CLIENT_METHOD"]
-    decay               = float(os.environ["DECAY"])
-    exploitation        = float(os.environ['EXPLOITATION'])
-    exploration         = float(os.environ['EXPLORATION'])
-    least_select_factor = float(os.environ['LEAST_SELECT_FACTOR'])
-    threshold           = float(os.environ['THRESHOLD'])
-    # model             = os.environ['MODEL']
-    init_clients        = float(os.environ['INIT_CLIENTS'])
-    local_epochs        = int(os.environ['LOCAL_EPOCHS'])
-    dirichlet_alpha     = float(os.environ["DIRICHLET_ALPHA"])
-    non_iid              = os.environ["non_iid"] == "True" 
-    threshold           = float(os.environ['THRESHOLD'])
-    dataset             = os.environ['DATASET']
-    model_type          = os.environ['MODEL_TYPE']
-    config_test         = os.environ["CONFIG_TEST"]
+    cid                             = int(os.environ['CLIENT_ID'])
+    num_clients                     = int(os.environ['NUM_CLIENTS'])
+    dataset                         = os.environ['DATASET']
+    local_epochs                    = int(os.environ['LOCAL_EPOCHS'])
+    non_iid                          = os.environ["non_iid"] == "True" 
+    participate                     = os.environ["PARTICIPATE"] == "True"
+    dirichlet_alpha                 = float(os.environ["DIRICHLET_ALPHA"])
+    swap                            = os.environ['SWAP'] == 'True'
+    rounds                          = int(os.environ['ROUNDS'])
+    solution                        = os.environ["STRATEGY"]
+    method                          = os.environ["SELECT_CLIENT_METHOD"]
+    decay                           = float(os.environ["DECAY"])
+    exploitation                    = float(os.environ['EXPLOITATION'])
+    exploration                     = float(os.environ['EXPLORATION'])
+    least_select_factor             = float(os.environ['LEAST_SELECT_FACTOR'])
+    threshold                       = float(os.environ['THRESHOLD'])
+    # model                         = os.environ['MODEL']
+    init_clients                    = float(os.environ['INIT_CLIENTS'])
+    local_epochs                    = int(os.environ['LOCAL_EPOCHS'])
+    dirichlet_alpha                 = float(os.environ["DIRICHLET_ALPHA"])
+    non_iid                         = os.environ["non_iid"] == "True" 
+    threshold                       = float(os.environ['THRESHOLD'])
+    dataset                         = os.environ['DATASET']
+    model_type                      = os.environ['MODEL_TYPE']
+    config_test                     = os.environ["CONFIG_TEST"]
     
     fl.client.start_client(
         server_address=os.environ['SERVER_IP'],
         client=get_strategy(
-            cid                 = cid,
-            num_clients         = num_clients,
-            dataset             = dataset,
-            epoch               = local_epochs,
-            non_iid              = non_iid,
-            participate         = participate,
-            dirichlet_alpha     = dirichlet_alpha,
-            swap                = swap,
-            rounds              = rounds,
-            solution            = solution,
-            method              = method,
-            decay               = decay,
-            exploitation        = exploitation,
-            exploration         = exploration,
-            least_select_factor = least_select_factor,
-            threshold           = threshold,
-            model_type          = model_type,
-            init_clients        = init_clients,
-            config_test         = config_test,
+            cid                             = cid,
+            num_clients                     = num_clients,
+            dataset                         = dataset,
+            epoch                           = local_epochs,
+            non_iid                         = non_iid,
+            participate                     = participate,
+            dirichlet_alpha                 = dirichlet_alpha,
+            swap                            = swap,
+            rounds                          = rounds,
+            solution                        = solution,
+            method                          = method,
+            decay                           = decay,
+            exploitation                    = exploitation,
+            exploration                     = exploration,
+            least_select_factor             = least_select_factor,
+            threshold                       = threshold,
+            model_type                      = model_type,
+            init_clients                    = init_clients,
+            config_test                     = config_test,
         ).to_client()
     )
 

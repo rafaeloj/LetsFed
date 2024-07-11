@@ -29,6 +29,7 @@ class FedCIA(fl.server.strategy.FedAvg):
         model_type: str,
         init_clients: float,
         config_test: str,
+        select_client_method_to_engaged: str,
     ):
         self.n_clients = n_clients
         self.rounds = rounds
@@ -41,13 +42,15 @@ class FedCIA(fl.server.strategy.FedAvg):
         for client_info in self.engaged_clients + self.not_engaged_clients:
             self.clients_intentions[client_info[0]] = client_info[1]
         self.select_client_method = select_client_method
+        self.select_client_method_to_engaged = select_client_method_to_engaged
+
         # self.least_select_factor  = least_select_factor
         self.decay_factor         = decay
         # Select
         self.selected_clients = []
-        self.r_intetions          = [0 for _ in range(n_clients)]
+        self.r_intetions          = np.full(n_clients, 0)
         # random select
-        self.exploitation = exploitation ## Ta errado o termo mas não consegui pensar em outro nome
+        self.exploitation = exploitation
         self.exploration = exploration
         
         self.model_type = model_type
@@ -59,11 +62,18 @@ class FedCIA(fl.server.strategy.FedAvg):
         self.threshold = threshold
         self.config_test = config_test
         # least select
-        self.how_many_time_selected = np.array([0 for _ in range(n_clients)])
-        self.how_many_time_selected_not_engaged = np.array([0 for _ in range(n_clients)])
+        self.how_many_time_selected = np.full(n_clients, 0)
+        self.how_many_time_selected_not_engaged = np.full(n_clients, 0)
         self._init_client_config()
         
         self.behaviors: Dict[str, Driver]                         = self.set_behaviors()
+
+        
+
+        ## temp
+        self.forget_clients = np.full(n_clients, int(self.rounds*0.15))
+
+
 
     def set_behaviors(self):
         return {
@@ -138,6 +148,7 @@ class FedCIA(fl.server.strategy.FedAvg):
                 'strategy': self.solution.lower(),
                 'model_type': self.model_type.lower(),
                 'select_client_method': self.select_client_method.lower(),
+                'select_client_method_to_engaged': self.select_client_method_to_engaged.lower(),
                 'n_selected': len(self.selected_clients),
                 'n_engaged': len(self.engaged_clients),
                 'n_not_engaged': len(self.not_engaged_clients),
@@ -155,6 +166,7 @@ class FedCIA(fl.server.strategy.FedAvg):
                 'threshold': self.threshold,
                 'init_clients': self.init_clients,
                 'config_test': self.config_test,
+                'forget_clients': "|".join(f'{str(client)}' for client in self.forget_clients),
             },
         )
         return cia_loss_aggregated, {}

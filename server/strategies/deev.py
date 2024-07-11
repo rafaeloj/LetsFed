@@ -164,6 +164,7 @@ class FedDEEV(fl.server.strategy.FedAvg):
                 'strategy': 'deev',
                 'model_type': self.model_type,
                 'select_client_method': None,
+                'select_client_method_to_engaged': None,
                 'n_selected': len(self.selected_clients),
                 'n_engaged': len(c_engaged),
                 'n_not_engaged': len(c_not_engaged),
@@ -181,6 +182,7 @@ class FedDEEV(fl.server.strategy.FedAvg):
                 'threshold': self.threshold,
                 'init_clients': self.init_clients,
                 'config_test': self.config_test,
+                'forget_clients': None,
             }
         )
         if should_pass:

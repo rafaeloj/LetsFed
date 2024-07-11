@@ -3,7 +3,7 @@ import tensorflow as tf
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
 from flwr.common.logger import logger
-# logger.disabled = True
+logger.disabled = True
 from logging import INFO
 from flwr_datasets.utils import divide_dataset
 from datasets import load_from_disk
@@ -128,15 +128,19 @@ class MaverickClient(fl.client.NumPyClient):
                 tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape[1:]),
                 tf.keras.layers.MaxPooling2D((2, 2)),
                 tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
                 tf.keras.layers.MaxPooling2D((2, 2)),
                 tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
                 tf.keras.layers.MaxPooling2D((2, 2)),
                 tf.keras.layers.Dropout(0.25),
+                tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.Flatten(),
                 tf.keras.layers.Dense(512, activation='relu'),
                 tf.keras.layers.Dropout(0.5),
+                tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.Dense(10, activation='softmax'),
             ])
             model.compile(
