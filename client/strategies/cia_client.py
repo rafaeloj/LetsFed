@@ -58,6 +58,7 @@ class MaverickClient(fl.client.NumPyClient):
         self.dynamic_engagement                              = isParticipate
         # Models
         self.model_type                                      = model_type
+        self.model_path = f"logs/{self.model_type}.weights.h5"  # Adiciona model_type ao nome do arquivo
         self.model                                           = self.create_model(self.x_train.shape)
         self.debug_model                                     = self.create_model(self.x_train.shape)
         self.swap                                            = swap
@@ -117,11 +118,10 @@ class MaverickClient(fl.client.NumPyClient):
             test = load_from_disk(f'{path}/{self.cid}-data-test')
             train = load_from_disk(f'{path}/{self.cid}-data-train')
 
-        if self.dataset == 'mnist':
-            return train['image'], train['label'], test['image'], test['label']
-        elif self.dataset == 'cifar10':
-            return train['img'], train['label'], test['img'], test['label']
+        keys = list(test.features.keys())
         
+        return train[keys[0]], train[keys[1]], test[keys[0]], test[keys[1]]
+
     def create_model(self, input_shape):
         if self.model_type == "cnn":
             model = tf.keras.models.Sequential([
@@ -143,24 +143,25 @@ class MaverickClient(fl.client.NumPyClient):
                 tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.Dense(10, activation='softmax'),
             ])
-            model.compile(
-                optimizer='adam',
-                loss='sparse_categorical_crossentropy',
-                metrics=['accuracy']
-            )
-            return model
-        model = tf.keras.models.Sequential([
-            tf.keras.layers.Input(shape=input_shape[1:]),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(64,  activation='relu'),
-            tf.keras.layers.Dense(32,  activation='relu'),
-            tf.keras.layers.Dense(10, activation='softmax'),
+        else:
+            model = tf.keras.models.Sequential([
+                tf.keras.layers.Input(shape=input_shape[1:]),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(128, activation='relu'),
+                tf.keras.layers.Dense(64,  activation='relu'),
+                tf.keras.layers.Dense(32,  activation='relu'),
+                tf.keras.layers.Dense(10, activation='softmax'),
 
-        ])
+            ])
 
         model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    
+
+        if os.path.exists(self.model_path):
+            print(f"Loading weights from {self.model_path}")
+            model.load_weights(self.model_path)
+        else:
+            print(f"Saving weights to {self.model_path}")
+            model.save_weights(self.model_path)
         return model
 
     def get_parameters(self, config):
@@ -330,6 +331,32 @@ class MaverickClient(fl.client.NumPyClient):
         self.behaviors.append(behavior)
 
     def make_decision(self, parameters, config):
+        if config['rounds'] == 1:
+            self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            self.rounds_intention = self.behaviors['curiosity_driver'].current_round
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
+            return
+        self.drivers_results = {}
+        if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+            value = self.behaviors["accuracy_driver"].analyze(self, parameters=parameters, config=config)
+            self.drivers_results['accuracy_driver'] = value
+            if value > self.threshold:
+                self.dynamic_engagement = True
+                self.want = True
+                self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            else:
+                self.dynamic_engagement = False
+                self.want = False
+                self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+
+        return
+
+    def bk_make_decision(self, parameters, config):
+        if config['rounds'] == 1:
+            self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            self.rounds_intention = self.behaviors['curiosity_driver'].current_round
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
+            return
         self.drivers_results = {}
         if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
 

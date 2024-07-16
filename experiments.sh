@@ -1,194 +1,246 @@
 #!/bin/bash
 
 cases=(
-    'FedCIA DEEV-INVERT DEEV ic:10 expl:25'
-    'FedCIA DEEV-INVERT R_ROBIN ic:10 expl:25'
-    'FedCIA DEEV-INVERT random ic:10 expl:50'
-    'FedCIA DEEV-INVERT DEEV ic:10 expl:50'
-    'FedCIA DEEV-INVERT R_ROBIN ic:10 expl:50'
-    'FedCIA DEEV-INVERT random ic:10 expl:75'
-    'FedCIA DEEV-INVERT DEEV ic:10 expl:75'
-    'FedCIA DEEV-INVERT R_ROBIN ic:10 expl:75'
-    'POC 10 ic:20'
-    'POC 20 ic:20'
-    'POC 30 ic:20'
-    'AVG 10 ic:20'
-    'AVG 20 ic:20'
-    'AVG 30 ic:20'
-    'DEEV 0.01 ic:20'
-    'DEEV 0.005 ic:20'
-    'DEEV 0.001 ic:20'
-    'FedCIA POC random ic:20 expl:25'
-    'FedCIA POC DEEV ic:20 expl:25'
-    'FedCIA POC R_ROBIN ic:20 expl:25'
-    'FedCIA POC random ic:20 expl:50'
-    'FedCIA POC DEEV ic:20 expl:50'
-    'FedCIA POC R_ROBIN ic:20 expl:50'
-    'FedCIA POC random ic:20 expl:75'
-    'FedCIA POC DEEV ic:20 expl:75'
-    'FedCIA POC R_ROBIN ic:20 expl:75'
-    'FedCIA RANDOM random ic:20 expl:25'
-    'FedCIA RANDOM DEEV ic:20 expl:25'
-    'FedCIA RANDOM R_ROBIN ic:20 expl:25'
-    'FedCIA RANDOM random ic:20 expl:50'
-    'FedCIA RANDOM DEEV ic:20 expl:50'
-    'FedCIA RANDOM R_ROBIN ic:20 expl:50'
-    'FedCIA RANDOM random ic:20 expl:75'
-    'FedCIA RANDOM DEEV ic:20 expl:75'
-    'FedCIA RANDOM R_ROBIN ic:20 expl:75'
-    'FedCIA DEEV random ic:20 expl:25'
-    'FedCIA DEEV DEEV ic:20 expl:25'
-    'FedCIA DEEV R_ROBIN ic:20 expl:25'
-    'FedCIA DEEV random ic:20 expl:50'
-    'FedCIA DEEV DEEV ic:20 expl:50'
-    'FedCIA DEEV R_ROBIN ic:20 expl:50'
-    'FedCIA DEEV random ic:20 expl:75'
-    'FedCIA DEEV DEEV ic:20 expl:75'
-    'FedCIA DEEV R_ROBIN ic:20 expl:75'
-    'FedCIA DEEV-INVERT random ic:20 expl:25'
-    'FedCIA DEEV-INVERT DEEV ic:20 expl:25'
-    'FedCIA DEEV-INVERT R_ROBIN ic:20 expl:25'
-    'FedCIA DEEV-INVERT random ic:20 expl:50'
-    'FedCIA DEEV-INVERT DEEV ic:20 expl:50'
-    'FedCIA DEEV-INVERT R_ROBIN ic:20 expl:50'
-    'FedCIA DEEV-INVERT random ic:20 expl:75'
-    'FedCIA DEEV-INVERT DEEV ic:20 expl:75'
-    'FedCIA DEEV-INVERT R_ROBIN ic:20 expl:75'
-    'POC 10 ic:30'
-    'POC 20 ic:30'
-    'POC 30 ic:30'
-    'AVG 10 ic:30'
-    'AVG 20 ic:30'
-    'AVG 30 ic:30'
-    'DEEV 0.01 ic:30'
-    'DEEV 0.005 ic:30'
-    'DEEV 0.001 ic:30'
-    'FedCIA POC random ic:30 expl:25'
-    'FedCIA POC DEEV ic:30 expl:25'
-    'FedCIA POC R_ROBIN ic:30 expl:25'
-    'FedCIA POC random ic:30 expl:50'
-    'FedCIA POC DEEV ic:30 expl:50'
-    'FedCIA POC R_ROBIN ic:30 expl:50'
-    'FedCIA POC random ic:30 expl:75'
-    'FedCIA POC DEEV ic:30 expl:75'
-    'FedCIA POC R_ROBIN ic:30 expl:75'
-    'FedCIA RANDOM random ic:30 expl:25'
-    'FedCIA RANDOM DEEV ic:30 expl:25'
-    'FedCIA RANDOM R_ROBIN ic:30 expl:25'
-    'FedCIA RANDOM random ic:30 expl:50'
-    'FedCIA RANDOM DEEV ic:30 expl:50'
-    'FedCIA RANDOM R_ROBIN ic:30 expl:50'
-    'FedCIA RANDOM random ic:30 expl:75'
-    'FedCIA RANDOM DEEV ic:30 expl:75'
-    'FedCIA RANDOM R_ROBIN ic:30 expl:75'
-    'FedCIA DEEV random ic:30 expl:25'
-    'FedCIA DEEV DEEV ic:30 expl:25'
-    'FedCIA DEEV R_ROBIN ic:30 expl:25'
-    'FedCIA DEEV random ic:30 expl:50'
-    'FedCIA DEEV DEEV ic:30 expl:50'
-    'FedCIA DEEV R_ROBIN ic:30 expl:50'
-    'FedCIA DEEV random ic:30 expl:75'
-    'FedCIA DEEV DEEV ic:30 expl:75'
-    'FedCIA DEEV R_ROBIN ic:30 expl:75'
-    'FedCIA DEEV-INVERT random ic:30 expl:25'
-    'FedCIA DEEV-INVERT DEEV ic:30 expl:25'
-    'FedCIA DEEV-INVERT R_ROBIN ic:30 expl:25'
-    'FedCIA DEEV-INVERT random ic:30 expl:50'
-    'FedCIA DEEV-INVERT DEEV ic:30 expl:50'
-    'FedCIA DEEV-INVERT R_ROBIN ic:30 expl:50'
-    'FedCIA DEEV-INVERT random ic:30 expl:75'
-    'FedCIA DEEV-INVERT DEEV ic:30 expl:75'
-    'FedCIA DEEV-INVERT R_ROBIN ic:30 expl:75'
-    'POC 10 ic:40'
-    'POC 20 ic:40'
-    'POC 30 ic:40'
-    'AVG 10 ic:40'
-    'AVG 20 ic:40'
-    'AVG 30 ic:40'
-    'DEEV 0.01 ic:40'
-    'DEEV 0.005 ic:40'
-    'DEEV 0.001 ic:40'
-    'FedCIA POC random ic:40 expl:25'
-    'FedCIA POC DEEV ic:40 expl:25'
-    'FedCIA POC R_ROBIN ic:40 expl:25'
-    'FedCIA POC random ic:40 expl:50'
-    'FedCIA POC DEEV ic:40 expl:50'
-    'FedCIA POC R_ROBIN ic:40 expl:50'
-    'FedCIA POC random ic:40 expl:75'
-    'FedCIA POC DEEV ic:40 expl:75'
-    'FedCIA POC R_ROBIN ic:40 expl:75'
-    'FedCIA RANDOM random ic:40 expl:25'
-    'FedCIA RANDOM DEEV ic:40 expl:25'
-    'FedCIA RANDOM R_ROBIN ic:40 expl:25'
-    'FedCIA RANDOM random ic:40 expl:50'
-    'FedCIA RANDOM DEEV ic:40 expl:50'
-    'FedCIA RANDOM R_ROBIN ic:40 expl:50'
-    'FedCIA RANDOM random ic:40 expl:75'
-    'FedCIA RANDOM DEEV ic:40 expl:75'
-    'FedCIA RANDOM R_ROBIN ic:40 expl:75'
-    'FedCIA DEEV random ic:40 expl:25'
-    'FedCIA DEEV DEEV ic:40 expl:25'
-    'FedCIA DEEV R_ROBIN ic:40 expl:25'
-    'FedCIA DEEV random ic:40 expl:50'
-    'FedCIA DEEV DEEV ic:40 expl:50'
-    'FedCIA DEEV R_ROBIN ic:40 expl:50'
-    'FedCIA DEEV random ic:40 expl:75'
-    'FedCIA DEEV DEEV ic:40 expl:75'
-    'FedCIA DEEV R_ROBIN ic:40 expl:75'
-    'FedCIA DEEV-INVERT random ic:40 expl:25'
-    'FedCIA DEEV-INVERT DEEV ic:40 expl:25'
-    'FedCIA DEEV-INVERT R_ROBIN ic:40 expl:25'
-    'FedCIA DEEV-INVERT random ic:40 expl:50'
-    'FedCIA DEEV-INVERT DEEV ic:40 expl:50'
-    'FedCIA DEEV-INVERT R_ROBIN ic:40 expl:50'
-    'FedCIA DEEV-INVERT random ic:40 expl:75'
-    'FedCIA DEEV-INVERT DEEV ic:40 expl:75'
-    'FedCIA DEEV-INVERT R_ROBIN ic:40 expl:75'
-    'POC 10 ic:50'
-    'POC 20 ic:50'
-    'POC 30 ic:50'
-    'AVG 10 ic:50'
-    'AVG 20 ic:50'
-    'AVG 30 ic:50'
-    'DEEV 0.01 ic:50'
-    'DEEV 0.005 ic:50'
-    'DEEV 0.001 ic:50'
-    'FedCIA POC random ic:50 expl:25'
-    'FedCIA POC DEEV ic:50 expl:25'
-    'FedCIA POC R_ROBIN ic:50 expl:25'
-    'FedCIA POC random ic:50 expl:50'
-    'FedCIA POC DEEV ic:50 expl:50'
-    'FedCIA POC R_ROBIN ic:50 expl:50'
-    'FedCIA POC random ic:50 expl:75'
-    'FedCIA POC DEEV ic:50 expl:75'
-    'FedCIA POC R_ROBIN ic:50 expl:75'
-    'FedCIA RANDOM random ic:50 expl:25'
-    'FedCIA RANDOM DEEV ic:50 expl:25'
-    'FedCIA RANDOM R_ROBIN ic:50 expl:25'
-    'FedCIA RANDOM random ic:50 expl:50'
-    'FedCIA RANDOM DEEV ic:50 expl:50'
-    'FedCIA RANDOM R_ROBIN ic:50 expl:50'
-    'FedCIA RANDOM random ic:50 expl:75'
-    'FedCIA RANDOM DEEV ic:50 expl:75'
-    'FedCIA RANDOM R_ROBIN ic:50 expl:75'
-    'FedCIA DEEV random ic:50 expl:25'
-    'FedCIA DEEV DEEV ic:50 expl:25'
-    'FedCIA DEEV R_ROBIN ic:50 expl:25'
-    'FedCIA DEEV random ic:50 expl:50'
-    'FedCIA DEEV DEEV ic:50 expl:50'
-    'FedCIA DEEV R_ROBIN ic:50 expl:50'
-    'FedCIA DEEV random ic:50 expl:75'
-    'FedCIA DEEV DEEV ic:50 expl:75'
-    'FedCIA DEEV R_ROBIN ic:50 expl:75'
-    'FedCIA DEEV-INVERT random ic:50 expl:25'
-    'FedCIA DEEV-INVERT DEEV ic:50 expl:25'
-    'FedCIA DEEV-INVERT R_ROBIN ic:50 expl:25'
-    'FedCIA DEEV-INVERT random ic:50 expl:50'
-    'FedCIA DEEV-INVERT DEEV ic:50 expl:50'
-    'FedCIA DEEV-INVERT R_ROBIN ic:50 expl:50'
-    'FedCIA DEEV-INVERT random ic:50 expl:75'
-    'FedCIA DEEV-INVERT DEEV ic:50 expl:75'
-    'FedCIA DEEV-INVERT R_ROBIN ic:50 expl:75'
+    "POC 10 ic:10"
+    "POC 20 ic:10"
+    "POC 30 ic:10"
+    "AVG 10 ic:10"
+    "AVG 20 ic:10"
+    "AVG 30 ic:10"
+    "DEEV 0.01 ic:10"
+    "DEEV 0.005 ic:10"
+    "DEEV 0.001 ic:10"
+    "R_ROBIN 10 ic:10"
+    "R_ROBIN 20 ic:10"
+    "R_ROBIN 30 ic:10"
+    "POC 10 ic:20"
+    "POC 20 ic:20"
+    "POC 30 ic:20"
+    "AVG 10 ic:20"
+    "AVG 20 ic:20"
+    "AVG 30 ic:20"
+    "DEEV 0.01 ic:20"
+    "DEEV 0.005 ic:20"
+    "DEEV 0.001 ic:20"
+    "R_ROBIN 10 ic:20"
+    "R_ROBIN 20 ic:20"
+    "R_ROBIN 30 ic:20"
+    "POC 10 ic:30"
+    "POC 20 ic:30"
+    "POC 30 ic:30"
+    "AVG 10 ic:30"
+    "AVG 20 ic:30"
+    "AVG 30 ic:30"
+    "DEEV 0.01 ic:30"
+    "DEEV 0.005 ic:30"
+    "DEEV 0.001 ic:30"
+    "R_ROBIN 10 ic:30"
+    "R_ROBIN 20 ic:30"
+    "R_ROBIN 30 ic:30"
+    "POC 10 ic:40"
+    "POC 20 ic:40"
+    "POC 30 ic:40"
+    "AVG 10 ic:40"
+    "AVG 20 ic:40"
+    "AVG 30 ic:40"
+    "DEEV 0.01 ic:40"
+    "DEEV 0.005 ic:40"
+    "DEEV 0.001 ic:40"
+    "R_ROBIN 10 ic:40"
+    "R_ROBIN 20 ic:40"
+    "R_ROBIN 30 ic:40"
+    "POC 10 ic:50"
+    "POC 20 ic:50"
+    "POC 30 ic:50"
+    "AVG 10 ic:50"
+    "AVG 20 ic:50"
+    "AVG 30 ic:50"
+    "DEEV 0.01 ic:50"
+    "DEEV 0.005 ic:50"
+    "DEEV 0.001 ic:50"
+    "R_ROBIN 10 ic:50"
+    "R_ROBIN 20 ic:50"
+    "R_ROBIN 30 ic:50"
+    "FedCIA POC random ic:10 expl:25"
+    "FedCIA POC random ic:20 expl:25"
+    "FedCIA POC random ic:30 expl:25"
+    "FedCIA POC random ic:40 expl:25"
+    "FedCIA POC random ic:50 expl:25"
+    "FedCIA POC DEEV ic:10 expl:25"
+    "FedCIA POC DEEV ic:20 expl:25"
+    "FedCIA POC DEEV ic:30 expl:25"
+    "FedCIA POC DEEV ic:40 expl:25"
+    "FedCIA POC DEEV ic:50 expl:25"
+    "FedCIA POC R_ROBIN ic:10 expl:25"
+    "FedCIA POC R_ROBIN ic:20 expl:25"
+    "FedCIA POC R_ROBIN ic:30 expl:25"
+    "FedCIA POC R_ROBIN ic:40 expl:25"
+    "FedCIA POC R_ROBIN ic:50 expl:25"
+    "FedCIA POC random ic:10 expl:50"
+    "FedCIA POC random ic:20 expl:50"
+    "FedCIA POC random ic:30 expl:50"
+    "FedCIA POC random ic:40 expl:50"
+    "FedCIA POC random ic:50 expl:50"
+    "FedCIA POC DEEV ic:10 expl:50"
+    "FedCIA POC DEEV ic:20 expl:50"
+    "FedCIA POC DEEV ic:30 expl:50"
+    "FedCIA POC DEEV ic:40 expl:50"
+    "FedCIA POC DEEV ic:50 expl:50"
+    "FedCIA POC R_ROBIN ic:10 expl:50"
+    "FedCIA POC R_ROBIN ic:20 expl:50"
+    "FedCIA POC R_ROBIN ic:30 expl:50"
+    "FedCIA POC R_ROBIN ic:40 expl:50"
+    "FedCIA POC R_ROBIN ic:50 expl:50"
+    "FedCIA POC random ic:10 expl:75"
+    "FedCIA POC random ic:20 expl:75"
+    "FedCIA POC random ic:30 expl:75"
+    "FedCIA POC random ic:40 expl:75"
+    "FedCIA POC random ic:50 expl:75"
+    "FedCIA POC DEEV ic:10 expl:75"
+    "FedCIA POC DEEV ic:20 expl:75"
+    "FedCIA POC DEEV ic:30 expl:75"
+    "FedCIA POC DEEV ic:40 expl:75"
+    "FedCIA POC DEEV ic:50 expl:75"
+    "FedCIA POC R_ROBIN ic:10 expl:75"
+    "FedCIA POC R_ROBIN ic:20 expl:75"
+    "FedCIA POC R_ROBIN ic:30 expl:75"
+    "FedCIA POC R_ROBIN ic:40 expl:75"
+    "FedCIA POC R_ROBIN ic:50 expl:75"
+    "FedCIA RANDOM random ic:10 expl:25"
+    "FedCIA RANDOM random ic:20 expl:25"
+    "FedCIA RANDOM random ic:30 expl:25"
+    "FedCIA RANDOM random ic:40 expl:25"
+    "FedCIA RANDOM random ic:50 expl:25"
+    "FedCIA RANDOM DEEV ic:10 expl:25"
+    "FedCIA RANDOM DEEV ic:20 expl:25"
+    "FedCIA RANDOM DEEV ic:30 expl:25"
+    "FedCIA RANDOM DEEV ic:40 expl:25"
+    "FedCIA RANDOM DEEV ic:50 expl:25"
+    "FedCIA RANDOM R_ROBIN ic:10 expl:25"
+    "FedCIA RANDOM R_ROBIN ic:20 expl:25"
+    "FedCIA RANDOM R_ROBIN ic:30 expl:25"
+    "FedCIA RANDOM R_ROBIN ic:40 expl:25"
+    "FedCIA RANDOM R_ROBIN ic:50 expl:25"
+    "FedCIA RANDOM random ic:10 expl:50"
+    "FedCIA RANDOM random ic:20 expl:50"
+    "FedCIA RANDOM random ic:30 expl:50"
+    "FedCIA RANDOM random ic:40 expl:50"
+    "FedCIA RANDOM random ic:50 expl:50"
+    "FedCIA RANDOM DEEV ic:10 expl:50"
+    "FedCIA RANDOM DEEV ic:20 expl:50"
+    "FedCIA RANDOM DEEV ic:30 expl:50"
+    "FedCIA RANDOM DEEV ic:40 expl:50"
+    "FedCIA RANDOM DEEV ic:50 expl:50"
+    "FedCIA RANDOM R_ROBIN ic:10 expl:50"
+    "FedCIA RANDOM R_ROBIN ic:20 expl:50"
+    "FedCIA RANDOM R_ROBIN ic:30 expl:50"
+    "FedCIA RANDOM R_ROBIN ic:40 expl:50"
+    "FedCIA RANDOM R_ROBIN ic:50 expl:50"
+    "FedCIA RANDOM random ic:10 expl:75"
+    "FedCIA RANDOM random ic:20 expl:75"
+    "FedCIA RANDOM random ic:30 expl:75"
+    "FedCIA RANDOM random ic:40 expl:75"
+    "FedCIA RANDOM random ic:50 expl:75"
+    "FedCIA RANDOM DEEV ic:10 expl:75"
+    "FedCIA RANDOM DEEV ic:20 expl:75"
+    "FedCIA RANDOM DEEV ic:30 expl:75"
+    "FedCIA RANDOM DEEV ic:40 expl:75"
+    "FedCIA RANDOM DEEV ic:50 expl:75"
+    "FedCIA RANDOM R_ROBIN ic:10 expl:75"
+    "FedCIA RANDOM R_ROBIN ic:20 expl:75"
+    "FedCIA RANDOM R_ROBIN ic:30 expl:75"
+    "FedCIA RANDOM R_ROBIN ic:40 expl:75"
+    "FedCIA RANDOM R_ROBIN ic:50 expl:75"
+    "FedCIA DEEV random ic:10 expl:25"
+    "FedCIA DEEV random ic:20 expl:25"
+    "FedCIA DEEV random ic:30 expl:25"
+    "FedCIA DEEV random ic:40 expl:25"
+    "FedCIA DEEV random ic:50 expl:25"
+    "FedCIA DEEV DEEV ic:10 expl:25"
+    "FedCIA DEEV DEEV ic:20 expl:25"
+    "FedCIA DEEV DEEV ic:30 expl:25"
+    "FedCIA DEEV DEEV ic:40 expl:25"
+    "FedCIA DEEV DEEV ic:50 expl:25"
+    "FedCIA DEEV R_ROBIN ic:10 expl:25"
+    "FedCIA DEEV R_ROBIN ic:20 expl:25"
+    "FedCIA DEEV R_ROBIN ic:30 expl:25"
+    "FedCIA DEEV R_ROBIN ic:40 expl:25"
+    "FedCIA DEEV R_ROBIN ic:50 expl:25"
+    "FedCIA DEEV random ic:10 expl:50"
+    "FedCIA DEEV random ic:20 expl:50"
+    "FedCIA DEEV random ic:30 expl:50"
+    "FedCIA DEEV random ic:40 expl:50"
+    "FedCIA DEEV random ic:50 expl:50"
+    "FedCIA DEEV DEEV ic:10 expl:50"
+    "FedCIA DEEV DEEV ic:20 expl:50"
+    "FedCIA DEEV DEEV ic:30 expl:50"
+    "FedCIA DEEV DEEV ic:40 expl:50"
+    "FedCIA DEEV DEEV ic:50 expl:50"
+    "FedCIA DEEV R_ROBIN ic:10 expl:50"
+    "FedCIA DEEV R_ROBIN ic:20 expl:50"
+    "FedCIA DEEV R_ROBIN ic:30 expl:50"
+    "FedCIA DEEV R_ROBIN ic:40 expl:50"
+    "FedCIA DEEV R_ROBIN ic:50 expl:50"
+    "FedCIA DEEV random ic:10 expl:75"
+    "FedCIA DEEV random ic:20 expl:75"
+    "FedCIA DEEV random ic:30 expl:75"
+    "FedCIA DEEV random ic:40 expl:75"
+    "FedCIA DEEV random ic:50 expl:75"
+    "FedCIA DEEV DEEV ic:10 expl:75"
+    "FedCIA DEEV DEEV ic:20 expl:75"
+    "FedCIA DEEV DEEV ic:30 expl:75"
+    "FedCIA DEEV DEEV ic:40 expl:75"
+    "FedCIA DEEV DEEV ic:50 expl:75"
+    "FedCIA DEEV R_ROBIN ic:10 expl:75"
+    "FedCIA DEEV R_ROBIN ic:20 expl:75"
+    "FedCIA DEEV R_ROBIN ic:30 expl:75"
+    "FedCIA DEEV R_ROBIN ic:40 expl:75"
+    "FedCIA DEEV R_ROBIN ic:50 expl:75"
+    "FedCIA DEEV-INVERT random ic:10 expl:25"
+    "FedCIA DEEV-INVERT random ic:20 expl:25"
+    "FedCIA DEEV-INVERT random ic:30 expl:25"
+    "FedCIA DEEV-INVERT random ic:40 expl:25"
+    "FedCIA DEEV-INVERT random ic:50 expl:25"
+    "FedCIA DEEV-INVERT DEEV ic:10 expl:25"
+    "FedCIA DEEV-INVERT DEEV ic:20 expl:25"
+    "FedCIA DEEV-INVERT DEEV ic:30 expl:25"
+    "FedCIA DEEV-INVERT DEEV ic:40 expl:25"
+    "FedCIA DEEV-INVERT DEEV ic:50 expl:25"
+    "FedCIA DEEV-INVERT R_ROBIN ic:10 expl:25"
+    "FedCIA DEEV-INVERT R_ROBIN ic:20 expl:25"
+    "FedCIA DEEV-INVERT R_ROBIN ic:30 expl:25"
+    "FedCIA DEEV-INVERT R_ROBIN ic:40 expl:25"
+    "FedCIA DEEV-INVERT R_ROBIN ic:50 expl:25"
+    "FedCIA DEEV-INVERT random ic:10 expl:50"
+    "FedCIA DEEV-INVERT random ic:20 expl:50"
+    "FedCIA DEEV-INVERT random ic:30 expl:50"
+    "FedCIA DEEV-INVERT random ic:40 expl:50"
+    "FedCIA DEEV-INVERT random ic:50 expl:50"
+    "FedCIA DEEV-INVERT DEEV ic:10 expl:50"
+    "FedCIA DEEV-INVERT DEEV ic:20 expl:50"
+    "FedCIA DEEV-INVERT DEEV ic:30 expl:50"
+    "FedCIA DEEV-INVERT DEEV ic:40 expl:50"
+    "FedCIA DEEV-INVERT DEEV ic:50 expl:50"
+    "FedCIA DEEV-INVERT R_ROBIN ic:10 expl:50"
+    "FedCIA DEEV-INVERT R_ROBIN ic:20 expl:50"
+    "FedCIA DEEV-INVERT R_ROBIN ic:30 expl:50"
+    "FedCIA DEEV-INVERT R_ROBIN ic:40 expl:50"
+    "FedCIA DEEV-INVERT R_ROBIN ic:50 expl:50"
+    "FedCIA DEEV-INVERT random ic:10 expl:75"
+    "FedCIA DEEV-INVERT random ic:20 expl:75"
+    "FedCIA DEEV-INVERT random ic:30 expl:75"
+    "FedCIA DEEV-INVERT random ic:40 expl:75"
+    "FedCIA DEEV-INVERT random ic:50 expl:75"
+    "FedCIA DEEV-INVERT DEEV ic:10 expl:75"
+    "FedCIA DEEV-INVERT DEEV ic:20 expl:75"
+    "FedCIA DEEV-INVERT DEEV ic:30 expl:75"
+    "FedCIA DEEV-INVERT DEEV ic:40 expl:75"
+    "FedCIA DEEV-INVERT DEEV ic:50 expl:75"
+    "FedCIA DEEV-INVERT R_ROBIN ic:10 expl:75"
+    "FedCIA DEEV-INVERT R_ROBIN ic:20 expl:75"
+    "FedCIA DEEV-INVERT R_ROBIN ic:30 expl:75"
+    "FedCIA DEEV-INVERT R_ROBIN ic:40 expl:75"
+    "FedCIA DEEV-INVERT R_ROBIN ic:50 expl:75"
 )
 
 

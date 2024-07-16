@@ -3,6 +3,7 @@ from flwr.common import EvaluateIns, FitIns, Parameters, parameters_to_ndarrays,
 from flwr.server.client_manager import ClientManager
 from flwr.server.strategy.aggregate import aggregate ,weighted_loss_avg
 from utils.logger import my_logger
+from utils.select_by_server import is_select_by_server
 
 class FedPOC(fl.server.strategy.FedAvg):
     def __init__(
@@ -78,7 +79,7 @@ class FedPOC(fl.server.strategy.FedAvg):
         weights_results = []
         for _, fit_res in results:
             client_id         = str(fit_res.metrics['cid'])
-            if self._is_seleceted_by_server(client_id) and fit_res.metrics['dynamic_engagement']:
+            if is_select_by_server(client_id, ','.join(self.selected_clients)) and fit_res.metrics['dynamic_engagement']:
                 weights_results.append((
                     parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples
                 ))
@@ -91,8 +92,6 @@ class FedPOC(fl.server.strategy.FedAvg):
         return parameters_aggregated
 
     def configure_evaluate(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
-        if self.fraction_evaluate == 0.0:
-            return []
         config = {
             'rounds': server_round,
 			"selected_by_server" : ','.join(self.selected_clients),
@@ -130,7 +129,7 @@ class FedPOC(fl.server.strategy.FedAvg):
             client_accuracy = float(eval_res.metrics['fit_acc'])
             accs.append(client_accuracy)
             local_list_clients.append((client_id, client_accuracy))
-            if eval_res.metrics['dynamic_engagement']:
+            if bool(eval_res.metrics['dynamic_engagement']):
                 c_engaged.append(client_id)
                 if self._is_seleceted_by_server(client_id):
                     loss_to_aggregate.append((eval_res.num_examples, eval_res.loss))

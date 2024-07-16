@@ -4,6 +4,7 @@ from strategies.fedavg import FedAvg
 from strategies.fedcia import FedCIA
 from strategies.poc import FedPOC
 from strategies.deev import FedDEEV
+from strategies.r_robin import FedRR
 from utils.logger import my_logger
 
 def get_strategy(
@@ -90,6 +91,20 @@ def get_strategy(
                 non_iid = non_iid,
                 dataset = dataset,
                 threshold = threshold,
+                model_type = model_type,
+                init_clients = init_clients,
+                config_test = config_test,
+            )
+        if strategy.upper() == "R_ROBIN":
+            return FedRR(
+                n_clients        = n_clients,
+                rounds           = rounds,
+                perc_of_clients  = exploration,
+                dataset= dataset,
+                dirichlet_alpha= dirichlet_alpha,
+                epoch= epoch,
+                non_iid=non_iid,
+                threshold=threshold,
                 model_type = model_type,
                 init_clients = init_clients,
                 config_test = config_test,

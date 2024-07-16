@@ -65,7 +65,7 @@ class FedAvg(fl.server.strategy.FedAvg):
         weights_results = []
         for _, fit_res in results:
             cid = fit_res.metrics['cid']
-            if fit_res.metrics['dynamic_engagement']: # Na teoria não participantes não responderam o chamado
+            if bool(fit_res.metrics['dynamic_engagement']):
                 if is_select_by_server(str(cid), self.selected_clients):
                     weights_results.append((
                         parameters_to_ndarrays(fit_res.parameters),

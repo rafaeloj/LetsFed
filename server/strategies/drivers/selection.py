@@ -41,8 +41,8 @@ class SelectionDriver(Driver):
         for client in real_not_engaged:
             if not client[1]: # se não interessado
                 server.forget_clients[client[0]] -= 1
-            else:
-                server.forget_clients[client[0]] = int(server.rounds*0.15)
+        for client in engaged:
+            server.forget_clients[client[0]] = int(server.rounds*0.15)
 
         server.selected_clients = engaged + real_not_engaged
     

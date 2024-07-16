@@ -120,7 +120,11 @@ class FedCIA(fl.server.strategy.FedAvg):
                         fit_res.num_examples
                     ))
 
+        if len(weights_of_participating_clients) == 0:
+            return self._last_fit
+        
         parameters_aggregated = ndarrays_to_parameters(aggregate(weights_of_participating_clients)) ## FedAvg
+        self._last_fit = parameters_aggregated
         return parameters_aggregated
 
     def configure_evaluate(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
@@ -140,35 +144,8 @@ class FedCIA(fl.server.strategy.FedAvg):
 
     def aggregate_evaluate(self, server_round: int, results, failures):
         self._collect_client_informations(results = results, server_round = server_round)
-        cia_loss_aggregated = self._cia_aggregate_evaluate(results = results)
-        my_logger.log(
-            '/s-data.csv',
-            data = {
-                'rounds': server_round,
-                'strategy': self.solution.lower(),
-                'model_type': self.model_type.lower(),
-                'select_client_method': self.select_client_method.lower(),
-                'select_client_method_to_engaged': self.select_client_method_to_engaged.lower(),
-                'n_selected': len(self.selected_clients),
-                'n_engaged': len(self.engaged_clients),
-                'n_not_engaged': len(self.not_engaged_clients),
-                'selection': '|'.join([f"{str(client[0])}:{self.clients_intentions[client[0]]}" for client in self.selected_clients]),
-                'r_intetion': '|'.join([str(x) for x in self.r_intetions.tolist()]),
-                'r_robin': '|'.join([str(x) for x in self.how_many_time_selected.tolist()]),
-                'skip_round': False,
-                'local_epochs': self.epoch,
-                'dirichlet_alpha': self.dirichlet_alpha,
-                'non_iid': self.non_iid,
-                'dataset': self.dataset.lower(),
-                'exploitation': self.exploitation,
-                'exploration': self.exploration,
-                'decay': self.decay,
-                'threshold': self.threshold,
-                'init_clients': self.init_clients,
-                'config_test': self.config_test,
-                'forget_clients': "|".join(f'{str(client)}' for client in self.forget_clients),
-            },
-        )
+        cia_loss_aggregated = self._cia_aggregate_evaluate(results = results, server_round = server_round)
+
         return cia_loss_aggregated, {}
 
     def _collect_client_informations(self, results, server_round):
@@ -195,18 +172,58 @@ class FedCIA(fl.server.strategy.FedAvg):
             for _, eval_res in results
         ]
 
-    def _cia_aggregate_evaluate(self, results):
+    def _cia_aggregate_evaluate(self, results, server_round):
         cia_parameters = []
+        c_engaged          = []
+        c_not_engaged      = []
         for _, evaluate_res in results:
             metrics = evaluate_res.metrics
             cid = str(metrics['cid'])
-            if metrics['dynamic_engagement']:
+            if bool(metrics['dynamic_engagement']):
+                c_engaged.append(cid)
                 if is_select_by_server(str(cid), [str(c[0]) for c in self.selected_clients]):
                     cia_parameters.append((
                         evaluate_res.num_examples,
                         evaluate_res.loss,
                     ))
+            else:
+                c_not_engaged.append(cid)
+        should_pass = len(cia_parameters) == 0
+        
+        my_logger.log(
+            '/s-data.csv',
+            data = {
+                'rounds': server_round,
+                'strategy': self.solution.lower(),
+                'model_type': self.model_type.lower(),
+                'select_client_method': self.select_client_method.lower(),
+                'select_client_method_to_engaged': self.select_client_method_to_engaged.lower(),
+                'n_selected': len(self.selected_clients),
+                'n_engaged': len(c_engaged),
+                'n_not_engaged': len(c_not_engaged),
+                'selection': '|'.join([f"{str(client[0])}:{self.clients_intentions[client[0]]}" for client in self.selected_clients]),
+                'r_intetion': '|'.join([str(x) for x in self.r_intetions.tolist()]),
+                'r_robin': '|'.join([str(x) for x in self.how_many_time_selected.tolist()]),
+                'skip_round': should_pass,
+                'local_epochs': self.epoch,
+                'dirichlet_alpha': self.dirichlet_alpha,
+                'non_iid': self.non_iid,
+                'dataset': self.dataset.lower(),
+                'exploitation': self.exploitation,
+                'exploration': self.exploration,
+                'decay': self.decay,
+                'threshold': self.threshold,
+                'init_clients': self.init_clients,
+                'config_test': self.config_test,
+                'forget_clients': "|".join(f'{str(client)}' for client in self.forget_clients),
+            },
+        )
+
+        if should_pass:
+            return self._last_eval
+
         loss_aggregated = weighted_loss_avg(cia_parameters)
+        self._last_eval = loss_aggregated
         return loss_aggregated
 
     def _update_client_infos(self, clients_info, server_round):
@@ -215,7 +232,7 @@ class FedCIA(fl.server.strategy.FedAvg):
         for client_info in clients_info:
             self.clients_intentions[int(client_info['cid'])] = client_info['want']
         self.engaged_clients         = [(client_info['cid'], client_info['want'], client_info['dynamic_engagement']) for client_info in clients_info if client_info['want']]
-        self.engaged_clients_acc     = [(client_info['cid'], client_info['acc']) for client_info in clients_info if client_info['want']]
+        self.engaged_clients_acc     = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if client_info['want']]
         self.not_engaged_clients     = [(client_info['cid'], client_info['want'], client_info['dynamic_engagement']) for client_info in clients_info if not client_info['want']]
         self.not_engaged_clients_acc = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if not client_info['want']]
         self.r_intetions             = np.array([client_info['r_intention'] for client_info in clients_info])
