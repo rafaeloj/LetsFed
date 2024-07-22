@@ -336,6 +336,9 @@ class MaverickClient(fl.client.NumPyClient):
             self.rounds_intention = self.behaviors['curiosity_driver'].current_round
             self.drivers_results['curiosity_driver'] = self.rounds_intention
             return
+        # self.dynamic_engagement = True
+        # self.want = True
+        # return
         self.drivers_results = {}
         if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
             value = self.behaviors["accuracy_driver"].analyze(self, parameters=parameters, config=config)

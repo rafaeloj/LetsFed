@@ -133,7 +133,8 @@ class FedDEEV(fl.server.strategy.FedAvg):
 
         for _, eval_res in results:
             client_id       = str(eval_res.metrics['cid'])
-            client_accuracy = float(eval_res.metrics['fit_acc'])
+            # client_accuracy = float(eval_res.metrics['fit_acc'])
+            client_accuracy = float(eval_res.metrics['acc'])
             accs.append(client_accuracy)
             local_list_clients.append((client_id, client_accuracy))
             if bool(eval_res.metrics['dynamic_engagement']):
