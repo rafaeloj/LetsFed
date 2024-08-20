@@ -1,7 +1,10 @@
 import flwr as fl
 import os
-from strategies.cia_client import MaverickClient
+from strategies import FederatedClient
+from strategies.training import LestFedClient
+from strategies.states import NonParticipationState, ParticipationState 
 import tensorflow as tf
+from utils import get_env_var, ConfigManager
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -11,98 +14,19 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-def get_strategy(
-    cid,
-    num_clients,
-    dataset,
-    epoch,
-    non_iid,
-    participate,
-    dirichlet_alpha,
-    swap,
-    rounds,
-    solution,
-    method,
-    exploitation: float,
-    exploration: float,
-    least_select_factor: float,
-    decay: float,
-    threshold: float,
-    model_type,
-    init_clients: float,
-    config_test: str,
-):
-    return MaverickClient(
-        cid=cid,
-        num_clients=num_clients,
-        dataset=dataset,
-        non_iid=non_iid,
-        epoch=epoch,
-        isParticipate=participate,
-        dirichlet_alpha=dirichlet_alpha,
-        swap        = swap,
-        rounds = rounds,
-        solution = solution,
-        method = method,
-        exploitation = exploitation,
-        exploration = exploration,
-        least_select_factor = least_select_factor,
-        decay = decay,
-        threshold = threshold,
-        model_type = model_type,
-        init_clients = init_clients,
-        config_test = config_test,
-    )
+def get_strategy(config):
+    fc = FederatedClient(config)
+    fc.set_strategy(LestFedClient(fc))
+    return fc
+    # return MaverickClient(config) 
+
 def main():
-    cid                             = int(os.environ['CLIENT_ID'])
-    num_clients                     = int(os.environ['NUM_CLIENTS'])
-    dataset                         = os.environ['DATASET']
-    local_epochs                    = int(os.environ['LOCAL_EPOCHS'])
-    non_iid                          = os.environ["non_iid"] == "True" 
-    participate                     = os.environ["PARTICIPATE"] == "True"
-    dirichlet_alpha                 = float(os.environ["DIRICHLET_ALPHA"])
-    swap                            = os.environ['SWAP'] == 'True'
-    rounds                          = int(os.environ['ROUNDS'])
-    solution                        = os.environ["STRATEGY"]
-    method                          = os.environ["SELECT_CLIENT_METHOD"]
-    decay                           = float(os.environ["DECAY"])
-    exploitation                    = float(os.environ['EXPLOITATION'])
-    exploration                     = float(os.environ['EXPLORATION'])
-    least_select_factor             = float(os.environ['LEAST_SELECT_FACTOR'])
-    threshold                       = float(os.environ['THRESHOLD'])
-    # model                         = os.environ['MODEL']
-    init_clients                    = float(os.environ['INIT_CLIENTS'])
-    local_epochs                    = int(os.environ['LOCAL_EPOCHS'])
-    dirichlet_alpha                 = float(os.environ["DIRICHLET_ALPHA"])
-    non_iid                         = os.environ["non_iid"] == "True" 
-    threshold                       = float(os.environ['THRESHOLD'])
-    dataset                         = os.environ['DATASET']
-    model_type                      = os.environ['MODEL_TYPE']
-    config_test                     = os.environ["CONFIG_TEST"]
-    
+    cm = ConfigManager('', 'utils/conf/variables.json', client=True)
+    conf = cm.get_os_config()
+    print(conf)
     fl.client.start_client(
         server_address=os.environ['SERVER_IP'],
-        client=get_strategy(
-            cid                             = cid,
-            num_clients                     = num_clients,
-            dataset                         = dataset,
-            epoch                           = local_epochs,
-            non_iid                         = non_iid,
-            participate                     = participate,
-            dirichlet_alpha                 = dirichlet_alpha,
-            swap                            = swap,
-            rounds                          = rounds,
-            solution                        = solution,
-            method                          = method,
-            decay                           = decay,
-            exploitation                    = exploitation,
-            exploration                     = exploration,
-            least_select_factor             = least_select_factor,
-            threshold                       = threshold,
-            model_type                      = model_type,
-            init_clients                    = init_clients,
-            config_test                     = config_test,
-        ).to_client()
+        client=get_strategy(config=conf).to_client()
     )
 
 if __name__ == "__main__":

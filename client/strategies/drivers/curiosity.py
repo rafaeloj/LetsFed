@@ -2,55 +2,44 @@ from .driver import Driver
 from random import randint
 IDLE = 0
 EXPLORING = 1
-EXPLORED = 2
-CURIOSITY = 0.1
-WILLING_PERC = 0.80
 class CuriosityDriver(Driver):
     def __init__(self, r_intention=0):
-        self.history       = []
         self.state         = IDLE # Type: idle, exploring, explored
         self.current_round = r_intention
     
     def get_name(self):
         return "curiosity_driver"
 
-    def analyze(self, client, parameters, config):
-        """
-        """
-        if self.on_exploration(client = client):
-            state = self.explore(client = client)
+    def run(self, client, parameters, config, selected=True):
+        if not selected:
+            return True if self.state == EXPLORING else False
+
+        if self.on_exploration():
+            state = self.explore()
             return state
 
-        if client.dynamic_engagement:
+        if client.participating_state:
             state = self.start_exploration(client = client)
             return state
     
-        # self.current_round = randint(1, int(client.rounds*0.1))
-        return 0 #self.calc_value(client = client)
+        return False
 
 
-    def explore(self, client):
-        """
-            Regra:
-                Caso ainda esteja no processo de exploração "executa" a exploração e retorna True
-                Caso não esteja retorna False
-        """
+    def explore(self):
         self.current_round -= 1
-        if not self.on_exploration(client):
-            self.set_explored()
-        return self.calc_value(client = client)
+        if not self.on_exploration():
+            self.set_idle()
+            return False
+        return True
 
-    def on_exploration(self, client):
+    def on_exploration(self):
         return self.current_round > 0 and self.state == EXPLORING
 
     def start_exploration(self, client):
         if self.current_round == 0:
-            self.current_round = randint(1, int(client.rounds*CURIOSITY)+1)
+            self.current_round = randint(1, int(client.conf['rounds'])+1)
         self.set_exploring()
-        return self.calc_value(client = client)
-
-    def set_explored(self):
-        self.state = EXPLORED
+        return True
     
     def set_exploring(self):
         self.state = EXPLORING
@@ -58,17 +47,3 @@ class CuriosityDriver(Driver):
     def set_idle(self):
         self.current_round = 0
         self.sate = IDLE
-
-    def finish(self, client):
-        """
-            Finaliza o processo de explocação
-        """
-        self.set_idle()
-        self.state = IDLE
-        client.dynamic_engagement = False
-        client.want = False
-
-    def calc_value(self, client):
-        """ A vontate é com base na quantidade de rounds que o client deseja participar. Quanto mais rounds maior é a vontade """
-        # return 1
-        return self.current_round / (CURIOSITY*100) * WILLING_PERC

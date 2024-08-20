@@ -1,0 +1,23 @@
+{
+    "server_ip": "SERVER_IP",
+    "tid": "TID",
+    "clients": "_CLIENTS",
+    "epochs": "_LOCAL_EPOCHS",
+    "dataset": "_DATASET",
+    "rounds": "_ROUNDS",
+    "init_clients": "_INIT_CLIENTS",
+    "dirichlet_alpha": "_DIRICHLET_ALPHA",
+    "threshold": "_THRESHOLD",
+    "strategy": "_STRATEGY_SID",
+    "exploration": "_STRATEGY_PARTICIPATING_EXPLORATION",
+    "p_method": "_STRATEGY_PARTICIPATING_METHOD",
+    "exploitation": "_STRATEGY_NON_PARTICIPATING_EXPLOITATION",
+    "np_method": "_STRATEGY_NON_PARTICIPATING_METHOD",
+    "decay": "_STRATEGY_NON_PARTICIPATING_DECAY",
+    "model_type": "_MODEL_TYPE",
+    "participating": "PARTICIPATING",
+    "g_learning_rate": "G_LEARNING_RATE",
+    "epsilon": "EPSILON",
+    "rho": "RHO",
+    "cid": "CID"
+}

@@ -7,42 +7,24 @@ from utils import my_logger
 import math
 
 class FedDEEV(fl.server.strategy.FedAvg):
-    def __init__(
-        self,
-        n_clients:        int,
-        epoch: int,
-        dirichlet_alpha: float,
-        non_iid: bool,
-        dataset: str,
-        threshold: float,
-        rounds:           int,
-        fraction_clients: float,
-        perc_of_clients:  float,
-        decay:            float,
-        model_type:       str,
-        init_clients: float,
-        config_test: str,
-    ):
-        self.n_clients          = n_clients
-        self.frac_clients       = fraction_clients
-        self.rounds             = rounds
+    def __init__(self, config):
+        self.n_clients          = config['clients']
+        self.rounds             = config['rounds']
         self.list_of_clients    = []
         self.list_of_accuracies = []
         self.selected_clients   = []
-        self.init_clients = init_clients
+        self.init_clients       = config['init_clients']
 
-        self.epoch = epoch
-        self.dirichlet_alpha = dirichlet_alpha
-        self.non_iid = non_iid
-        self.dataset = dataset
-        self.threshold = threshold
-        self.model_type = model_type
-        self.config_test = config_test
+        self.epochs           = config['epochs']
+        self.dirichlet_alpha = config['dirichlet_alpha']
+        self.dataset         = config['dataset']
+        self.threshold       = config['threshold']
+        self.model_type      = config['model_type']
+        self.tid     = config['tid']
         ## DEEV
-        self.perc_of_clients    = perc_of_clients
-        self.decay_factor       = decay
+        self.decay_factor       = config['decay']
 
-        super().__init__(fraction_fit = self.frac_clients, min_available_clients = n_clients, min_fit_clients = n_clients, min_evaluate_clients = n_clients)
+        super().__init__(fraction_fit = 1, min_available_clients = self.n_clients, min_fit_clients = self.n_clients, min_evaluate_clients = self.n_clients)
 
     def __select_clients(self, server_round):
         if server_round <= 1:
@@ -69,7 +51,6 @@ class FedDEEV(fl.server.strategy.FedAvg):
 			"selected_by_server" : ','.join(self.selected_clients),
             'rounds'          : server_round,
         }
-
         fit_ins = FitIns(parameters, config)
         sample_size, min_num_clients = self.num_fit_clients(
             client_manager.num_available()
@@ -78,6 +59,7 @@ class FedDEEV(fl.server.strategy.FedAvg):
             num_clients=sample_size, min_num_clients=min_num_clients
         )
 
+        print(self.selected_clients)
         return [(client, fit_ins) for client in clients]
 
     def aggregate_fit(self, server_round: int, results, failures):
@@ -88,7 +70,7 @@ class FedDEEV(fl.server.strategy.FedAvg):
         weights_results = []
         for _, fit_res in results:
             client_id = str(fit_res.metrics['cid'])
-            if self._is_seleceted_by_server(client_id) and fit_res.metrics['dynamic_engagement']:
+            if self._is_seleceted_by_server(client_id) and fit_res.metrics['participating_state']:
                 weights_results.append((parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples))
 
         if len(weights_results) == 0:
@@ -127,8 +109,8 @@ class FedDEEV(fl.server.strategy.FedAvg):
         local_list_clients      = []
         self.list_of_accuracies = []
         accs                    = []
-        c_engaged               = []
-        c_not_engaged           = []
+        participating_clients               = []
+        non_participating_clients           = []
         loss_to_aggregate       = []
 
         for _, eval_res in results:
@@ -137,12 +119,12 @@ class FedDEEV(fl.server.strategy.FedAvg):
             client_accuracy = float(eval_res.metrics['acc'])
             accs.append(client_accuracy)
             local_list_clients.append((client_id, client_accuracy))
-            if bool(eval_res.metrics['dynamic_engagement']):
-                c_engaged.append(client_id)
+            if bool(eval_res.metrics['participating_state']):
+                participating_clients.append(client_id)
                 if self._is_seleceted_by_server(client_id):
                     loss_to_aggregate.append((eval_res.num_examples, eval_res.loss))
             else:
-                c_not_engaged.append(client_id)
+                non_participating_clients.append(client_id)
 
         local_list_clients.sort(key=lambda x: x[1])
         accs.sort()
@@ -154,8 +136,8 @@ class FedDEEV(fl.server.strategy.FedAvg):
 
         # Update status
         self.clients_intentions      = list(range(self.n_clients))
-        for cid in c_engaged + c_not_engaged:
-            self.clients_intentions[int(cid)] = True if cid in c_engaged else False
+        for cid in participating_clients + non_participating_clients:
+            self.clients_intentions[int(cid)] = True if cid in participating_clients else False
         
         should_pass = len(loss_to_aggregate) == 0
         my_logger.log(
@@ -167,22 +149,21 @@ class FedDEEV(fl.server.strategy.FedAvg):
                 'select_client_method': None,
                 'select_client_method_to_engaged': None,
                 'n_selected': len(self.selected_clients),
-                'n_engaged': len(c_engaged),
-                'n_not_engaged': len(c_not_engaged),
+                'n_participating_clients': len(participating_clients),
+                'n_non_participating_clients': len(non_participating_clients),
                 'selection': '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
                 'r_intetion': None,
                 'r_robin': None,
                 'skip_round': should_pass,
-                'local_epochs': self.epoch,
+                'local_epochs': self.epochs,
                 'dirichlet_alpha': self.dirichlet_alpha,
-                'non_iid': self.non_iid,
                 'dataset': self.dataset.lower(),
                 'exploitation': None,
                 'exploration': None,
                 'decay': self.decay_factor,
                 'threshold': self.threshold,
                 'init_clients': self.init_clients,
-                'config_test': self.config_test,
+                'tid': self.tid,
                 'forget_clients': None,
             }
         )

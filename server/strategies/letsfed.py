@@ -9,80 +9,66 @@ from logging import INFO
 from typing import Dict
 from .drivers import Driver, SelectionDriver
 import numpy as np
-class FedCIA(fl.server.strategy.FedAvg):
+class LetsFed(fl.server.strategy.FedAvg):
     def __init__(
         self,
-        n_clients: int,
-        rounds:     int,
-        engaged_clients: list,
-        select_client_method: str,
-        exploitation: float,
-        exploration: float,
-        least_select_factor: float,
-        decay: float,
-        solution: str,
-        epoch: int,
-        dirichlet_alpha: float,
-        non_iid: bool,
-        dataset: float,
-        threshold: float,
-        model_type: str,
-        init_clients: float,
-        config_test: str,
-        select_client_method_to_engaged: str,
+        config: Dict,
     ):
-        self.n_clients = n_clients
-        self.rounds = rounds
-        super().__init__(fraction_fit=1, min_available_clients=n_clients, min_fit_clients=n_clients, min_evaluate_clients=n_clients)
-        self.engaged_clients      = [(cid, True) for cid in engaged_clients]
-        self.not_engaged_clients  = [(cid, False) for cid in range(n_clients) if cid not in engaged_clients]
-        self.clients_intentions      = list(range(self.n_clients))
-        self.solution = solution
-        self.init_clients = init_clients
-        for client_info in self.engaged_clients + self.not_engaged_clients:
+        self.n_clients = config['clients']
+        self.rounds    = config['rounds']
+        super().__init__(
+            fraction_fit = 1,
+            min_available_clients = self.n_clients,
+            min_fit_clients = self.n_clients,
+            min_evaluate_clients = self.n_clients
+        )
+        
+        self.participating_clients      = [(cid, True) for cid in config['participating']]
+        self.non_participating_clients  = [(cid, False) for cid in range(self.n_clients) if cid not in config['participating']]
+        self.clients_intentions   = list(range(self.n_clients))
+        self.solution             = config['strategy']
+        self.init_clients         = config['init_clients']
+        for client_info in self.participating_clients + self.non_participating_clients:
             self.clients_intentions[client_info[0]] = client_info[1]
-        self.select_client_method = select_client_method
-        self.select_client_method_to_engaged = select_client_method_to_engaged
+        
+        self.p_method         = config['p_method']
+        self.np_method        = config['np_method']
 
-        # self.least_select_factor  = least_select_factor
-        self.decay_factor         = decay
         # Select
         self.selected_clients = []
-        self.r_intetions          = np.full(n_clients, 0)
+        self.r_intetions      = np.full(self.n_clients, 0)
+        
         # random select
-        self.exploitation = exploitation
-        self.exploration = exploration
+        self.exploitation = config['exploitation']
+        self.exploration  = config['exploration']
+        self.decay        = config['decay']
         
-        self.model_type = model_type
-        self.epoch = epoch
-        self.dirichlet_alpha = dirichlet_alpha
-        self.non_iid = non_iid
-        self.dataset = dataset
-        self.decay = decay
-        self.threshold = threshold
-        self.config_test = config_test
+        self.model_type      = config['model_type']
+        self.epochs          = config['epochs']
+        self.dirichlet_alpha = config['dirichlet_alpha']
+        self.dataset         = config['dataset']
+        self.threshold       = config['threshold']
+        self.tid             = config['tid']
         # least select
-        self.how_many_time_selected = np.full(n_clients, 0)
-        self.how_many_time_selected_not_engaged = np.full(n_clients, 0)
+        self.how_many_time_selected             = np.full(self.n_clients, 0)
+        self.how_many_time_selected_non_participating = np.full(self.n_clients, 0)
         self._init_client_config()
-        
-        self.behaviors: Dict[str, Driver]                         = self.set_behaviors()
 
         
 
-        ## temp
-        self.forget_clients = np.full(n_clients, int(self.rounds*0.15))
+        self.behaviors: Dict[str, Driver] = self.set_behaviors()
+
+        self.forget_clients = np.full(self.n_clients, int(self.rounds*0.15))
 
 
 
     def set_behaviors(self):
         return {
-            'selection_driver': SelectionDriver(self.select_client_method)
+            'selection_driver': SelectionDriver(self.np_method)
         }
 
     def _init_client_config(self):
         self.manager_client_rounds = [0 for i in range(self.n_clients)]
-
 
     def configure_fit(self, server_round: int, parameters: Parameters, client_manager: ClientManager):
         sample_size, min_num_clients = self.num_fit_clients(
@@ -95,7 +81,6 @@ class FedCIA(fl.server.strategy.FedAvg):
         config = {
             'rounds': server_round,
         }
-
         self.behaviors['selection_driver'].run(self, parameters = parameters, config = config)
 
         config['selected_by_server'] = ','.join([str(client[0]) for client in self.selected_clients])
@@ -113,7 +98,7 @@ class FedCIA(fl.server.strategy.FedAvg):
         for _, fit_res in results:
             metrics = fit_res.metrics
             cid = fit_res.metrics['cid']
-            if metrics['dynamic_engagement']:
+            if metrics['participating_state']:
                 if is_select_by_server(str(cid), [str(c[0]) for c in self.selected_clients]):
                     weights_of_participating_clients.append((
                         parameters_to_ndarrays(fit_res.parameters),
@@ -155,18 +140,18 @@ class FedCIA(fl.server.strategy.FedAvg):
             clients_info = clients_info,
             server_round = server_round
         )
-        self.engaged_clients_acc_avg = np.mean(np.array([client_info[1] for client_info in self.engaged_clients_acc]))
-        self.not_engaged_clients_acc_avg = np.mean(np.array([client_info[1] for client_info in self.not_engaged_clients_acc]))
+        self.participating_clients_acc_avg = np.mean(np.array([client_info[1] for client_info in self.participating_clients_acc]))
+        self.non_participating_clients_acc_avg = np.mean(np.array([client_info[1] for client_info in self.non_participating_clients_acc]))
         
     def _extract_client_info(self, results):
         return  [
             {
                 'cid': int(eval_res.metrics['cid']),
-                'want': eval_res.metrics['want'],
+                'desired_state': eval_res.metrics['desired_state'],
                 'loss': eval_res.loss,
                 'acc': eval_res.metrics['acc'],
                 'fit_acc': eval_res.metrics['fit_acc'],
-                'dynamic_engagement': eval_res.metrics['dynamic_engagement'],
+                'participating_state': eval_res.metrics['participating_state'],
                 'r_intention': eval_res.metrics['r_intention']
             }
             for _, eval_res in results
@@ -174,20 +159,20 @@ class FedCIA(fl.server.strategy.FedAvg):
 
     def _cia_aggregate_evaluate(self, results, server_round):
         cia_parameters = []
-        c_engaged          = []
-        c_not_engaged      = []
+        participating_clients          = []
+        non_participating_clients      = []
         for _, evaluate_res in results:
             metrics = evaluate_res.metrics
             cid = str(metrics['cid'])
-            if bool(metrics['dynamic_engagement']):
-                c_engaged.append(cid)
+            if bool(metrics['participating_state']):
+                participating_clients.append(cid)
                 if is_select_by_server(str(cid), [str(c[0]) for c in self.selected_clients]):
                     cia_parameters.append((
                         evaluate_res.num_examples,
                         evaluate_res.loss,
                     ))
             else:
-                c_not_engaged.append(cid)
+                non_participating_clients.append(cid)
         should_pass = len(cia_parameters) == 0
         
         my_logger.log(
@@ -196,25 +181,24 @@ class FedCIA(fl.server.strategy.FedAvg):
                 'rounds': server_round,
                 'strategy': self.solution.lower(),
                 'model_type': self.model_type.lower(),
-                'select_client_method': self.select_client_method.lower(),
-                'select_client_method_to_engaged': self.select_client_method_to_engaged.lower(),
+                'np_method': self.np_method.lower(),
+                'p_method': self.p_method.lower(),
                 'n_selected': len(self.selected_clients),
-                'n_engaged': len(c_engaged),
-                'n_not_engaged': len(c_not_engaged),
-                'selection': '|'.join([f"{str(client[0])}:{self.clients_intentions[client[0]]}" for client in self.selected_clients]),
+                'n_participating_clients': len(participating_clients),
+                'n_non_participating_clients': len(non_participating_clients),
+                'selection': '|'.join([f"{str(client[0])}:{client[2]}" for client in self.participating_clients+self.non_participating_clients if client[0] in [c[0] for c in self.selected_clients]]),
                 'r_intetion': '|'.join([str(x) for x in self.r_intetions.tolist()]),
                 'r_robin': '|'.join([str(x) for x in self.how_many_time_selected.tolist()]),
                 'skip_round': should_pass,
-                'local_epochs': self.epoch,
+                'local_epochs': self.epochs,
                 'dirichlet_alpha': self.dirichlet_alpha,
-                'non_iid': self.non_iid,
                 'dataset': self.dataset.lower(),
                 'exploitation': self.exploitation,
                 'exploration': self.exploration,
-                'decay': self.decay,
                 'threshold': self.threshold,
+                'decay': self.decay,
                 'init_clients': self.init_clients,
-                'config_test': self.config_test,
+                'tid': self.tid,
                 'forget_clients': "|".join(f'{str(client)}' for client in self.forget_clients),
             },
         )
@@ -230,12 +214,12 @@ class FedCIA(fl.server.strategy.FedAvg):
         """ Sim poderia fazer em 1 for, mas não quero - SUPERA """
         self.clients_intentions      = list(range(self.n_clients))
         for client_info in clients_info:
-            self.clients_intentions[int(client_info['cid'])] = client_info['want']
-        self.engaged_clients         = [(client_info['cid'], client_info['want'], client_info['dynamic_engagement']) for client_info in clients_info if client_info['want']]
-        self.engaged_clients_acc     = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if client_info['want']]
-        self.not_engaged_clients     = [(client_info['cid'], client_info['want'], client_info['dynamic_engagement']) for client_info in clients_info if not client_info['want']]
-        self.not_engaged_clients_acc = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if not client_info['want']]
+            self.clients_intentions[int(client_info['cid'])] = client_info['desired_state']
+        self.participating_clients         = [(client_info['cid'], client_info['desired_state'], client_info['participating_state']) for client_info in clients_info if client_info['desired_state']]
+        self.participating_clients_acc     = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if client_info['desired_state']]
+        self.non_participating_clients     = [(client_info['cid'], client_info['desired_state'], client_info['participating_state']) for client_info in clients_info if not client_info['desired_state']]
+        self.non_participating_clients_acc = [(client_info['cid'], client_info['fit_acc']) for client_info in clients_info if not client_info['desired_state']]
         self.r_intetions             = np.array([client_info['r_intention'] for client_info in clients_info])
         # atualizar
-        for client_info in self.engaged_clients:
+        for client_info in self.participating_clients:
             self.manager_client_rounds[int(client_info[0])] += 1

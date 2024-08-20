@@ -3,5 +3,5 @@ RUN mkdir app
 RUN mkdir app/strategies
 RUN apt update
 RUN pip install --upgrade pip
-RUN pip install numpy flwr scikit-learn flwr_datasets
+RUN pip install numpy flwr scikit-learn flwr_datasets keras tensorflow
 CMD ["python", "-u", "/app/strategies_manager.py"]

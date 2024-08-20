@@ -6,38 +6,22 @@ from utils.logger import my_logger
 from utils.select_by_server import is_select_by_server
 
 class FedPOC(fl.server.strategy.FedAvg):
-    def __init__(
-        self,
-        n_clients:        int,
-        rounds:           int,
-        epoch: int,
-        dirichlet_alpha: float,
-        non_iid: bool,
-        dataset: str,
-        threshold: float,
-        model_type:       str,
-        fraction_clients: float,
-        perc_of_clients:  float,
-        init_clients: float,
-        config_test: str,
-    ):
-        self.n_clients          = n_clients
-        self.frac_clients       = fraction_clients
-        self.rounds             = rounds
+    def __init__(self, config):
+        self.n_clients          = config['clients']
+        self.rounds             = config['rounds']
         self.list_of_clients    = []
         self.list_of_accuracies = []
         self.selected_clients   = []
-        self.perc_of_clients    = perc_of_clients
-        self.init_clients = init_clients
-        self.epoch = epoch
-        self.dirichlet_alpha = dirichlet_alpha
-        self.non_iid = non_iid
-        self.dataset = dataset
-        self.threshold = threshold
-        self.model_type = model_type
-        self.config_test = config_test
+        self.perc_of_clients    = config['exploration']
+        self.init_clients       = config['init_clients']
+        self.epochs              = config['epochs']
+        self.dirichlet_alpha    = config['dirichlet_alpha']
+        self.dataset            = config['dataset']
+        self.threshold          = config['threshold']
+        self.model_type         = config['model_type']
+        self.tid        = config['tid']
 
-        super().__init__(fraction_fit = self.frac_clients, min_available_clients = n_clients, min_fit_clients = n_clients, min_evaluate_clients = n_clients)
+        super().__init__(fraction_fit = 1, min_available_clients = self.n_clients, min_fit_clients = self.n_clients, min_evaluate_clients = self.n_clients)
 
     def __select_clients(self, server_round):
         if server_round <= 1:
@@ -79,7 +63,7 @@ class FedPOC(fl.server.strategy.FedAvg):
         weights_results = []
         for _, fit_res in results:
             client_id         = str(fit_res.metrics['cid'])
-            if is_select_by_server(client_id, ','.join(self.selected_clients)) and fit_res.metrics['dynamic_engagement']:
+            if is_select_by_server(client_id, ','.join(self.selected_clients)) and fit_res.metrics['participating_state']:
                 weights_results.append((
                     parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples
                 ))
@@ -121,8 +105,8 @@ class FedPOC(fl.server.strategy.FedAvg):
         self.list_of_clients    = []
         accs                    = []
         loss_to_aggregate       = []
-        c_engaged               = []
-        c_not_engaged           = []
+        participating_clients               = []
+        non_participating_clients           = []
 
         for _, eval_res in results:
             client_id       = str(eval_res.metrics['cid'])
@@ -130,12 +114,12 @@ class FedPOC(fl.server.strategy.FedAvg):
             client_accuracy = float(eval_res.metrics['acc'])
             accs.append(client_accuracy)
             local_list_clients.append((client_id, client_accuracy))
-            if bool(eval_res.metrics['dynamic_engagement']):
-                c_engaged.append(client_id)
+            if bool(eval_res.metrics['participating_state']):
+                participating_clients.append(client_id)
                 if self._is_seleceted_by_server(client_id):
                     loss_to_aggregate.append((eval_res.num_examples, eval_res.loss))
             else:
-                c_not_engaged.append(client_id)
+                non_participating_clients.append(client_id)
 
         local_list_clients.sort(key=lambda x: x[1])
 
@@ -143,8 +127,8 @@ class FedPOC(fl.server.strategy.FedAvg):
 
         # Update status
         self.clients_intentions      = list(range(self.n_clients))
-        for cid in c_engaged + c_not_engaged:
-            self.clients_intentions[int(cid)] = True if cid in c_engaged else False
+        for cid in participating_clients + non_participating_clients:
+            self.clients_intentions[int(cid)] = True if cid in participating_clients else False
 
         should_pass = len(loss_to_aggregate) == 0
         my_logger.log(
@@ -156,22 +140,21 @@ class FedPOC(fl.server.strategy.FedAvg):
                 'select_client_method': None,
                 'select_client_method_to_engaged': None,
                 'n_selected': len(self.selected_clients),
-                'n_engaged': len(c_engaged),
-                'n_not_engaged': len(c_not_engaged),
+                'n_participating_clients': len(participating_clients),
+                'n_non_participating_clients': len(non_participating_clients),
                 'selection': '|'.join([f"{str(client)}:{self.clients_intentions[int(client)]}" for client in self.selected_clients]),
                 'r_intetion': None,
                 'r_robin': None,
                 'skip_round': should_pass,
-                'local_epochs': self.epoch,
+                'local_epochs': self.epochs,
                 'dirichlet_alpha': self.dirichlet_alpha,
-                'non_iid': self.non_iid,
                 'dataset': self.dataset.lower(),
                 'exploitation': None,
                 'exploration': self.perc_of_clients,
                 'decay': None,
                 'threshold': self.threshold,
                 'init_clients': self.init_clients,
-                'config_test': self.config_test,
+                'tid': self.tid,
                 'forget_clients': None,
             },
         )

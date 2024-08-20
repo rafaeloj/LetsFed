@@ -11,7 +11,7 @@ while IFS= read -r container; do
     container_name=$(echo "$container" | awk '{print $3}')
 
     # Verificar se o nome do contêiner contém uma palavra-chave relacionada ao federated learning
-    if [[ "$container_name" == *"fedcia"* || "$container_name" == *"rfl_server"* || "$container_name" == *"rfl_client"* ]]; then
+    if [[ "$container_name" == *"LetsFed"* || "$container_name" == *"rfl_server"* || "$container_name" == *"rfl_client"* ]]; then
         # Remover o contêiner
         docker rm -f "$container_id"
     fi

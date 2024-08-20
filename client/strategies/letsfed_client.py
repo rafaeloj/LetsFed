@@ -1,0 +1,329 @@
+import flwr as fl
+from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
+from flwr.common.logger import logger
+logger.disabled = True
+import os
+import sys
+sys.path.append(os.path.abspath('../../'))
+
+from utils import is_select_by_server, my_logger, DSManager, ModelManager
+from typing import List, Dict
+from .drivers import Driver, CuriosityDriver, AccuracyDriver, MaxFLClientDriver, IDLE, EXPLORING
+import numpy as np
+import time
+# disable_progress_bar()
+
+class MaverickClient(fl.client.NumPyClient):
+
+    def __init__(
+        self,
+        config: Dict,
+    ):
+        self.miss                                            = 0 # Criar contador de quando mudou de estado
+        self.cid                                             = config["cid"]
+        self.num_clients                                     = config["num_clients"]
+        self.epochs                                          = config["epochs"]
+        self.dataset                                         = config["dataset"].lower()
+        self.dirichlet_alpha                                 = config["dirichlet_alpha"]
+        self.x_train, self.y_train, self.x_test, self.y_test = self.load_data()
+        self.dynamic_engagement                              = config['participating']
+        self.rho                                             = config['rho']
+
+        # ---------------------------------- Models ---------------------------------------------
+        self.model_type                                      = config['model_type']
+        self.mm = ModelManager(
+            model_type                                       = self.model_type,
+            input_shape                                      = self.x_train.shape
+        )
+        self.model                                           = self.mm.get_model(self.model_type)
+        self.debug_model                                     = self.mm.get_model(self.model_type)
+        # ---------------------------------------------------------------------------------------
+        
+        self.rounds                                          = config['rounds']
+        self.want                                            = self.dynamic_engagement
+        self.p_method                                        = config['p_method']
+        self.np_method                                       = config['np_method']
+        self.sid                                             = config['sid']
+        self.behaviors: Dict[str, Driver]                    = self.set_behaviors()
+        self.drivers_results                                 = {b_name: 0 for b_name, _ in self.behaviors.items()}
+        self.rounds_intention                                = 0
+        self.exploitation                                    = config['exploitation']
+        self.exploration                                     = config['exploration']
+        self.threshold                                       = config['threshold']
+        self.init_clients                                    = config['init_clients']
+        self.tid                                             = config['tid']
+        self.decay                                           = config['decay']
+        self.g_learning_rate  = config['g_learning_rate']
+        self.epsilon          = config['epsilon']
+        self.q_value = 0
+
+        if self.dynamic_engagement:
+            self.rounds_intention = self.rounds*0.1
+            self.drivers_results['curiosity_driver'] = 1
+
+    def set_behaviors(self):
+        drivers: List[Driver] = [
+            AccuracyDriver(input_shape = self.x_train.shape, model_type=self.model_type),
+            CuriosityDriver(),
+            MaxFLClientDriver(self.rho)
+        ]
+        return {
+            driver.get_name(): driver
+            for driver in drivers
+        }
+
+    def load_data(self):
+        self.dm = DSManager({
+                "train": DirichletPartitioner(
+                    num_partitions = self.num_clients,
+                    partition_by = "label",
+                    alpha = self.dirichlet_alpha,
+                    self_balancing = False
+                ),
+                "test": IidPartitioner(num_partitions=self.num_clients)
+            })
+
+        path = f'logs/{self.dataset}/{self.dirichlet_alpha}/clients-{self.num_clients}'
+        train, test = self.dm.load_locally(path, self.cid)
+
+        keys = list(test.features.keys())
+        
+        return train[keys[0]], train[keys[1]], test[keys[0]], test[keys[1]]
+
+    def get_parameters(self, config):
+        return self.model.get_weights()
+
+    def fit(self, parameters, config):
+        fit_response = {
+            'cid': self.cid,
+            'participating_state': self.dynamic_engagement,
+        }
+
+        history = self.debug_model.fit(self.x_train, self.y_train, epochs=self.epochs, verbose=0)
+        self.l_fit_acc     = np.mean(history.history['accuracy'])
+        self.l_fit_loss    = np.mean(history.history['loss'])
+        model_size = sum([layer.nbytes for layer in parameters])
+        self.model_size = model_size
+
+        if self.sid.lower() != "maxfl":
+            if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+                return self._engaged_fit(parameters=parameters, config=config), self.x_train.shape[0], fit_response
+            return self._not_engaged_fit(parameters=parameters, config=config, server_selection='not_selected'), self.x_train.shape[0], fit_response
+
+        if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+            delta_weights_value = self._engaged_fit(parameters=parameters, config=config)
+            # fit_response['delta_model']  = delta_weights_value
+            fit_response['q_values']: float = self.q_value
+            return delta_weights_value, self.x_train.shape[0], fit_response
+
+        delta_weights_value = self._not_engaged_fit(parameters=parameters, config=config, server_selection='not_selected'), self.x_train.shape[0], fit_response
+        fit_response['q_values'] = self.q_value
+
+        return parameters, self.x_train.shape[0], fit_response
+    
+    def _engaged_fit(self, parameters, config):
+        if not self.dynamic_engagement:
+            print("ENTROU AQUI")
+            return self._not_engaged_fit(parameters=parameters, config=config, server_selection='selected') 
+        
+        if self.sid.lower() != "maxfl":
+            new_parameters, acc, loss, cost = self._global_fit(weights=parameters, server_round=config['rounds']) # Atualiza o modelo global com dados do cliente
+
+            self.g_fit_acc = np.mean(acc)
+            self.g_fit_loss = np.mean(loss)
+            self.cost = cost
+
+            return new_parameters
+
+        self.model.set_weights(parameters)
+        return self.behaviors['maxfl_driver'].fit(self)
+
+    def _not_engaged_fit(self, parameters, config, server_selection):
+        start_time = time.time()
+        history = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, verbose=0)
+        acc     = np.mean(history.history['accuracy'])
+        loss    = np.mean(history.history['loss'])
+        end_time = time.time()
+        cost = end_time - start_time
+
+        self.g_fit_acc = np.mean(acc)
+        self.g_fit_loss = np.mean(loss)
+        self.cost = cost
+        if self.sid.lower() != 'maxfl':
+            return parameters
+        return None
+
+    def _global_fit(self, weights, server_round):
+        start_time = time.time()
+        self.model.set_weights(weights)
+        history    = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, verbose=0)
+        acc        = np.mean(history.history['accuracy'])
+        loss       = np.mean(history.history['loss'])
+        parameters = self.model.get_weights()
+        end_time = time.time()
+        cost = end_time - start_time
+        
+        return parameters, acc, loss, cost
+
+    def evaluate(self, parameters, config):
+        loss = None
+        shape = None
+        eval_resp = None
+        
+        
+        l_loss, l_acc = self.debug_model.evaluate(self.x_test, self.y_test)
+        self.l_eval_acc = np.mean(l_acc)
+        self.l_eval_loss = np.mean(l_loss)
+        is_select = is_select_by_server(str(self.cid), config['selected_by_server'].split(','))
+        if is_select:
+            self.miss+=1
+            loss, shape, eval_resp = self._engaged_evaluate(parameters=parameters, config=config)
+        else:
+            loss, shape, eval_resp = self._not_engaged_evaluate(parameters=parameters, config=config, server_selection='not_selected')
+
+        my_logger.log(
+            '/c-data.csv',
+            data = {
+                'rounds': config['rounds'], 
+                'cid': self.cid, 
+                'sid': self.sid.lower(), 
+                'np_method': self.np_method.lower(), 
+                'p_method': self.p_method.lower(), 
+                'model_type': self.model_type.lower(), 
+                'g_eval_acc': self.g_eval_acc, 
+                'g_eval_loss': self.g_eval_loss, 
+                'l_eval_acc': self.l_eval_acc, 
+                'l_eval_loss': self.l_eval_loss, 
+                'g_fit_acc': self.g_fit_acc, 
+                'g_fit_loss': self.g_fit_loss, 
+                'l_fit_acc': self.l_fit_acc, 
+                'l_fit_loss': self.l_fit_loss,
+                'participating_state': self.dynamic_engagement, 
+                'old_dynamic_engagement': self.old_dynamic_engagement, 
+                'is_selected': is_select, 
+                'desire': self.want, 
+                'size': self.model_size, 
+                'cost': self.cost, 
+                'r_intention': self.r_intention, 
+                'miss': self.miss, 
+                'local_epochs': self.epochs, 
+                'dirichlet_alpha': self.dirichlet_alpha, 
+                'dataset': self.dataset.lower(), 
+                'exploitation': self.exploitation, 
+                'exploration': self.exploration, 
+                'decay': self.decay, 
+                'threshold': self.threshold,
+                'init_clients': self.init_clients,
+                'tid': self.tid,
+                'q_value': self.q_value,
+            }
+        )
+        eval_resp['fit_acc'] = self.g_fit_acc
+        eval_resp['q_value'] = self.q_value
+
+        return loss, shape, eval_resp
+
+    def _engaged_evaluate(self, parameters, config):
+        if not self.dynamic_engagement:
+            return self._not_engaged_evaluate(parameters=parameters, config=config, server_selection='selected')
+
+        self.model.set_weights(parameters)
+        loss, acc = self.model.evaluate(self.x_test, self.y_test)
+        
+        old_dynamic_engagent = self.dynamic_engagement
+        # self.make_decision(parameters = parameters, config = config)
+        
+        evaluation_response = {
+            "cid"                : self.cid,
+            'participating_state': old_dynamic_engagent,
+            'desired_state'      : self.want,
+            'acc'                : acc,
+            'r_intention'        : self.rounds_intention
+        }
+        self.g_eval_loss = np.mean(loss)
+        self.g_eval_acc = np.mean(acc)
+        self.r_intention = self.rounds_intention
+        self.old_dynamic_engagement = old_dynamic_engagent
+
+        return loss, self.x_test.shape[0], evaluation_response
+
+    def _not_engaged_evaluate(self, parameters, config, server_selection):
+        l_loss, l_acc = self.model.evaluate(self.x_test, self.y_test)
+        old_dynamic_engagent = self.dynamic_engagement
+        # self.make_decision(parameters = parameters, config = config)
+        
+        self.g_eval_acc = np.mean(l_acc)
+        self.g_eval_loss = np.mean(l_loss)
+        self.r_intention = self.rounds_intention
+        self.old_dynamic_engagement = old_dynamic_engagent
+
+        evaluation_response = {
+            "cid"               : self.cid,
+            'participating_state': old_dynamic_engagent,
+            'desired_state'              : self.want,
+            'acc'               : l_acc,
+            'r_intention'       : self.rounds_intention,
+        }
+        return l_loss, self.x_test.shape[0], evaluation_response
+
+    def add_behavior(self, behavior: Driver):
+        """
+            In the current moment, the order of behaviros is importante, so take care what behavior you add
+        """
+        self.behaviors.append(behavior)
+
+    def make_decision(self, parameters, config):
+        if config['rounds'] == 1:
+            self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            self.rounds_intention = self.behaviors['curiosity_driver'].current_round
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
+            return
+
+        self.drivers_results = {}
+        if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+            value = self.behaviors["accuracy_driver"].analyze(self, parameters=parameters, config=config)
+            self.drivers_results['accuracy_driver'] = value
+            if value > self.threshold:
+                self.dynamic_engagement = True
+                self.want = True
+                self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            else:
+                self.dynamic_engagement = False
+                self.want = False
+                self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+
+        return
+
+    def bk_make_decision(self, parameters, config):
+        if config['rounds'] == 1:
+            self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            self.rounds_intention = self.behaviors['curiosity_driver'].current_round
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
+            return
+        self.drivers_results = {}
+        if is_select_by_server(str(self.cid), config['selected_by_server'].split(',')):
+
+            if self.behaviors['curiosity_driver'].state == EXPLORING:
+                self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+            elif self.behaviors['curiosity_driver'].state == IDLE:
+                value = self.behaviors["accuracy_driver"].analyze(self, parameters=parameters, config=config)
+                self.drivers_results['accuracy_driver'] = value
+                if value > self.threshold:
+                    self.dynamic_engagement = True
+                    self.want = True
+                    self.behaviors['curiosity_driver'].analyze(self, parameters=parameters, config=config)
+
+            self.rounds_intention = self.behaviors['curiosity_driver'].current_round
+            self.drivers_results['curiosity_driver'] = self.rounds_intention
+        # if self.behaviors['curiosity_driver'].state == EXPLORED:
+            # self.behaviors['curiosity_driver'].finish(self)
+        # my_logger.log(
+        #     "/d-curiosity.csv",
+        #     data = {
+        #         "round": config['rounds'],
+        #         'cid': self.cid,
+        #         'value': self.behaviors['curiosity_driver'].state,
+        #         'threshold': self.behaviors['curiosity_driver'].current_round,
+        #     },
+        # )
+        return

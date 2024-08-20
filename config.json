@@ -1,0 +1,43 @@
+[
+    {
+        "clients": 20,
+        "epochs": 1,
+        "dataset": "mnist",
+        "rounds": 25,
+        "init_clients": 0.50,
+        "dirichlet_alpha": 0.01,
+        "threshold": 1.0,
+        "model_type": "dnn",
+        "strategy": "letsfed",
+        "exploration": 0.50,
+        "p_method": "random",
+        "exploitation": 0.50,
+        "np_method": "random"
+    },
+    {
+        "clients": 20,
+        "epochs": 1,
+        "dataset": "mnist",
+        "rounds": 25,
+        "init_clients": 1.0,
+        "dirichlet_alpha": 1.0,
+        "threshold": 1,
+        "strategy": "deev",
+        "decay": "0.001"
+    },
+    {
+        "clients": 10,
+        "epochs": 5,
+        "dirichlet_alpha": 0.5, 
+        "dataset": "fashion_mnist",
+        "init_clients": 1.0,
+        "rounds": 25,
+        "threshold": 1,
+        "model_type": "dnn",
+        "strategy": "maxfl",
+        "learning_rate": 0.01, 
+        "epsilon": 1,
+        "rho": 0.5,
+        "exploration": 1.0
+    }
+]
