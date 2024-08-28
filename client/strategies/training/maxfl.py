@@ -43,15 +43,20 @@ class MaxFLClient(TrainingStrategy):
         client.selected = is_select_by_server(client.cid, config['selected_by_server'].split(','))
 
         # https://openreview.net/pdf?id=8GI1SXqJBk
-        # if client.selected:
         client.model.set_weights(parameters)
+        v_loss, v_acc = client.model.evaluate(client.x_validation, client.y_validation)
+        client.maxfl_loss = np.mean(v_loss)
+        client.apply_drivers(parameters=parameters, config=config) # add qk
+        
+        client.data_to_log['qk'] = client.qk
+        fit_response['qk'] = client.qk
+
+
         prev_model: keras.Model = copy.deepcopy(client.model)
         history    = client.model.fit(client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0)
         acc        = np.mean(history.history['accuracy'])
         loss       = np.mean(history.history['loss'])
-        v_loss, v_acc = client.model.evaluate(client.x_validation, client.y_validation)
         
-        client.maxfl_loss = np.mean(v_loss)
         client.g_fit_acc = np.mean(acc)
         client.g_fit_loss = np.mean(loss)
         client.v_fit_acc = np.mean(v_acc)
@@ -59,10 +64,6 @@ class MaxFLClient(TrainingStrategy):
         client.data_to_log['v_fit_acc'] = client.v_fit_acc
         client.data_to_log['v_fit_loss'] = client.v_fit_loss
         
-        client.apply_drivers(parameters=parameters, config=config) # add qk
-        
-        client.data_to_log['qk'] = client.qk
-        fit_response['qk'] = client.qk
         
         delta_parameters = [
             curr - prev
