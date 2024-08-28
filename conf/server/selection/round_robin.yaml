@@ -1,0 +1,2 @@
+method: round_robin
+perc_of_clients: 0.3

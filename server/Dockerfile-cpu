@@ -3,5 +3,6 @@ RUN mkdir app
 RUN mkdir app/strategies
 RUN apt update
 RUN pip install --upgrade pip
-RUN pip install numpy flwr scikit-learn flwr_datasets keras tensorflow
-CMD ["python", "-u", "/app/strategies_manager.py"]
+RUN pip install numpy flwr scikit-learn flwr_datasets keras tensorflow omegaconf hydra-core
+ENTRYPOINT ["python", "-u", "/app/strategies_manager.py"]
+CMD []

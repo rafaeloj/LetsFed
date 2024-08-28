@@ -8,6 +8,7 @@ RUN apt update
 RUN pip install --upgrade pip
 RUN pip install flwr-datasets
 RUN pip install flwr_datasets[vision]
-RUN pip install numpy pandas flwr keras scikit-learn matplotlib datasets tensorflow
+RUN pip install numpy pandas flwr keras scikit-learn matplotlib datasets tensorflow omegaconf hydra-core
 
-CMD ["python3", "-u", "/client/strategies_manager.py"]
+ENTRYPOINT ["python3", "-u", "/client/strategies_manager.py"]
+CMD []

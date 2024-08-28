@@ -1,0 +1,5 @@
+epochs: 5
+learning_rate_client: 0.0001
+participating: false
+threshold: 1.0
+training_strategy: normal

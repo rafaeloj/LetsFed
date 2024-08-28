@@ -1,0 +1,3 @@
+defaults:
+- train: dirichlet
+- test: iid

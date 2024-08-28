@@ -1,0 +1,2 @@
+method: avg
+pre_training_epochs: 100

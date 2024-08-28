@@ -1,22 +1,22 @@
 from .driver import Driver
 import tensorflow as tf
 from typing import Tuple
-from utils import ModelManager
-# from utils.select_by_server import is_select_by_server
+from conf import Environment
+from utils import ModelManager, is_select_by_server
 
 WILLING_PERC = 1.0
 
 class AccuracyDriver(Driver):
-    def __init__(self, input_shape: Tuple[int], model_type: str, threshold: float):
-        self.threshold = threshold
-        self._create_model(input_shape = input_shape, model_type = model_type)
+    def __init__(self, input_shape: Tuple[int], conf: Environment):
+        self.threshold = conf.client.threshold
+        self._create_model(input_shape = input_shape, conf = conf)
 
     def get_name(self):
         return "accuracy_driver"
 
-    def _create_model(self, input_shape: Tuple[int], model_type: str):
+    def _create_model(self, input_shape: Tuple[int], conf: Environment):
         self.mm = ModelManager(
-            model_type = model_type,
+            conf = conf,
             input_shape = input_shape
         )
 
@@ -37,7 +37,7 @@ class AccuracyDriver(Driver):
             client.y_validation,
             verbose = 0
         )
-        client.conf['diff'] = c_tmp_loss / g_tmp_loss
+        client.diff = c_tmp_loss / g_tmp_loss
 
         willing = self._better(
             global_loss = g_tmp_loss,

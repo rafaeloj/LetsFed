@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arquivos YAML</title>
+</head>
+<body>
+    <h1>Arquivos YAML</h1>
+    <ul>
+        {% for file in yaml_files %}
+            <li><a href="{{ url_for('edit_file', file=file) }}">{{ file }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

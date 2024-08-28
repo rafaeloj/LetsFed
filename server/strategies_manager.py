@@ -1,43 +1,56 @@
 import flwr as fl
-import os
-from strategies.fedavg import FedAvg
-from strategies import LetsFed
-from strategies import FedPOC
-from strategies import FedDEEV
-from strategies import FedRR
-from strategies import MaxFL
-from utils import my_logger, ConfigManager
-from typing import Dict
-import json
+from conf import Environment
+from strategies import FLServer
+from strategies.client_selection_method import DEEV, RandomSelection, POC, RoundRobinSelection, LetsFedSelection
+from strategies.aggregate_method import FedAVG, MaxFL
 
-def get_strategy(config: ConfigManager):
-        if os.environ["_STRATEGY_SID"].upper() == 'LETSFED':
-            return LetsFed(config.get_letsfed_config())
-        if os.environ["_STRATEGY_SID"].upper() == 'POC':
-            return FedPOC(config.get_poc_config())
-        if os.environ["_STRATEGY_SID"].upper() == 'DEEV':
-            return FedDEEV(config.get_deev_config())
-        if os.environ["_STRATEGY_SID"].upper() == 'AVG':
-            return FedAvg(config.get_avg_config())
-        if os.environ["_STRATEGY_SID"].upper() == "R_ROBIN":
-            return FedRR(config.get_rr_config())
-        if os.environ['_STRATEGY_SID'].upper() == "MAXFL":
-            return MaxFL(config.get_maxfl_config())
-def main():
-    config_manager = ConfigManager('')
+from hydra.core.config_store import ConfigStore
+import hydra
 
-    my_logger.log(
-        '/s-teste.csv',
-        data = {
-             'rounds': 0,
-             'server': 'on'
-        },
-    )
 
+def get_selection_method(selection_method: str, cfg: Environment = None):
+    print(selection_method)
+    if selection_method.upper() == 'POC':
+        return POC()
+
+    if selection_method.upper() == 'DEEV':
+        return DEEV()
+
+    if selection_method.upper() == 'RANDOM':
+        return RandomSelection()
+
+    if selection_method.upper() == "ROUND_ROBIN":
+        return RoundRobinSelection()
+
+    if selection_method.upper() == "LETSFED":
+        return LetsFedSelection(
+            participating = get_selection_method(cfg.server.selection.participating.method),
+            non_participating = get_selection_method(cfg.server.selection.non_participating.method),
+        )
+    raise ValueError(f"Selection method not found: {selection_method}")
+
+def get_aggregation_method(agg_method: str):
+    if agg_method.upper() == 'AVG':
+        return FedAVG()
+
+    if agg_method.upper() == "MAXFL":
+        return MaxFL()
+
+
+cs = ConfigStore.instance()
+cs.store(name='Environment', node=Environment)
+
+@hydra.main(version_base=None, config_path='conf', config_name='config')
+def main(cfg: Environment):
+    # print(cfg)
     fl.server.start_server(
-        server_address=os.environ['SERVER_IP'],
-        config=fl.server.ServerConfig(num_rounds=int(os.environ["_ROUNDS"])),
-        strategy=get_strategy(config_manager)
+        server_address=f'{cfg.server.ip}:{cfg.server.port}',
+        config=fl.server.ServerConfig(num_rounds = cfg.rounds),
+        strategy=FLServer(
+            get_selection_method(cfg.server.selection.method, cfg),
+            get_aggregation_method(cfg.server.aggregation.method),
+            cfg,
+        )
     )
 
 if __name__ == '__main__':

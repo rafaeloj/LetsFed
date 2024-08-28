@@ -58,7 +58,6 @@ class MaxFL(fl.server.strategy.FedAvg):
             min_num_clients = min_num_clients,
         )
         self.last_parameters = parameters_to_ndarrays(parameters)
-        print(self.selected_clients)
         return [
             (client, fit_ins)
             for client in clients

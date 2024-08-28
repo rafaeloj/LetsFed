@@ -1,10 +1,13 @@
 import flwr as fl
 import os
+from typing import TYPE_CHECKING
+from conf import Environment
 from strategies import FederatedClient
-from strategies.training import LestFedClient
-from strategies.states import NonParticipationState, ParticipationState 
 import tensorflow as tf
-from utils import get_env_var, ConfigManager
+import sys
+
+from hydra.core.config_store import ConfigStore
+import hydra
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -14,19 +17,22 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-def get_strategy(config):
-    fc = FederatedClient(config)
-    fc.set_strategy(LestFedClient(fc))
+def get_strategy(config: Environment):
+    fc = FederatedClient(
+        cid = int(os.environ["CID"]),
+        config = config,
+    )
     return fc
-    # return MaverickClient(config) 
 
-def main():
-    cm = ConfigManager('', 'utils/conf/variables.json', client=True)
-    conf = cm.get_os_config()
-    print(conf)
+cs = ConfigStore.instance()
+cs.store(name='Environment', node=Environment)
+
+@hydra.main(version_base=None, config_path='conf', config_name='config')
+def main(cfg: Environment):
+    # print(cfg)
     fl.client.start_client(
-        server_address=os.environ['SERVER_IP'],
-        client=get_strategy(config=conf).to_client()
+        server_address=f'rfl_server:{cfg.server.port}',
+        client=get_strategy(cfg).to_client()
     )
 
 if __name__ == "__main__":

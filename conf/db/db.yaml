@@ -1,0 +1,5 @@
+dataset: mnist
+defaults:
+- _self_
+- partitioner: p1
+path: logs

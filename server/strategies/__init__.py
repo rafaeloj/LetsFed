@@ -1,7 +1,3 @@
-from .fedavg import FedAvg
-from .deev import FedDEEV
-from .letsfed import LetsFed
-from .poc import FedPOC
-from .r_robin import FedRR
+from .fl_server import FLServer
 from .maxfl import MaxFL
 from .drivers import SelectionDriver, Driver

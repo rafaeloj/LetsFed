@@ -1,145 +1,94 @@
+from omegaconf import OmegaConf
+from typing import List
+from random import sample
+from conf import Environment
 class DockercomposeManager():
-    def __init__(self, config_values, config_variables, gpu=False):
-        self.server_config = config_values
-        self.client_config = config_values
-        self.config_variables = config_variables
-        self.file_name = None
-        self.gpu = gpu
+    def __init__(self, config: Environment):
+        self.conf = config
+        self.start_clients()
+    def generate(self, file_name: str):
+        yaml_data = {
+            'services': {
+                f'client-{i}': v for i, v in enumerate(self.create_clients())                
+            },
+        }        
+        yaml_data['services']['server'] = self.create_server()
+        with open(file_name, 'w') as f:
+            OmegaConf.save(yaml_data,f)
 
+    def create_server(self):
+        return {
+            'image': self.server_img,
+            'logging': { 'driver': 'local' },
+            'container_name': 'rfl_server',
+            'profiles': ['server'],
+            'environment': [
+                f"CLIENTS={','.join([str(cid) for cid in self.participating_clients])}"
+            ],
+            'command': [f'server/selection={self.conf.server.selection.method}', f'server/aggregation={self.conf.server.aggregation.method}'],
+            'volumes': [
+                './server/strategies/client_selection_method:/server/strategies/client_selection_method/:r',
+                './server/strategies/aggregate_method:/server/strategies/aggregate_method/:r',
+                './server/strategies_manager.py:/app/strategies_manager.py:r',
+                './server/strategies/drivers:/server/strategies/drivers/:r',
+                './server/strategies:/app/strategies/:r',
+                './utils:/app/utils/:r',
+                './model:/app/model:rw',
+                './conf:/app/conf:r',
+                './logs:/logs:rw',
+            ],
+            'networks': ['default'],
+            'deploy': {
+                'replicas': 1,
+                'placement': {
+                    'constraints': ['node.role==manager'],
+                },
+            },
+        }
+    def start_clients(self) -> list:
+        n_clients_to_start = int(self.conf.n_clients*self.conf.init_clients)
+        self.participating_clients = sample(range(self.conf.n_clients), n_clients_to_start)
 
-    def filename(self, config):
-        if self.file_name:
-            return self.file_name
-        self.file_name = f"dockercompose-{self.tdi(config, '')}.yaml".lower()
+    def create_clients(self) -> List[dict]: 
+        clients = [
+            {'image': self.client_img,
+            'logging': {
+                'driver': 'local'
+            },
+            'container_name': f'rfl_client-{i}',
+            'profiles': ['client'],
+            'command': [f'server/selection={self.conf.server.selection.method}', f'server/aggregation={self.conf.server.aggregation.method}'],
+            'environment': [
+                f'CID={i}',
+                f'PARTICIPATING={True if i in self.participating_clients else False}',
+            ],
+            'volumes': [
+                './client/strategies_manager.py:/client/strategies_manager.py:r',
+                './client/strategies/training:/client/strategies/training/:r',
+                './client/strategies/drivers:/client/strategies/drivers/:r',
+                './client/strategies/states:/client/strategies/states/:r',
+                './client/strategies:/client/strategies/:r',
+                './utils:/utils/:r',
+                './logs:/logs:rw',
+                './conf:/client/conf:r',
+                './model:/model:rw',
+            ],
+            'networks': ['default'],
+            'deploy': { 
+                'replicas': 1,
+                'placement': {
+                    'constraints': ['node.role==manager']
+                }
+            }} for i in range(self.conf.n_clients)
+        ]
 
-        return self.file_name
+        return clients
 
-    def create_dockercompose(self, participating_clients):
-        with open(f"{self.filename(self.server_config)}", 'w') as dockercompose_file:
-            header = f"services:\n\n"
-            dockercompose_file.write(header)
-            server_str = self.s_config([str(cid) for cid in participating_clients])
+    @property
+    def server_img(self):
+        return 'server-flwr-gpu' if self.conf.gpu else 'server-flwr-cpu'
 
-            dockercompose_file.write(server_str)
-            for client in range(self.client_config['clients']):
-                client_str = self.c_config(
-                    cid = client,
-                    participating = client in participating_clients
-                )
-                dockercompose_file.write(client_str)
-
-    def c_config(self, cid, participating):
-        client_str = f"    client-{cid}:\n\
-        image: {self.client_image}\n\
-        logging:\n\
-            driver: local\n\
-        {self.runtime}\n\
-        container_name: rfl_client-{cid}\n\
-        profiles:\n\
-        - client\n\
-        environment:\n\
-            - TID={self.tdi(self.client_config, '')}\n\
-            - SERVER_IP=rfl_server:9999\n\
-            - PARTICIPATING={participating}\n\
-            - CID={cid}\n\
-            {self.environment(config = self.client_config)}\n\
-        {self.c_volumes}\n\
-            {self.default}\n\
-        \n"
-
-        return client_str
+    @property
+    def client_img(self):
+        return 'client-flwr-gpu' if self.conf.gpu else 'client-flwr-cpu'
     
-
-    def tdi(self, config, v: str):
-        for _, value in config.items():
-            if type(value) == dict:
-                v += self.tdi(value, '')
-            else:
-                v += f"{value}" if v == '' else f'-{value}'
-        return v
-
-    @property
-    def client_image(self):
-        if not self.gpu:
-            return 'client-flwr-cpu:latest'
-        return 'client-flwr:latest'
-
-    def s_config(self, participating):
-        server_str = f"    server:\n\
-        image: {self.server_image}\n\
-        logging:\n\
-            driver: local\n\
-        {self.runtime}\n\
-        container_name: rfl_server\n\
-        profiles:\n\
-        - server\n\
-        environment:\n\
-            - SERVER_IP=0.0.0.0:9999\n\
-            - TID={self.tdi(self.server_config, '')}\n\
-            - PARTICIPATING={','.join(participating)}\n\
-            {self.environment(config=self.server_config)}\n\
-        {self.s_volumes}\n\
-        {self.default}\
-        \n"
-
-        return server_str
-
-    @property
-    def server_image(self):
-        if not self.gpu:
-            return 'server-flwr-cpu:latest'
-        return 'server-flwr:latest'
-
-    @property
-    def runtime(self):
-        if self.gpu:
-            return 'runtime: nvidia'
-        return ''
-
-    @property
-    def default(self):
-        return f"""
-        networks:\n\
-                - default\n\
-        deploy:\n\
-            replicas: 1\n\
-            {self.gpu_default}\n\
-            placement:\n\
-                constraints:\n\
-                - node.role==manager\n\
-        """
-    @property
-    def gpu_default(self):
-        if self.gpu:
-            return """
-                resources: \n\
-                    reservations:\n\
-                    devices:\n\
-                        - capabilities: [gpu]\n\
-            """
-        return ""
-    @property
-    def s_volumes(self):
-        return """volumes:\n\
-            - ./logs:/logs:rw\n\
-            - ./server/strategies_manager.py:/app/strategies_manager.py:r\n\
-            - ./server/strategies/drivers:/server/strategies/drivers/:r\n\
-            - ./server/strategies:/app/strategies/:r\n\
-            - ./utils:/app/utils/:r
-        """
-
-    @property
-    def c_volumes(self):
-        return """volumes:\n\
-            - ./logs:/logs:rw\n\
-            - ./client/strategies:/client/strategies/:r\n\
-            - ./client/strategies/drivers:/client/strategies/drivers/:r\n\
-            - ./client/strategies_manager.py:/client/strategies_manager.py:r\n\
-            - ./utils:/utils/:r\n\
-        """
-
-    def environment(self, config: dict, s="", pref=""):
-        for key, value in config.items():
-            s += f"- {self.config_variables[key]}={value}\n\
-            "
-        return s

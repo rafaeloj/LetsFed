@@ -1,0 +1,6 @@
+dirichlet_alpha: 0.1
+method: dirichlet
+min_partition_size: 10
+partition_by: label
+self_balacing: false
+shuffle: true
