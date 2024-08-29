@@ -7,5 +7,5 @@ gpu: false
 init_clients: 0.3
 model_path: model
 model_type: dnn
-n_clients: 10
-rounds: 25
+n_clients: 50
+rounds: 50

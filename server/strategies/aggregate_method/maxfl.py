@@ -16,11 +16,11 @@ if TYPE_CHECKING:
 class MaxFL(AggregateMethod):
     def init(self, server: 'FLServer'):
         server.model = self.load_model(server)
+
     def load_model(self, server: 'FLServer'):
         dm = DSManager(n_clients=server.conf.n_clients, conf=server.conf.db)
-        train, test = dm.load_locally(partition_id=int(0))
+        train, validation, test = dm.load_locally(partition_id=int(0))
         keys = list(test.features.keys())
-        train, validation = divide_dataset(dataset=train, division=[0.8, 0.2])
         self.x_train, self.y_train, self.x_validation, self.y_validation = train[keys[0]], train[keys[1]], validation[keys[0]], validation[keys[1]]
         self.x_test, self.y_test = test[keys[0]], test[keys[1]]
         mm = ModelManager(

@@ -2,13 +2,14 @@ from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
 from datasets import load_from_disk
 import os
-
+from typing import Tuple
+from flwr_datasets.utils import divide_dataset
+from flwr_datasets.visualization import plot_comparison_label_distribution
 from conf.config import Database
-
 class DSManager():
     def __init__(self, n_clients: int, conf: Database):
         self.path = self._get_path_name(conf, n_clients)
-  
+        self.conf = conf
         self.train_partitioner = self.set_train_partitioner(n_clients = n_clients, conf = conf)
         self.test_partitioner = self.set_test_partitioner(n_clients = n_clients, conf = conf)
 
@@ -63,7 +64,15 @@ class DSManager():
             raise "Dataset not loaded"
         return self.fds.load_partition(partition_id = partition_id, split = 'test')
 
-    def load_locally(self, partition_id: int, path: str = None):
+    def load_locally(self, partition_id: int, path: str = None) -> Tuple[Database,Database,Database]:
+        """
+        Args:
+            partition_id (int): CID
+            path (str, optional):
+
+        Returns:
+            Tupla[Dataset,Dataset,Dataset]: Train, Validation, Test
+        """
         print("LOAD DATA FROM LOCAL STORAGE")
         p = f'/{self.path}'
         if path:
@@ -73,25 +82,40 @@ class DSManager():
             test                           = load_from_disk(f'{p}/test/{partition_id}')
             self.test                      = test
             self.test_partitioner.dataset  = test
-        train_folder = os.path.exists(f'{p}/train/{partition_id}')
 
+        train_folder = os.path.exists(f'{p}/train/{partition_id}')
         if train_folder:
             train                          = load_from_disk(f'{p}/train/{partition_id}')
             self.train                     = train
             self.train_partitioner.dataset = train
 
-        if not train_folder or not test_folder:
+        validation_folder = os.path.exists(f'{p}/validation/{partition_id}')
+        if validation_folder:
+            validation = load_from_disk(f'{p}/validation/{partition_id}')
+
+
+        if not train_folder or not test_folder or not validation_folder:
             raise ValueError(f"Error into load dataset of cid: {partition_id}")
         
-        return test, train
+        return train, validation, test
         
-    def save_locally(self, path: str = None):
+    def save_locally(self, path: str = None) -> None:
         p = self.path
         if path:
             p = path.lower()
+        
         for cid in range(self.fds.partitioners['train'].num_partitions):
-            print(cid)
-            self.fds.load_partition(cid, 'train').with_format("numpy").save_to_disk(f'{p}/train/{cid}')
-        for cid in range(self.fds.partitioners['test'].num_partitions):
-            self.fds.load_partition(cid, 'test').with_format("numpy").save_to_disk(f'{p}/test/{cid}')
-
+            train, validation = divide_dataset(dataset=self.fds.load_partition(cid, 'train'), division=[0.8, 0.2])
+            test = self.fds.load_partition(cid, 'test')
+            test.with_format("numpy").save_to_disk(f'{p}/test/{cid}')
+            train.with_format("numpy").save_to_disk(f'{p}/train/{cid}')
+            validation.with_format("numpy").save_to_disk(f'{p}/validation/{cid}')
+        fig, _, _ = plot_comparison_label_distribution(
+            partitioner_list=[self.train_partitioner, self.test_partitioner],
+            label_name="label",
+            subtitle=f"Comparison of Partitioning Schemes on {self.conf.dataset.upper()}",
+            titles=["Train distribution", "Test distribution"],
+            legend=True,
+            verbose_labels=False,
+        )
+        fig.savefig(f'{p}/partition_distributions.png', format='png')
