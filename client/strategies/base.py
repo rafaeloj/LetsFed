@@ -62,6 +62,9 @@ class FederatedClient(fl.client.NumPyClient):
         
         train, validation, test = dm.load_locally(partition_id=int(self.cid))
         keys = list(test.features.keys())
+        # Salvar quantos tipos de imagens tem
+        self.labels = test.features['label'].names
+        
         self.x_train, self.y_train, self.x_validation, self.y_validation = train[keys[0]], train[keys[1]], validation[keys[0]], validation[keys[1]]
         self.x_test, self.y_test = test[keys[0]], test[keys[1]]
 
@@ -117,7 +120,8 @@ class FederatedClient(fl.client.NumPyClient):
             'g_eval_loss': self.g_eval_loss, 
             'selected': self.selected,
             'training_method': self.conf.client.training_strategy,
-            'aggregation': self.conf.server.aggregation.method,
+            # 'aggregation': f"{self.conf.server.aggregation.method}-default",
+            'aggregation': f"{self.conf.server.aggregation.method}-normal",
             'selection': self.conf.server.selection.method,
             **self.data_to_log,
         }

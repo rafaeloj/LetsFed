@@ -8,4 +8,4 @@ init_clients: 0.3
 model_path: model
 model_type: dnn
 n_clients: 50
-rounds: 50
+rounds: 25

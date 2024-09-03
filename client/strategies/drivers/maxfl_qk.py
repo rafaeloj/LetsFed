@@ -10,7 +10,7 @@ class MaxFLQkDriver(Driver):
         return np.exp(x) / (1.0 + np.exp(x))
 
     def run(self, client, parameters, config):
-        loss_weight = self.sigmoid(2*(np.sum(client.maxfl_loss) - client.maxfl_threshold)) # Line 321: algos
+        loss_weight = self.sigmoid(np.sum(client.maxfl_loss) - client.maxfl_threshold) # Line 321: algos
         # client.qk = loss_weight * (1-loss_weight)
         client.qk = loss_weight
         return client.qk

@@ -54,7 +54,6 @@ class NormalClient(TrainingStrategy):
         return client.model.get_weights(), client.x_train.shape[0], fit_response
     
     def __participating_fit(self, client: 'FederatedClient', parameters: NDArrays, config: Config) -> NDArrays:        
-        client.model.set_weights(parameters)
         start_time = time.time()
         history    = client.model.fit(client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0)
         acc        = np.mean(history.history['accuracy'])
@@ -80,7 +79,9 @@ class NormalClient(TrainingStrategy):
 
 
     def __participating_evaluate(self, client: 'FederatedClient', parameters: NDArrays, config: Config) -> Tuple[float, int, Config]:
-        client.model.set_weights(parameters)
+        client.selected = is_select_by_server(str(client.cid), config['selected_by_server'].split(','))
+        if client.selected:
+            client.model.set_weights(parameters)
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         loss = np.mean(loss)
         acc  = np.mean(acc)

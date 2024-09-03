@@ -126,7 +126,7 @@ class FLServer(Strategy):
             'number_of_participating': np.count_nonzero(self.client_participating_state == True),
             'number_of_non_participating': np.count_nonzero(self.client_participating_state == False),
             'training_method': self.conf.client.training_strategy,
-            'aggregation': self.conf.server.aggregation.method,
+            'aggregation': f"{self.conf.server.aggregation.method}-default",
             'selection': self.conf.server.selection.method,
             **self.data_to_log,
         }
