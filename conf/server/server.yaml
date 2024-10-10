@@ -1,6 +1,0 @@
-defaults:
-- _self_
-- aggregation: maxfl
-- selection: random
-ip: 0.0.0.0
-port: 9999

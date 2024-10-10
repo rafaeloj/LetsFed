@@ -4,10 +4,7 @@ from typing import TYPE_CHECKING
 from conf import Environment
 from strategies import FederatedClient
 import tensorflow as tf
-import sys
-
-from hydra.core.config_store import ConfigStore
-import hydra
+from omegaconf import OmegaConf
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -24,12 +21,8 @@ def get_strategy(config: Environment):
     )
     return fc
 
-cs = ConfigStore.instance()
-cs.store(name='Environment', node=Environment)
-
-@hydra.main(version_base=None, config_path='conf', config_name='config')
-def main(cfg: Environment):
-    # print(cfg)
+def main():
+    cfg: Environment = OmegaConf.load('/client/conf/config.yaml')
     fl.client.start_client(
         server_address=f'rfl_server:{cfg.server.port}',
         client=get_strategy(cfg).to_client()

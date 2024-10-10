@@ -1,11 +1,42 @@
-defaults:
-- _self_
-- server: server
-- client: client
-- db: db
 gpu: false
-init_clients: 0.3
+init_clients: 1.0
 model_path: model
 model_type: dnn
-n_clients: 50
-rounds: 25
+n_clients: 30
+rounds: 10
+server:
+  ip: 0.0.0.0
+  port: 9999
+  aggregation:
+    epsilon: 10
+    g_learning_rate: 0.01
+    method: maxfl
+    pre_training_epochs: 5
+    rho: 0.1
+  selection:
+    method: random
+    perc_of_clients: 0.3
+client:
+  epochs: 5
+  learning_rate_client: 0.0001
+  participating: false
+  threshold: 1.0
+  training_strategy: maxfl
+db:
+  dataset: fashion_mnist
+  path: logs
+  partitioner:
+    train:
+      dirichlet_alpha: 0.1
+      method: dirichlet
+      min_partition_size: 10
+      partition_by: label
+      self_balacing: false
+      shuffle: true
+    test:
+      dirichlet_alpha: 0.1
+      method: dirichlet
+      min_partition_size: 10
+      partition_by: label
+      self_balacing: false
+      shuffle: true

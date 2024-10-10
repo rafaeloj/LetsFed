@@ -4,8 +4,7 @@ from strategies import FLServer
 from strategies.client_selection_method import DEEV, RandomSelection, POC, RoundRobinSelection, LetsFedSelection
 from strategies.aggregate_method import FedAVG, MaxFL
 
-from hydra.core.config_store import ConfigStore
-import hydra
+from omegaconf import OmegaConf
 
 
 def get_selection_method(selection_method: str, cfg: Environment = None):
@@ -36,13 +35,8 @@ def get_aggregation_method(agg_method: str):
     if agg_method.upper() == "MAXFL":
         return MaxFL()
 
-
-cs = ConfigStore.instance()
-cs.store(name='Environment', node=Environment)
-
-@hydra.main(version_base=None, config_path='conf', config_name='config')
-def main(cfg: Environment):
-    # print(cfg)
+def main():
+    cfg: Environment = OmegaConf.load("/app/conf/config.yaml")
     fl.server.start_server(
         server_address=f'{cfg.server.ip}:{cfg.server.port}',
         config=fl.server.ServerConfig(num_rounds = cfg.rounds),

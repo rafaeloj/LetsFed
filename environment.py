@@ -1,8 +1,7 @@
 from conf.config import Database
 from utils import DSManager, DockercomposeManager
 from conf import Environment
-from hydra.core.config_store import ConfigStore
-import hydra
+from omegaconf import OmegaConf
 
 
 def load_data(n_clients: int, db: Database):
@@ -10,12 +9,8 @@ def load_data(n_clients: int, db: Database):
     dm.load(db.dataset)
     dm.save_locally()
 
-
-cs = ConfigStore.instance()
-cs.store(name='Environment', node=Environment)
-
-@hydra.main(version_base=None, config_path="conf", config_name="config")
-def main(cfg: Environment):
+def main():
+    cfg: Environment = OmegaConf.load("conf/config.yaml")
     print(cfg)
     a = DockercomposeManager(cfg)
     a.generate(file_name=f"dockercompose-{cfg.n_clients}-{cfg.model_type}-{cfg.rounds}-{cfg.init_clients}-{cfg.client.epochs}-{cfg.init_clients}.yaml")

@@ -24,7 +24,9 @@ class ModelManager():
                 tf.keras.layers.Input(shape=self.input_shape[1:]),
                 tf.keras.layers.Flatten(),
                 tf.keras.layers.Dense(128, activation='relu'),
+                tf.keras.layers.Dropout(0.25),
                 tf.keras.layers.Dense(64,  activation='relu'),
+                tf.keras.layers.Dropout(0.25),
                 tf.keras.layers.Dense(32,  activation='relu'),
                 tf.keras.layers.Dense(10, activation='softmax'),
             ])

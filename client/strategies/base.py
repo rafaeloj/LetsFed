@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath('../../'))
 from .drivers import Driver
 from .states import NonParticipationState, ParticipationState, ClientState
 from utils import ModelManager, DSManager, my_logger
-from .training import TrainingStrategy, LestFedClient, MaxFLClient, NormalClient
+from .training import TrainingStrategy, LestFedClient, MaxFLClient, NormalClient, FedPerClient
 from conf import Environment
 from keras import Model
 from typing import Dict, Tuple, List
@@ -45,8 +45,10 @@ class FederatedClient(fl.client.NumPyClient):
             return MaxFLClient(self)
         if self.conf.client.training_strategy.lower() == "letsfed":
             return LestFedClient(self)
-        if self.conf.client.training_strategy.lower() == 'normal':
+        if self.conf.client.training_strategy.lower() == 'avg':
             return NormalClient(self)
+        if self.conf.client.training_strategy.lower() == 'fedper':
+            return FedPerClient(self)
 
     def load_model(self):
         self.conf.model_type

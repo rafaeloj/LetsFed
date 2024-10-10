@@ -1,7 +1,0 @@
-decay: 0.01
-method: letsfed
-non_participating:
-  method: random
-participating:
-  method: random
-perc_of_clients: 0.5

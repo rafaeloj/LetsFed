@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 import keras
 import numpy as np
 
-class MaxFLClient(TrainingStrategy):
+class QFFLClient(TrainingStrategy):
     def __init__(self, client: 'FederatedClient'):
         pre_training = MaxFLPreTrainingDriver()
         client.maxfl_threshold = pre_training.run(client, None, None)
@@ -26,8 +26,6 @@ class MaxFLClient(TrainingStrategy):
 
     def __get_drivers(self):
         drivers = [
-
-            MaxFLQkDriver(),
         ]
         return drivers
 
@@ -35,7 +33,6 @@ class MaxFLClient(TrainingStrategy):
         fit_response = {
             'cid': client.cid,
             "participating_state": True,
-            # 'qk': client.qk
         }
         model_size = sum([layer.nbytes for layer in parameters])
         client.model_size = model_size
@@ -45,11 +42,6 @@ class MaxFLClient(TrainingStrategy):
         glob_model.set_weights(parameters)
 
         loss, acc = client.model.evaluate(client.x_train, client.y_train)
-        client.maxfl_loss = np.mean(loss)
-        # https://openreview.net/pdf?id=8GI1SXqJBk
-        client.apply_drivers(parameters=parameters, config=config) # add qk
-        client.data_to_log['qk'] = client.qk
-        fit_response['qk'] = client.qk
 
         client.g_fit_acc = np.mean(acc)
         client.g_fit_loss = np.mean(loss)
@@ -68,8 +60,8 @@ class MaxFLClient(TrainingStrategy):
                 curr - prev
                 for curr, prev in zip(client.model.get_weights(), prev_model.get_weights())
             ]
-            client.model.set_weights(delta_parameters)
-
+            # client.model.set_weights(delta_parameters)
+            delta_parameters = delta_parameters * (1/client.conf.client.eta) ## QFFL
             return delta_parameters, client.x_train.shape[0], fit_response
 
         return client.model.get_weights(), client.x_train.shape[0], fit_response
