@@ -1,42 +1,74 @@
-gpu: false
-init_clients: 1.0
-model_path: model
-model_type: dnn
-n_clients: 30
+# General Configuration
 rounds: 10
+n_clients: 30
+init_clients: 1.0
+gpu: false
+log_path: logs
+
+# Server Configuration
 server:
   ip: 0.0.0.0
   port: 9999
-  aggregation:
-    epsilon: 10
-    g_learning_rate: 0.01
-    method: maxfl
-    pre_training_epochs: 5
-    rho: 0.1
-  selection:
-    method: random
+  type: fl_server
+
+  # Aggregation configuration
+  aggregation_method:
+    name: fedavg  # Options: fedavg, maxfl, qffl
+    # MaxFL specific parameters (only used when name is maxfl)
+    # epsilon: 10
+    # learning_rate: 0.01
+    # pre_training_epochs: 5
+    # QFFL specific parameters (only used when name is qffl)
+    # rho: 0.1
+    # learning_rate: 0.01
+
+  # Selection configuration
+  selection_method:
+    name: random  # Options: random, deev, poc, round_robin, letsfed
     perc_of_clients: 0.3
+    # DEEV specific parameters (only used when name is deev)
+    # decay: 0.95
+    # LetsFed specific parameters (only used when name is letsfed)
+    # participating_method: random
+    # non_participating_method: poc
+
+# Client Configuration
 client:
   epochs: 5
-  learning_rate_client: 0.0001
-  participating: false
-  threshold: 1.0
-  training_strategy: maxfl
-db:
+  learning_rate: 0.0001
+  training_strategy:
+    name: normal  # Options: normal, letsfed, maxfl, fedper, qffl
+    # LetsFed specific parameters (only used when name is letsfed)
+    # threshold: 1.0
+
+  # LetsFed specific
+  participating: true
+
+# Dataset Configuration
+dataset:
   dataset: fashion_mnist
   path: logs
-  partitioner:
-    train:
-      dirichlet_alpha: 0.1
-      method: dirichlet
-      min_partition_size: 10
-      partition_by: label
-      self_balacing: false
-      shuffle: true
-    test:
-      dirichlet_alpha: 0.1
-      method: dirichlet
-      min_partition_size: 10
-      partition_by: label
-      self_balacing: false
-      shuffle: true
+  batch_size: 32
+  shuffle_train: true
+  prefetch: true
+
+  train_partitioner:
+    method: dirichlet  # Options: dirichlet, iid
+    dirichlet_alpha: 0.1
+    partition_by: label
+    self_balancing: false
+    min_partition_size: 10
+    shuffle: true
+
+  test_partitioner:
+    method: dirichlet
+    dirichlet_alpha: 0.1
+    partition_by: label
+    self_balancing: false
+    min_partition_size: 10
+    shuffle: true
+
+# Model Configuration
+model:
+  type: dnn  # Options: dnn, cnn
+  path: model
