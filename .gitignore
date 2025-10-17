@@ -1,13 +1,110 @@
-logs*
-teste*
-*.pyc
-*.cpython*
-client/strategies/drivers/__pycache__/accuracy.cpython-312.pyc
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ============================================
+# Virtual Environments
+# ============================================
+venv/
+env/
+.venv/
+ENV/
+
+# ============================================
+# IDEs
+# ============================================
+.idea/
+.vscode/
+*.swp
+*~
+
+# ============================================
+# OS
+# ============================================
+.DS_Store
+Thumbs.db
+.directory
+
+# ============================================
+# Logs and Outputs
+# ============================================
+logs/
+logs*/
+*.log
+outputs/
+outputs*/
+
+# ============================================
+# Experiments and Results
+# ============================================
+plots/
+checkpoints/
+experiments/
+results/
+
+# ============================================
+# ML Models (large files)
+# ============================================
+*.h5
+*.weights.h5
+*.pth
+*.pt
+*.ckpt
+*.pkl
+*.pickle
+
+# ============================================
+# Datasets (large files)
+# ============================================
+data/
+datasets/
+*.csv
+*.parquet
+
+# ============================================
+# Generated Images/Plots
+# ============================================
 *.png
 *.svg
-plots/
-client/strategies/drivers/__pycache__/accuracy.cpython-312.pyc
-client/strategies/drivers/__pycache__/curiosity.cpython-312.pyc
-server/strategies/drivers/__pycache__/selection.cpython-312.pyc
+*.jpg
+*.jpeg
+
+# ============================================
+# Docker
+# ============================================
 dockercompose*
-outputs
+docker-compose.override.yml
+
+# ============================================
+# Environment Variables
+# ============================================
+.env
+.env.*
+*.secret
+
+# ============================================
+# Jupyter
+# ============================================
+.ipynb_checkpoints/
+
+# ============================================
+# Testing/Temporary
+# ============================================
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.old
+
+# ============================================
+# CI/CD and Coverage
+# ============================================
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
