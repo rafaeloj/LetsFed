@@ -1,0 +1,17 @@
+# Federated Learning
+flwr>=1.7.0
+flwr-datasets[vision]>=0.0.2
+
+# Deep Learning
+tensorflow>=2.15.0
+keras>=3.0.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Configuration
+omegaconf>=2.3.0
+
+# Dataset Management
+datasets>=2.14.0

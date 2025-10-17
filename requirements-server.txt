@@ -1,0 +1,16 @@
+# Federated Learning
+flwr>=1.7.0
+
+# Deep Learning (CPU version for server)
+tensorflow-cpu>=2.15.0
+keras>=3.0.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Configuration
+omegaconf>=2.3.0
+
+# Utilities
+scikit-learn>=1.3.0
