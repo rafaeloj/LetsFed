@@ -1,0 +1,17 @@
+line-length = 100
+target-version = "py312"
+
+fix = false
+
+exclude = [
+]
+
+[lint] # This is where we configure the plugins.
+select = ["E4", "E5", "E7", "E9", "F", "B", "ANN", "S", "C4", "N", "I", "ISC"]
+ignore = ["ANN003", "ANN101", "ANN102", "N999"]
+
+[lint.per-file-ignores]
+"tests/*.py" = ["S101"]
+
+[lint.flake8-implicit-str-concat]
+allow-multiline = false
