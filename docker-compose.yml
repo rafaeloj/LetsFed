@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Federated Learning Server
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.new
+    container_name: fl_server
+    hostname: fl_server
+    ports:
+      - "9999:9999"
+    volumes:
+      # Mount configuration
+      - ./conf:/app/conf:ro
+      # Mount model weights (read-write for saving)
+      - ./model:/app/model:rw
+      # Mount logs (read-write)
+      - ./logs:/app/logs:rw
+      # Development: live code updates (comment out in production)
+      - ./server/strategies:/app/server/strategies:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - fl_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.connect(('localhost', 9999)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Federated Learning Clients (template)
+  # Clients will be created dynamically based on n_clients in config
+
+networks:
+  fl_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  model_data:
+  log_data:
