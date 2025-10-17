@@ -1,34 +1,66 @@
 from abc import ABC, abstractmethod
-from flwr.common import Scalar, Parameters, FitRes, EvaluateRes
-from typing import Tuple, Dict, TYPE_CHECKING, Optional, List, Union
+from typing import TYPE_CHECKING, Optional, Union
+
+from flwr.common import EvaluateRes, FitRes, Parameters, Scalar
 from flwr.server.client_proxy import ClientProxy
 
+from ..fl_server import FLServer
+
 if TYPE_CHECKING:
-    from server.strategies import FLServer
+    from server.strategies.fl_server import FLServer
+
 
 class AggregateMethod(ABC):
     @abstractmethod
+    def init(self, server: FLServer) -> None:
+        """
+        Method to initialize parameters of specific solution
+
+        Args:
+            server: The federated learning server instance.
+        """
+        ...
+
+    @abstractmethod
     def agg_fit(
         self,
-        server: 'FLServer',
+        server: FLServer,
         server_round: int,
-        results: List[Tuple[ClientProxy, FitRes]],
-        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
-    ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
-        """ Method to call in aggregate fit step """
+        results: list[tuple[ClientProxy, FitRes]],
+        failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> tuple[Optional[Parameters], dict[str, Scalar]]:
+        """
+        Method to call in aggregate fit step
+
+        Args:
+            server: The federated learning server instance.
+            server_round: The current round number.
+            results: List of tuples of ClientProxy and FitRes from clients.
+            failures: List of failures that occurred during client training.
+
+        Returns:
+            A tuple containing the aggregated Parameters and a dictionary of Scalar metrics.
+        """
+        ...
 
     @abstractmethod
     def agg_eval(
         self,
-        server: 'FLServer',
+        server: FLServer,
         server_round: int,
-        results: List[Tuple[ClientProxy, EvaluateRes]],
-        failures: List[Union[Tuple[ClientProxy, EvaluateRes], BaseException]],
-    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
-        """ Method to call in aggregate evaluate step """
+        results: list[tuple[ClientProxy, EvaluateRes]],
+        failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],
+    ) -> tuple[Optional[float], dict[str, Scalar]]:
+        """
+        Method to call in aggregate evaluate step
 
-    @abstractmethod
-    def init(server: 'FLServer'):
+        Args:
+            server: The federated learning server instance.
+            server_round: The current round number.
+            results: List of tuples of ClientProxy and EvaluateRes from clients.
+            failures: List of failures that occurred during client evaluation.
+
+        Returns:
+            A tuple containing the aggregated loss (float) and a dictionary of Scalar metrics.
         """
-            Method to initialize parameters of specific solution
-        """
+        ...

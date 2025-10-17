@@ -1,23 +1,24 @@
-# Multi-stage build for optimized server container
-FROM python:3.11-slim as base
+# GPU-enabled server container
+FROM tensorflow/tensorflow:2.15.0-gpu
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Update and install minimal dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Create application directory
 WORKDIR /app
 
-# Copy requirements first for better caching
+# Copy requirements and install
 COPY requirements-server.txt .
-RUN pip install --no-cache-dir -r requirements-server.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-server.txt
 
 # Copy application code
 COPY server/ ./server/
@@ -27,6 +28,9 @@ COPY utils/ ./utils/
 
 # Set Python path
 ENV PYTHONPATH=/app
+
+# Configure GPU
+ENV TF_FORCE_GPU_ALLOW_GROWTH=true
 
 # Expose server port
 EXPOSE 9999
