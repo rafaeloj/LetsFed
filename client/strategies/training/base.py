@@ -1,36 +1,71 @@
-from abc import ABC
-from typing import Dict, Tuple, TYPE_CHECKING
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
 from flwr.common import (
     Config,
     NDArrays,
     Scalar,
 )
+
 if TYPE_CHECKING:
-    from client.strategies import FederatedClient
-import numpy as np
+    from client.strategies.fl_client import FLClient
+
 
 class TrainingStrategy(ABC):
-    def get_parameters(self, client, config: Config) -> NDArrays:
-        """ Default Method """
-        return client.model.get_weights()
+    @abstractmethod
+    def init(self, client: FLClient) -> None:
+        """
+        Method to initialize parameters of specific solution
 
-    def fit(self, client: 'FederatedClient', parameters: NDArrays, config: Config) -> Tuple[NDArrays, int, Dict[str, Scalar]]:
-        """ Default Method """
-        client.model.set_weights(parameters)
-        history = client.model.fit(client.x_train, client.y_train, epochs = client.conf.client.epochs, verbose = 0)
-        client.fit_acc  = np.mean(history.history['accuracy'])
-        client.fit_loss = np.mean(history.history['loss'])
+        Args:
+            client: The federated learning client instance.
+        """
+        ...
 
-        return client.model.get_weights(), client.x_train.shape[0], {}
+    @abstractmethod
+    def get_parameters(self, client: FLClient) -> NDArrays:
+        """
+        Get model parameters from the client.
 
-    def evaluate(self, client: 'FederatedClient', parameters: NDArrays, config: Config) -> Tuple[NDArrays, int, Dict[str, Scalar]]:
-        """ Default Method """
-        client.model.set_weights(parameters)
-        loss, acc       = self.model.evaluate(client.x_test, client.y_test)
-        client.fit_acc  = acc
-        client.fit_loss = loss 
-        eval_response = {
-            "acc" : acc,
-        }
+        Args:
+            client (FLClient): The federated learning client.
 
-        return loss, client.x_test.shape[0], eval_response
+        Returns:
+            NDArrays: The model parameters.
+        """
+        ...
+
+    @abstractmethod
+    def fit(
+        self, client: FLClient, parameters: NDArrays, config: Config
+    ) -> tuple[NDArrays, int, dict[str, Scalar]]:
+        """
+        Train the model on the client data.
+        Args:
+            client (FLClient): The federated learning client.
+            parameters (NDArrays): The model parameters.
+            config (Config): Configuration dictionary.
+
+        Returns:
+            tuple[NDArrays, int, dict[str, Scalar]]: Updated model parameters,
+            number of examples used for training, and additional metrics.
+        """
+        ...
+
+    @abstractmethod
+    def evaluate(
+        self, client: FLClient, parameters: NDArrays, config: Config
+    ) -> tuple[NDArrays, int, dict[str, Scalar]]:
+        """
+        Evaluate the model on the client test data.
+
+        Args:
+            client (FLClient): The federated learning client.
+            parameters (NDArrays): The model parameters.
+            config (Config): Configuration dictionary.
+
+        Returns:
+            tuple[NDArrays, int, dict[str, Scalar]]: Loss, number of examples used for evaluation,
+            and additional metrics.
+        """
+        ...

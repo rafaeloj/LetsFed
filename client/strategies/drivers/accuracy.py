@@ -1,50 +1,58 @@
-from .driver import Driver
-import tensorflow as tf
-from typing import Tuple
-from conf import Environment
-from utils import ModelManager, is_select_by_server
+from typing import TYPE_CHECKING
 
-WILLING_PERC = 1.0
+from flwr.common import (
+    Config,
+    NDArrays,
+)
+
+from .driver import Driver
+
+if TYPE_CHECKING:
+    from ..fl_client import FLClient
+
 
 class AccuracyDriver(Driver):
-    def __init__(self, input_shape: Tuple[int], conf: Environment):
-        self.threshold = conf.client.threshold
-        self._create_model(input_shape = input_shape, conf = conf)
+    """
+    Driver for accuracy-based client selection.
+    """
 
-    def get_name(self):
-        return "accuracy_driver"
+    def run(self, client: FLClient, parameters: NDArrays, config: Config) -> None:
+        """
+        Run the driver with the given client, parameters, and config.
 
-    def _create_model(self, input_shape: Tuple[int], conf: Environment):
-        self.mm = ModelManager(
-            conf = conf,
-            input_shape = input_shape
-        )
-
-    def run(self, client, parameters, config):       
-        server_round = config['rounds']
-
+        Args:
+            client (FLClient): The federated learning client.
+            parameters (NDArrays): The model parameters.
+            config (Config): Configuration dictionary.
+        """
+        # Case for first round
+        server_round = config["rounds"]
         if server_round == 1:
             return True
-        
-        self.mm.model.set_weights(parameters)
-        g_tmp_loss, _ = self.mm.model.evaluate(
-            client.x_validation,
-            client.y_validation,
-            verbose = 0
-        )
-        c_tmp_loss, _ = client.model.evaluate(
-            client.x_validation,
-            client.y_validation,
-            verbose = 0
-        )
-        client.diff = c_tmp_loss / g_tmp_loss
 
-        willing = self._better(
-            global_loss = g_tmp_loss,
-            client_loss = c_tmp_loss
-        )
-        # print(f"{client.conf['cid']} with threshold {self.threshold}: {c_tmp_loss / g_tmp_loss} - {willing}")
-        return willing
+        g_tmp_loss, _ = self.g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
+        c_tmp_loss, _ = client.model.evaluate(client.x_validation, client.y_validation, verbose=0)
 
-    def _better(self, global_loss: float, client_loss: float):
-        return (client_loss / global_loss) > self.threshold
+        willing = self._client_willing(
+            global_loss=g_tmp_loss,
+            client_loss=c_tmp_loss,
+            threshold=client.conf.client.training_strategy.threshold_accuracy,
+        )
+
+        client.willing = willing
+
+    def _client_willing(
+        self, global_loss: float, client_loss: float, threshold: float = None
+    ) -> bool:
+        """
+        Check if the client loss is better than the global loss.
+
+        Args:
+            global_loss (float): The global model loss.
+            client_loss (float): The client model loss.
+            threshold (float): The threshold for improvement.
+
+        Returns:
+            bool: True if the client loss is better than the global loss, False otherwise.
+        """
+        return (client_loss / global_loss) > threshold

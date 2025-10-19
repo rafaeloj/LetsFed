@@ -1,49 +1,86 @@
-from .driver import Driver
+import os
 from random import randint
-IDLE = 0
-EXPLORING = 1
+from typing import TYPE_CHECKING
+
+from flwr.common import (
+    Config,
+    NDArrays,
+)
+
+from .driver import Driver
+
+if TYPE_CHECKING:
+    from ..fl_client import FLClient
+
+IDLE = int(os.environ.get("IDLE_STATE", "0"))
+EXPLORING = int(os.environ.get("EXPLORING_STATE", "1"))
+
+
 class CuriosityDriver(Driver):
-    def __init__(self, r_intention=0):
-        self.state         = IDLE # Type: idle, exploring, explored
-        self.current_round = r_intention
-    
-    def get_name(self):
-        return "curiosity_driver"
+    """
+    Driver for curiosity-based client selection.
+    """
 
-    def run(self, client, parameters, config, selected=True):
-        if not selected:
-            return True if self.state == EXPLORING else False
+    def run(self, client: FLClient, parameters: NDArrays, config: Config) -> None:
+        """
+        Run the driver with the given client, parameters, and config.
 
-        if self.on_exploration():
-            state = self.explore()
+        Args:
+            client (FLClient): The federated learning client.
+            parameters (NDArrays): The model parameters.
+            config (Config): Configuration dictionary.
+        """
+        if not client.selected:
+            return True if client.state == EXPLORING else False
+
+        if self.on_exploration(client=client):
+            state = self.explore(client=client)
             return state
 
         if client.participating_state:
-            state = self.start_exploration(client = client)
+            state = self.start_exploration(client=client)
             return state
-    
+
         return False
 
-
-    def explore(self):
-        self.current_round -= 1
-        if not self.on_exploration():
-            self.set_idle()
+    def explore(self, client: FLClient) -> bool:
+        """
+        Explore the environment.
+        """
+        client.rounds_intention -= 1
+        if not self.on_exploration(client=client):
+            self.set_idle(client=client)
             return False
         return True
 
-    def on_exploration(self):
-        return self.current_round > 0 and self.state == EXPLORING
+    def on_exploration(self, client: FLClient) -> bool:
+        """
+        Check if the client is currently exploring.
+        """
+        return client.rounds_intention > 0 and client.state == EXPLORING
 
-    def start_exploration(self, client):
-        if self.current_round == 0:
-            self.current_round = randint(1, int(client.conf['rounds'])+1)
-        self.set_exploring()
+    def start_exploration(self, client: FLClient) -> bool:
+        """
+        Start the exploration phase for the client.
+
+        Args:
+            client (FLClient): The federated learning client.
+        """
+        if client.rounds_intention == 0:
+            client.rounds_intention = randint(1, int(client.conf.rounds) + 1)  # noqa: S311
+
+        self.set_exploring(client=client)
         return True
-    
-    def set_exploring(self):
-        self.state = EXPLORING
-    
-    def set_idle(self):
-        self.current_round = 0
-        self.sate = IDLE
+
+    def set_exploring(self, client: FLClient) -> None:
+        """
+        Set the client state to exploring.
+        """
+        client.state = EXPLORING
+
+    def set_idle(self, client: FLClient) -> None:
+        """
+        Set the client state to idle.
+        """
+        client.rounds_intention = 0
+        client.state = IDLE

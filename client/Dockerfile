@@ -1,13 +1,33 @@
-# # FROM python:3.12-slim
-FROM tensorflow/tensorflow:latest-gpu
+# Multi-stage build for optimized client container
+FROM python:3.11-slim as base
 
-RUN mkdir client
-RUN mkdir client/strategies/
-RUN mkdir client/strategies/engagement_strategy
-RUN pip install --upgrade pip
-RUN pip install flwr-datasets
-RUN pip install flwr_datasets[vision]
-# RUN python3.12 -m pip install flwr_datasets[audio]
-RUN python -m pip install numpy pandas flwr keras scikit-learn matplotlib datasets seaborn
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-CMD ["python3", "-u", "/client/strategies_manager.py"]
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create application directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements-client.txt .
+RUN pip install --no-cache-dir -r requirements-client.txt
+
+# Copy application code
+COPY client/ ./client/
+COPY conf/ ./conf/
+COPY dataset_manager/ ./dataset_manager/
+COPY model/ ./model/
+COPY utils/ ./utils/
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Run client
+CMD ["python", "-u", "client/strategies_manager.py"]

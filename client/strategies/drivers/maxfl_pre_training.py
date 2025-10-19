@@ -1,19 +1,34 @@
-from .driver import Driver
-import numpy as np
-from typing import TYPE_CHECKING
-from utils import ModelManager
 import copy
+from typing import TYPE_CHECKING
+
+from flwr.common import (
+    Config,
+    NDArrays,
+)
+
+from .driver import Driver
+
 if TYPE_CHECKING:
-    from client.strategies import FederatedClient
+    from ..fl_client import FLClient
+
 
 class MaxFLPreTrainingDriver(Driver):
+    def run(self, client: FLClient, parameters: NDArrays, config: Config) -> None:
+        """
+        Run the driver with the given client, parameters, and config.
 
-    def get_name(self):
-        return "maxfl_pre_training_driver"
-    def run(self, client: 'FederatedClient', parameters, config):
-        net_tmp = copy.deepcopy(client.model)    
-        net_tmp.fit(client.x_train, client.y_train, epochs=client.conf.server.aggregation.pre_training_epochs)
+        Args:
+            client (FLClient): The federated learning client.
+            parameters (NDArrays): The model parameters.
+            config (Config): Configuration dictionary.
+        """
+        net_tmp = copy.deepcopy(client.model)
+        net_tmp.fit(
+            client.x_train,
+            client.y_train,
+            epochs=client.conf.server.aggregation_method.pre_training_epochs,
+        )
 
         loss, acc = net_tmp.evaluate(client.x_validation, client.y_validation)
 
-        return loss
+        client.maxfl_threshold = loss

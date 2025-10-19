@@ -1,0 +1,45 @@
+# GPU-enabled client container
+FROM tensorflow/tensorflow:2.15.0-gpu
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Update and install minimal dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create application directory
+WORKDIR /app
+
+# Copy requirements and install
+COPY requirements-client.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-client.txt
+
+# Copy application code
+COPY client/ ./client/
+COPY conf/ ./conf/
+COPY dataset_manager/ ./dataset_manager/
+COPY model/ ./model/
+COPY utils/ ./utils/
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Configurações de GPU otimizadas para TensorFlow
+# Habilita crescimento dinâmico de memória (evita OOM)
+ENV TF_FORCE_GPU_ALLOW_GROWTH=true
+# Desabilita mensagens de log verbosas da GPU (opcional)
+ENV TF_CPP_MIN_LOG_LEVEL=2
+# Configurações CUDA para melhor performance
+ENV CUDA_CACHE_DISABLE=0
+ENV CUDA_CACHE_MAXSIZE=2147483648
+# Permite que TensorFlow use todas as GPUs disponíveis
+ENV CUDA_VISIBLE_DEVICES=all
+
+# Run client
+CMD ["python", "-u", "client/strategies_manager.py"]
