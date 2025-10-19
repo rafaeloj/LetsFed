@@ -9,7 +9,6 @@ log_path: logs
 server:
   ip: 0.0.0.0
   port: 9999
-  type: fl_server
 
   # Aggregation configuration
   aggregation_method:

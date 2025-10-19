@@ -47,6 +47,7 @@ class FLServer(Strategy):
         """
         super().__init__()
 
+        # Initialize server parameters
         self.client_selection: ClientSelectionMethod = client_selection
         self.aggregate_method: AggregateMethod = aggregate_method
         self.conf: Environment = conf
@@ -60,15 +61,11 @@ class FLServer(Strategy):
         self.clients_acc = np.zeros(conf.n_clients)
         self.clients_loss = np.zeros(conf.n_clients)
         self.model: keras.Model = None
-        self.aggregate_method.init(self)
         self.data_to_log = {}
 
-        # Logging
-        self.metrics_history: Dict[str, list] = {
-            "round": [],
-            "avg_accuracy": [],
-            "avg_loss": [],
-        }
+        # Initialize strategies
+        self.aggregate_method.init(self)
+        self.client_selection.init(self)
 
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
         """

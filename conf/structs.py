@@ -158,7 +158,6 @@ class ServerConfig:
 
     ip: str = MISSING
     port: int = MISSING
-    type: str = MISSING
 
     aggregation_method: AggregationMethod = MISSING
     selection_method: SelectionMethod = MISSING

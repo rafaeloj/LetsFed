@@ -29,8 +29,16 @@ COPY utils/ ./utils/
 # Set Python path
 ENV PYTHONPATH=/app
 
-# Configure GPU
+# Configurações de GPU otimizadas para TensorFlow
+# Habilita crescimento dinâmico de memória (evita OOM)
 ENV TF_FORCE_GPU_ALLOW_GROWTH=true
+# Desabilita mensagens de log verbosas da GPU (opcional)
+ENV TF_CPP_MIN_LOG_LEVEL=2
+# Configurações CUDA para melhor performance
+ENV CUDA_CACHE_DISABLE=0
+ENV CUDA_CACHE_MAXSIZE=2147483648
+# Permite que TensorFlow use todas as GPUs disponíveis
+ENV CUDA_VISIBLE_DEVICES=all
 
 # Expose server port
 EXPOSE 9999

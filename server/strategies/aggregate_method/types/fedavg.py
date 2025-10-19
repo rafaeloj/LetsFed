@@ -19,6 +19,10 @@ if TYPE_CHECKING:
 
 
 class FedAVG(AggregateMethod):
+    """
+    Federated Averaging (FedAvg) aggregation strategy.
+    """
+
     def init(self, server: FLServer) -> None:
         """
         Method to initialize parameters of specific solution
