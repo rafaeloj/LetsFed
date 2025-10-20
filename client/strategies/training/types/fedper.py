@@ -61,6 +61,7 @@ class FedPerClient(TrainingStrategy):
         """
         # Initialize fit response
         fit_response = {"cid": client.cid, "participating_state": True, "desired_state": True}
+
         # Calculate and store model size
         model_size = sum([layer.nbytes for layer in parameters])
         client.model_size = model_size

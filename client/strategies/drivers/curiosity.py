@@ -31,17 +31,18 @@ class CuriosityDriver(Driver):
             config (Config): Configuration dictionary.
         """
         if not client.selected:
-            return True if client.state == EXPLORING else False
+            state = True if client.state == EXPLORING else False
 
-        if self.on_exploration(client=client):
+        elif self.on_exploration(client=client):
             state = self.explore(client=client)
-            return state
 
-        if client.participating_state:
+        elif client.participating_state:
             state = self.start_exploration(client=client)
-            return state
 
-        return False
+        else:
+            state = False
+
+        client.curiosity = state
 
     def explore(self, client: FLClient) -> bool:
         """

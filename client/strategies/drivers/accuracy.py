@@ -30,7 +30,7 @@ class AccuracyDriver(Driver):
         if server_round == 1:
             return True
 
-        g_tmp_loss, _ = self.g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
+        g_tmp_loss, _ = client.g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
         c_tmp_loss, _ = client.model.evaluate(client.x_validation, client.y_validation, verbose=0)
 
         willing = self._client_willing(
