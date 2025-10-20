@@ -104,11 +104,7 @@ LetsFed/
 │   ├── logger.py                     # Metrics logging system
 │   ├── docker_compose_manager.py     # Dynamic compose generator
 │   └── utils.py                      # Helper functions
-│
-├── 🌐 app/                            # Web Interface
-│   ├── service.py                    # Flask web app
-│   └── templates/                    # HTML templates
-│
+││
 ├── 📋 requirements-client.txt         # Client dependencies
 ├── 📋 requirements-server.txt         # Server dependencies
 ├── 🐳 docker-compose.yml              # Container orchestration (CPU)
