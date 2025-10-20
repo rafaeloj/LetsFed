@@ -4,14 +4,14 @@ import flwr as fl
 from omegaconf import OmegaConf
 
 from ..conf import Environment
-from .strategies.factory import ClientFactory
+from .strategies.factory import ClientBuilder
 
 
 def main() -> None:
     cfg: Environment = OmegaConf.load("/client/conf/config.yaml")
     fl.client.start_client(
         server_address=f"rfl_server:{cfg.server.port}",
-        client=ClientFactory.create(cid=os.environ.get("CID"), config=cfg).to_client(),
+        client=ClientBuilder.create(cid=os.environ.get("CID"), config=cfg).to_client(),
     )
 
 
