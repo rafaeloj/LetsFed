@@ -94,8 +94,6 @@ LetsFed/
 │
 ├── 📊 dataset_manager/                # Dataset Handling
 │   ├── dataset_manager.py            # Dataset partitioning logic
-│   ├── dataloader.py                 # Data loading utilities
-│   └── structs.py                    # Data structures
 │
 ├── 🧠 model/                          # Model Management
 │   └── model_manager.py              # Model factory (CNN, DNN)
