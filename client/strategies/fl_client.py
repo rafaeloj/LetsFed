@@ -10,6 +10,7 @@ from ...conf import Environment
 from ...dataset_manager.dataset_manager import DSManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
+from .drivers.driver import Driver
 from .training.base import TrainingStrategy
 
 logger = Logger(__name__)
@@ -36,6 +37,7 @@ class FLClient(fl.client.NumPyClient):
         self.load_model()
 
         # Initialize client parameters
+        self.drivers: list[Driver] = []
         self.participating_state: bool = True
         self.desired_state: bool = True
         self.selected: bool = False
@@ -94,6 +96,46 @@ class FLClient(fl.client.NumPyClient):
             Model parameters as NDArrays
         """
         return self.training_strategy.get_parameters(self)
+
+    def set_parameters(self, parameters: NDArrays) -> None:
+        """
+        Set the model parameters.
+
+        Args:
+            parameters: Model parameters as NDArrays
+        """
+        self.model.set_weights(parameters)
+
+    def add_drivers(self, drivers: list[Driver]) -> None:
+        """
+        Add a list of drivers to the client.
+        Implements the Plugin Architecture pattern.
+
+        Args:
+            drivers: List of driver instances to add
+        """
+        self.drivers.extend(drivers)
+
+    def apply_drivers(self, parameters: NDArrays, config: Config) -> None:
+        """
+        Apply all registered drivers in sequence.
+        Implements the Chain of Responsibility pattern.
+
+        Args:
+            parameters: Model parameters
+            config: Configuration dictionary
+        """
+        for driver in self.drivers:
+            driver.run(self, parameters, config)
+
+    def get_drivers(self) -> list[Driver]:
+        """
+        Get the list of registered drivers.
+
+        Returns:
+            List of driver instances
+        """
+        return self.drivers
 
     def fit(self, parameters: NDArrays, config: Config) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
