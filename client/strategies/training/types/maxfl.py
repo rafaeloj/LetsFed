@@ -1,4 +1,3 @@
-import copy
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -87,25 +86,14 @@ class MaxFLClient(TrainingStrategy):
         )
 
         if client.selected:
-            client.model.set_weights(parameters)
-            prev_model = copy.deepcopy(client.model)
+            client.set_parameters(parameters)
             history = client.model.fit(
                 client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
             )
             client.g_fit_acc = np.mean(history.history["accuracy"])
             client.g_fit_loss = np.mean(history.history["loss"])
 
-            delta_parameters = [
-                curr - prev
-                for curr, prev in zip(
-                    client.model.get_weights(), prev_model.get_weights(), strict=True
-                )
-            ]
-            client.model.set_weights(delta_parameters)
-
-            return delta_parameters, client.x_train.shape[0], fit_response
-
-        return client.model.get_weights(), client.x_train.shape[0], fit_response
+        return client.get_parameters(), client.x_train.shape[0], fit_response
 
     def evaluate(
         self, client: FLClient, parameters: NDArrays, config: Config
@@ -122,11 +110,14 @@ class MaxFLClient(TrainingStrategy):
             tuple[NDArrays, int, dict[str, Scalar]]: Loss, number of examples used for evaluation,
             and additional metrics.
         """
+        # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
             client.cid, config["selected_by_server"].split(",")
         )
+
+        # Set weights if selected
         if client.selected:
-            client.model.set_weights(parameters)
+            client.set_parameters(parameters)
 
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_acc = np.mean(acc)
@@ -135,8 +126,8 @@ class MaxFLClient(TrainingStrategy):
             "cid": client.cid,
             "acc": client.g_eval_acc,
             "loss": client.g_eval_loss,
-            "participating_state": client.participating_state,
-            "desired_state": client.participating_state,
+            "participating_state": client.get_participating_state(),
+            "desired_state": client.get_participating_state(),
         }
 
         return loss, client.x_test.shape[0], eval_resp

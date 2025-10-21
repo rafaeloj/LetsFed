@@ -29,18 +29,6 @@ class QFFLClient(TrainingStrategy):
         """
         pass
 
-    def get_parameters(self, client: FLClient) -> NDArrays:
-        """
-        Get model parameters from the client.
-
-        Args:
-            client (FLClient): The federated learning client.
-
-        Returns:
-            NDArrays: The model parameters.
-        """
-        return client.model.get_weights()
-
     def fit(
         self, client: FLClient, parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
@@ -66,11 +54,6 @@ class QFFLClient(TrainingStrategy):
         model_size = sum([layer.nbytes for layer in parameters])
         client.model_size = model_size
 
-        # Evaluate local model before training (for case when the client is not selected)
-        loss, acc = client.model.evaluate(client.x_train, client.y_train)
-        client.g_fit_acc = np.mean(acc)
-        client.g_fit_loss = np.mean(loss)
-
         # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
             client.cid, config["selected_by_server"].split(",")
@@ -78,8 +61,8 @@ class QFFLClient(TrainingStrategy):
 
         # Fitting model
         if client.selected:
-            client.model.set_weights(parameters)
-            prev_model = copy.deepcopy(client.model)
+            client.set_parameters(parameters)
+            prev_model_parameters = copy.deepcopy(client.get_parameters())
             history = client.model.fit(
                 client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
             )
@@ -89,15 +72,13 @@ class QFFLClient(TrainingStrategy):
             # Calculate delta parameters
             delta_parameters = [
                 curr - prev
-                for curr, prev in zip(
-                    client.model.get_weights(), prev_model.get_weights(), strict=True
-                )
+                for curr, prev in zip(client.get_parameters(), prev_model_parameters, strict=True)
             ]
             delta_parameters = delta_parameters * (1 / client.conf.client.eta)  ## QFFL
 
             return delta_parameters, client.x_train.shape[0], fit_response
 
-        return client.model.get_weights(), client.x_train.shape[0], fit_response
+        return client.get_parameters(), client.x_train.shape[0], fit_response
 
     def evaluate(
         self, client: FLClient, parameters: NDArrays, config: Config
@@ -114,11 +95,14 @@ class QFFLClient(TrainingStrategy):
             tuple[NDArrays, int, dict[str, Scalar]]: Loss, number of examples used for evaluation,
             and additional metrics.
         """
+        # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
             client.cid, config["selected_by_server"].split(",")
         )
+
+        # Set weights if selected
         if client.selected:
-            client.model.set_weights(parameters)
+            client.set_parameters(parameters)
 
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_acc = np.mean(acc)
@@ -127,8 +111,8 @@ class QFFLClient(TrainingStrategy):
             "cid": client.cid,
             "acc": client.g_eval_acc,
             "loss": client.g_eval_loss,
-            "participating_state": client.participating_state,
-            "desired_state": client.participating_state,
+            "participating_state": client.get_participating_state(),
+            "desired_state": client.get_participating_state(),
         }
 
         return loss, client.x_test.shape[0], eval_resp

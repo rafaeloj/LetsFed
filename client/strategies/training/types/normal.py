@@ -28,18 +28,6 @@ class NormalClient(TrainingStrategy):
         """
         pass
 
-    def get_parameters(self, client: FLClient) -> NDArrays:
-        """
-        Get model parameters from the client.
-
-        Args:
-            client (FLClient): The federated learning client.
-
-        Returns:
-            NDArrays: The model parameters.
-        """
-        return client.model.get_weights()
-
     def fit(
         self, client: FLClient, parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
@@ -69,14 +57,14 @@ class NormalClient(TrainingStrategy):
 
         # Fitting model
         if client.selected:
-            client.model.set_weights(parameters)
+            client.set_parameters(parameters)
             history = client.model.fit(
                 client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
             )
             client.g_fit_acc = np.mean(history.history["accuracy"])
             client.g_fit_loss = np.mean(history.history["loss"])
 
-        return client.model.get_weights(), client.x_train.shape[0], fit_response
+        return client.get_parameters(), client.x_train.shape[0], fit_response
 
     def evaluate(
         self, client: FLClient, parameters: NDArrays, config: Config
@@ -97,8 +85,10 @@ class NormalClient(TrainingStrategy):
         client.selected = Utils.is_select_by_server(
             str(client.cid), config["selected_by_server"].split(",")
         )
+
+        # Set weights if selected
         if client.selected:
-            client.model.set_weights(parameters)
+            client.set_parameters(parameters)
 
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_acc = np.mean(acc)

@@ -33,7 +33,7 @@ class LetsFedClient(TrainingStrategy):
         Args:
             client: The federated learning client instance.
         """
-        client.desired_state = client.participating_state
+        client.desired_state = client.get_participating_state()
         client.state = IDLE
         client.rounds_intention = 1
         client.willing = True
@@ -65,16 +65,16 @@ class LetsFedClient(TrainingStrategy):
         Returns:
             NDArrays: Updated model parameters.
         """
-        if not client.participating_state:
+        if not client.get_participating_state():
             return self._non_participating_fit(client, parameters=parameters, config=config)
 
-        client.model.set_weights(parameters)
+        client.set_parameters(parameters)
         history = client.model.fit(
             client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
         )
         client.g_fit_acc = np.mean(history.history["accuracy"])
         client.g_fit_loss = np.mean(history.history["loss"])
-        new_parameters = client.model.get_weights()
+        new_parameters = client.get_parameters()
 
         return new_parameters
 
@@ -118,7 +118,7 @@ class LetsFedClient(TrainingStrategy):
         # Initialize fit response
         fit_response = {
             "cid": client.cid,
-            "participating_state": client.participating_state,
+            "participating_state": client.get_participating_state(),
         }
 
         # Calculate and store model size
@@ -150,10 +150,10 @@ class LetsFedClient(TrainingStrategy):
         Args:
             client (FLClient): The federated learning client.
         """
-        if not client.willing and client.participating_state:
+        if not client.willing and client.get_participating_state():
             client.set_participating_state(False)
 
-        if client.willing and not client.participating_state:
+        if client.willing and not client.get_participating_state():
             client.set_participating_state(True)
 
     def _participating_evaluate(
@@ -172,11 +172,11 @@ class LetsFedClient(TrainingStrategy):
             tuple[NDArrays, int, dict[str, Scalar]]: Loss, number of examples used for evaluation,
             and additional metrics.
         """
-        if not client.participating_state:
+        if not client.get_participating_state():
             return self._non_participating_evaluate(client, parameters=parameters, config=config)
 
         # Evaluate the model (on a participant client)
-        client.model.set_weights(parameters)
+        client.set_parameters(parameters)
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_loss = np.mean(loss)
         client.g_eval_acc = np.mean(acc)
@@ -236,7 +236,7 @@ class LetsFedClient(TrainingStrategy):
         # Initialize variables
         eval_resp = {
             "cid": client.cid,
-            "participating_state": client.participating_state,
+            "participating_state": client.get_participating_state(),
         }
 
         # Set global model weights and apply drivers
@@ -246,7 +246,7 @@ class LetsFedClient(TrainingStrategy):
         self._manager_client_state(client)
 
         # Update desired state
-        client.desired_state = client.participating_state
+        client.desired_state = client.get_participating_state()
         eval_resp["desired_state"] = client.desired_state
 
         # Analyze if the client is selected

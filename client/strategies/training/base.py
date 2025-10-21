@@ -12,6 +12,10 @@ if TYPE_CHECKING:
 
 
 class TrainingStrategy(ABC):
+    """
+    Abstract base class for federated learning training strategies.
+    """
+
     @abstractmethod
     def init(self, client: FLClient) -> None:
         """
@@ -19,19 +23,6 @@ class TrainingStrategy(ABC):
 
         Args:
             client: The federated learning client instance.
-        """
-        ...
-
-    @abstractmethod
-    def get_parameters(self, client: FLClient) -> NDArrays:
-        """
-        Get model parameters from the client.
-
-        Args:
-            client (FLClient): The federated learning client.
-
-        Returns:
-            NDArrays: The model parameters.
         """
         ...
 

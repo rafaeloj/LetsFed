@@ -1,8 +1,8 @@
 import flwr as fl
-from strategies.factory import ServerBuilder
 
 from ..conf import Environment
 from ..conf.loader import load_config
+from .strategies.server_builder import ServerBuilder
 
 
 def main() -> None:

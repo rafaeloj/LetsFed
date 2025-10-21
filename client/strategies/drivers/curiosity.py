@@ -36,7 +36,7 @@ class CuriosityDriver(Driver):
         elif self.on_exploration(client=client):
             state = self.explore(client=client)
 
-        elif client.participating_state:
+        elif client.get_participating_state():
             state = self.start_exploration(client=client)
 
         else:

@@ -4,7 +4,7 @@ import flwr as fl
 from omegaconf import OmegaConf
 
 from ..conf import Environment
-from .strategies.factory import ClientBuilder
+from .strategies.client_builder import ClientBuilder
 
 
 def main() -> None:

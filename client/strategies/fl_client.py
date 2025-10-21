@@ -33,6 +33,9 @@ class FLClient(fl.client.NumPyClient):
 
         # Load data and model
         self.model: Model
+        self.x_train, self.y_train = None, None
+        self.x_validation, self.y_validation = None, None
+        self.x_test, self.y_test = None, None
         self.load_data()
         self.load_model()
 
@@ -41,6 +44,7 @@ class FLClient(fl.client.NumPyClient):
         self.participating_state: bool = True
         self.desired_state: bool = True
         self.selected: bool = False
+        self.model_size: int = 0
         self.g_eval_acc: float = 0
         self.g_fit_acc: float = 0
         self.g_eval_loss: float = 0
@@ -95,7 +99,7 @@ class FLClient(fl.client.NumPyClient):
         Returns:
             Model parameters as NDArrays
         """
-        return self.training_strategy.get_parameters(self)
+        return self.model.get_weights()
 
     def set_parameters(self, parameters: NDArrays) -> None:
         """
@@ -183,6 +187,7 @@ class FLClient(fl.client.NumPyClient):
             "desired_state": self.desired_state,
             "selected": self.selected,
             "cid": self.cid,
+            "model_size": self.model_size,
             "g_fit_acc": self.g_fit_acc,
             "g_fit_loss": self.g_fit_loss,
             "g_eval_acc": self.g_eval_acc,
