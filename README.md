@@ -1,4 +1,41 @@
-## Let’s Federate - Effective Communication Strategy for Dynamic Client Participation - ICMLA Conference
+# 🚀 Let's Federate - Effective Communication Strategy for Dynamic Client Participation - ICMLA Conference
+
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://python.org)
+[![Flower](https://img.shields.io/badge/Flower-Framework-green?logo=flower)](https://flower.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
+[![License](https://img.shields.io/badge/License-Research-orange)](.)
+[![Paper](https://img.shields.io/badge/ICMLA-2024-red)](https://doi.org/10.1109/ICMLA61862.2024.00055)
+
+
+## 📑 Table of Contents
+
+- [Abstract](#abstract)
+- [Citation](#citation)
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Project Structure](#-project-structure)
+- [Architecture & Design Patterns](#️-architecture--design-patterns)
+  - [Design Patterns Overview](#design-patterns-overview)
+  - [Strategy Pattern + Dependency Injection](#1-strategy-pattern--dependency-injection)
+  - [Factory Pattern](#2-factory-pattern)
+  - [Builder Pattern](#3-builder-pattern)
+  - [Chain of Responsibility (Drivers)](#4-chain-of-responsibility-drivers)
+  - [Context Object Pattern (DriverContext)](#5-context-object-pattern-drivercontext)
+  - [Federated Learning Flow](#federated-learning-flow)
+- [Available Strategies](#-available-strategies)
+- [Extending the Framework](#-extending-the-framework)
+- [Logging and Analysis](#-logging-and-analysis)
+- [Docker Configuration](#-docker-configuration)
+- [Configuration Reference](#️-configuration-reference)
+- [Research & Publications](#-research--publications)
+- [Development](#️-development)
+- [Contributing](#-contributing)
+- [Additional Resources](#-additional-resources)
+- [Contact](#-contact)
+
+---
+
+## Abstract
 
 **Abstract:**
 Federated Learning (FL) has emerged as a privacy-preserving powerful tool in decentralized Machine Learning (ML) environments. However, real-world scenarios often face bandwidth limitations that can be overwhelmed when all clients simultaneously perform training and communicate with the server in a federated system. Consequently, selection mechanisms are critical for identifying optimal subsets of clients to participate in the federation. Traditional selection methods, however, typically do not allow clients the autonomy to decide whether or not to contribute to the federation. Therefore, this paper proposes LetsFed, a client selection framework that respects client independence throughout the training process. The LetsFed framework differentiates between participating and non-participating clients, employing targeted selection mechanisms to address system challenges effectively. Empirical results demonstrate that LestFed can outperform, in dynamic client participation environments, literature solutions by up to 40%, reducing unnecessary data transmission by as much as 29%, while also enhancing the efficacy of the selection process.
@@ -26,8 +63,8 @@ A modular and extensible **Federated Learning research framework** built on [Flo
 
 ## ✨ Key Features
 
-- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Builder Pattern, and Chain of Responsibility
-- **🔌 Extensible Design**: Plugin-based driver system for composable client behaviors
+- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Builder Pattern, Chain of Responsibility, and Context Object Pattern
+- **🔌 Extensible Design**: Plugin-based driver system with DriverContext for composable and testable client behaviors
 - **🎛️ Multiple Strategy Support**:
   - **Aggregation**: FedAvg, MaxFL
   - **Client Selection**: Random, DEEV, PoC, Round Robin, LetsFed
@@ -36,6 +73,7 @@ A modular and extensible **Federated Learning research framework** built on [Flo
 - **⚙️ YAML Configuration**: Type-safe configuration management with OmegaConf
 - **📊 Comprehensive Logging**: Automatic metrics tracking for analysis
 - **🎯 Type Safety**: Full type hints throughout the codebase
+- **🧪 Testable Design**: DriverContext pattern enables easy unit testing without complex mocks
 
 ## 📁 Project Structure
 
@@ -77,8 +115,9 @@ LetsFed/
 │   │   │       ├── maxfl.py          # MaxFL training
 │   │   │       ├── fedper.py         # FedPer training
 │   │   │       └── qffl.py           # QFFL training
-│   │   └── drivers/                  # Modular behaviors (Chain of Responsibility)
+│   │   └── drivers/                  # Modular behaviors (Chain of Responsibility + Context Object)
 │   │       ├── driver.py             # Base driver interface
+│   │       ├── context.py            # DriverContext for explicit side effects
 │   │       ├── accuracy.py           # Accuracy-based decision driver
 │   │       ├── curiosity.py          # Curiosity-driven participation
 │   │       ├── maxfl_qk.py           # MaxFL quality metric
@@ -110,88 +149,6 @@ LetsFed/
 ├── 🔨 build.sh                        # Build script
 └── 🧪 test/                           # Testing and analysis
     └── teste.ipynb                   # Results analysis notebook
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Docker** >= 20.10
-- **Docker Compose** >= 2.0
-- **(Optional)** NVIDIA Docker for GPU support
-- **Python** >= 3.8 (for local development)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd LetsFed
-   ```
-
-2. **Configure your experiment**
-
-   Edit `conf/config.yaml`:
-   ```yaml
-   rounds: 10
-   n_clients: 30
-
-   server:
-     aggregation_method:
-       name: fedavg  # Options: fedavg, maxfl
-     selection_method:
-       name: letsfed  # Options: random, deev, poc, round_robin, letsfed
-       perc_of_clients: 0.3
-
-   client:
-     training_strategy:
-       name: letsfed  # Options: normal, letsfed, maxfl, fedper, qffl
-     epochs: 5
-
-   dataset:
-     dataset: fashion_mnist  # Options: fashion_mnist, cifar10
-   ```
-
-3. **Build containers**
-   ```bash
-   # CPU version
-   ./build.sh
-
-   # GPU version
-   docker-compose -f docker-compose.gpu.yml build
-   ```
-
-4. **Run the experiment**
-   ```bash
-   # CPU
-   docker-compose up
-
-   # GPU
-   docker-compose -f docker-compose.gpu.yml up
-   ```
-
-5. **Analyze results**
-
-   Logs are saved in the `logs/` directory. Use the provided Jupyter notebook:
-   ```bash
-   jupyter notebook test/teste.ipynb
-   ```
-
-### Alternative: Local Development
-
-For development without Docker:
-
-```bash
-# Install dependencies
-pip install -r requirements-server.txt
-pip install -r requirements-client.txt
-
-# Run server
-python -m server.strategies_manager
-
-# Run clients (in separate terminals)
-CID=0 python -m client.strategies_manager
-CID=1 python -m client.strategies_manager
 ```
 
 ## 🏗️ Architecture & Design Patterns
@@ -229,17 +186,19 @@ graph TB
         FLC -->|delegates to| TRN
     end
 
-    subgraph "Chain of Responsibility"
+    subgraph "Chain of Responsibility + Context Object"
         TRN -->|configures| DRV[Drivers]
         DRV -->|pipeline| D1[AccuracyDriver]
         DRV -->|pipeline| D2[CuriosityDriver]
         DRV -->|pipeline| D3[MaxFLQkDriver]
+        DRV -->|uses| CTX[DriverContext]
+        CTX -->|explicit modifications| FLC
     end
 
     style Factory Pattern fill:#e1f5ff
     style Builder Pattern fill:#fff4e1
     style Strategy Pattern + Dependency Injection fill:#e8f5e9
-    style Chain of Responsibility fill:#f3e5f5
+    style Chain of Responsibility + Context Object fill:#f3e5f5
 ```
 
 ### 1. Strategy Pattern + Dependency Injection
@@ -375,6 +334,10 @@ graph LR
         D3[MaxFLQkDriver]
     end
 
+    subgraph Context Object
+        CTX[DriverContext]
+    end
+
     subgraph FLClient
         FC[Client State]
     end
@@ -383,13 +346,15 @@ graph LR
     TS -->|configures| D2
     TS -->|configures| D3
 
-    D1 -->|modifies| FC
-    D2 -->|modifies| FC
-    D3 -->|modifies| FC
+    D1 -->|sets values| CTX
+    D2 -->|sets values| CTX
+    D3 -->|sets values| CTX
 
-    FC -.->|client.willing| D1
-    FC -.->|client.state| D2
-    FC -.->|client.qk| D3
+    CTX -->|applies modifications| FC
+
+    FC -.->|reads state| D1
+    FC -.->|reads state| D2
+    FC -.->|reads state| D3
 ```
 
 **Example:**
@@ -401,6 +366,99 @@ graph LR
 - ✅ **Reusability**: Share drivers across strategies
 - ✅ **Modularity**: Each driver has a single responsibility
 - ✅ **Composability**: Mix and match drivers freely
+- ✅ **Testability**: Easy to test without complex mocks
+- ✅ **Explicit Side Effects**: Clear what each driver modifies
+
+### 5. Context Object Pattern (DriverContext)
+
+The framework implements the **Context Object Pattern** to improve driver testability and make side effects explicit:
+
+```mermaid
+sequenceDiagram
+    participant TS as TrainingStrategy
+    participant FC as FLClient
+    participant CTX as DriverContext
+    participant D1 as Driver1
+    participant D2 as Driver2
+
+    TS->>FC: apply_drivers()
+    FC->>CTX: create context
+
+    FC->>D1: run(client, params, config, context)
+    D1->>D1: compute result
+    D1->>CTX: set('qk', 0.85)
+
+    FC->>D2: run(client, params, config, context)
+    D2->>D2: compute result
+    D2->>CTX: set('willing', true)
+
+    FC->>CTX: get_all()
+    CTX-->>FC: {'qk': 0.85, 'willing': true}
+
+    FC->>FC: apply modifications to client
+    FC-->>TS: return modifications
+```
+
+#### Key Components
+
+**DriverContext Class:**
+```python
+@dataclass
+class DriverContext:
+    """Context for storing driver results"""
+    modifications: dict[str, ContextValue]
+
+    def set(self, key: str, value: ContextValue) -> None:
+        """Store a modification"""
+
+    def get(self, key: str, default: ContextValue = None) -> ContextValue:
+        """Retrieve a value"""
+
+    def has(self, key: str) -> bool:
+        """Check if key exists"""
+
+    def get_all(self) -> dict[str, ContextValue]:
+        """Get all modifications"""
+```
+
+**Driver Interface (Updated):**
+```python
+class Driver(ABC):
+    @abstractmethod
+    def run(
+        self,
+        client: FLClient,
+        parameters: NDArrays,
+        config: Config,
+        context: DriverContext  # New parameter
+    ) -> None:
+        """
+        Run driver and store results in context.
+
+        Example:
+            context.set('qk', computed_qk)
+            context.set('willing', True)
+        """
+        ...
+```
+
+**FLClient.apply_drivers() (Updated):**
+```python
+def apply_drivers(self, parameters: NDArrays, config: Config) -> dict:
+    """Apply all drivers using DriverContext"""
+    context = DriverContext()
+
+    # Run all drivers, collecting results in context
+    for driver in self.drivers:
+        driver.run(self, parameters, config, context)
+
+    # Apply modifications from context to client
+    modifications = context.get_all()
+    for key, value in modifications.items():
+        setattr(self, key, value)
+
+    return modifications  # For logging/debugging
+```
 
 ### Federated Learning Flow
 
@@ -484,7 +542,7 @@ server:
 server:
   selection_method:
     name: letsfed
-    perc_of_clients: 0.3  # Select 30% of clients
+    perc_of_clients: 0.3      # Select 30% of clients
 ```
 
 ### Client-Side Strategies
@@ -503,20 +561,21 @@ server:
 ```yaml
 client:
   training_strategy:
-    name: letsfed
-    threshold: 1.0  # Strategy-specific parameter
+    name: letsfed             # Options: normal, letsfed, maxfl, fedper, qffl
+    # LetsFed parameters (if name=letsfed)
+    # threshold: 1.0
 ```
 
 #### Driver System (Modular Behaviors)
 
-Drivers are **composable components** that add specific behaviors to training strategies:
+Drivers are **composable components** that add specific behaviors to training strategies using the **DriverContext pattern**:
 
-| Driver | Purpose | Modifies |
-|--------|---------|----------|
-| **AccuracyDriver** | Decides if client wants to participate | `client.willing` |
-| **CuriosityDriver** | Manages exploration/exploitation states | `client.state`, `client.curiosity` |
-| **MaxFLQkDriver** | Calculates client quality metric | `client.qk` |
-| **MaxFLPreTrainingDriver** | Initializes MaxFL threshold | `client.maxfl_threshold` |
+| Driver | Purpose | Sets in Context |
+|--------|---------|-----------------|
+| **AccuracyDriver** | Decides if client wants to participate | `willing` (bool) |
+| **CuriosityDriver** | Manages exploration/exploitation states | `curiosity` (bool), `state` (int), `rounds_intention` (int) |
+| **MaxFLQkDriver** | Calculates client quality metric | `qk` (float) |
+| **MaxFLPreTrainingDriver** | Computes local fit loss via pre-training | `l_fit_loss` (float) |
 
 **Example: Combining Drivers**
 
@@ -524,9 +583,9 @@ Drivers are **composable components** that add specific behaviors to training st
 class LetsFedTraining(TrainingStrategy):
     def _get_drivers(self):
         return [
-            AccuracyDriver(),      # Decide participation
-            CuriosityDriver(),     # Manage exploration
-            MaxFLQkDriver(),       # Add quality metric (reused from MaxFL!)
+            AccuracyDriver(),      # Decide participation → sets 'willing'
+            CuriosityDriver(),     # Manage exploration → sets 'curiosity', 'state'
+            MaxFLQkDriver(),       # Add quality metric → sets 'qk' (reused from MaxFL!)
         ]
 ```
 
@@ -593,14 +652,43 @@ client:
 1. **Create the driver** in `client/strategies/drivers/`:
 
 ```python
+from .context import DriverContext
 from .driver import Driver
 from flwr.common import Config, NDArrays
 
 class MyCustomDriver(Driver):
-    def run(self, client, parameters: NDArrays, config: Config) -> None:
-        # Implement driver logic
-        # Modify client state/attributes
-        client.my_metric = self._calculate_metric(client)
+    """
+    Custom driver for computing specific metrics.
+
+    Modifies:
+        - my_metric: Description of what this computes (type)
+    """
+
+    def run(
+        self,
+        client: FLClient,
+        parameters: NDArrays,
+        config: Config,
+        context: DriverContext
+    ) -> None:
+        """
+        Compute metric and store in context.
+
+        Args:
+            client: FLClient instance (for reading state)
+            parameters: Model parameters
+            config: Configuration dict
+            context: DriverContext for storing results
+        """
+        # Implement driver logic (read from client)
+        metric = self._calculate_metric(client)
+
+        # Store result in context (don't modify client directly)
+        context.set('my_metric', metric)
+
+    def _calculate_metric(self, client) -> float:
+        # Your computation logic here
+        return some_value
 ```
 
 2. **Use in any training strategy**:
@@ -739,23 +827,6 @@ graph TB
     CN -.->|mount| Data
 ```
 
-### GPU Support
-
-For experiments with GPU acceleration:
-
-```bash
-# Build GPU images
-docker-compose -f docker-compose.gpu.yml build
-
-# Run with GPU
-docker-compose -f docker-compose.gpu.yml up
-```
-
-**Requirements:**
-- NVIDIA GPU
-- NVIDIA Docker runtime
-- CUDA-compatible drivers
-
 ### Scaling Clients
 
 Modify the number of clients in `docker-compose.yml` or use the manager:
@@ -824,21 +895,7 @@ model:
   # Model-specific parameters...
 ```
 
-### Environment Variables
 
-Override configuration with environment variables:
-
-```bash
-# Client ID (required for clients)
-export CID=0
-
-# State variables (LetsFed)
-export IDLE_STATE=0
-export EXPLORING_STATE=1
-
-# Run client
-python -m client.strategies_manager
-```
 
 ## 🎓 Research & Publications
 
@@ -861,20 +918,6 @@ If you use this framework in your research, please cite:
 
 ## 🛠️ Development
 
-### Code Quality Tools
-
-The project uses several tools to maintain code quality:
-
-```bash
-# Linting and formatting
-ruff check .
-ruff format .
-
-# Pre-commit hooks
-pre-commit install
-pre-commit run --all-files
-```
-
 ### Project Philosophy
 
 This framework follows key software engineering principles:
@@ -891,21 +934,28 @@ This framework follows key software engineering principles:
   - Factory Pattern for object creation
   - Builder Pattern for complex construction
   - Chain of Responsibility for driver pipeline
+  - Context Object Pattern for explicit side effects and testability
 
 - **📦 Modular Design**
   - Clear separation of concerns
   - Composable components
   - Minimal coupling, high cohesion
 
-### Testing
 
-```bash
-# Run unit tests (if available)
-pytest tests/
+## 🔒 Security Considerations
 
-# Run experiment with test configuration
-docker-compose -f docker-compose.test.yml up
-```
+This is a **research framework** and should not be used in production without proper security review:
+
+- No authentication/authorization implemented
+- Network communication is not encrypted by default
+- Data is not encrypted at rest
+- No input validation for malicious data
+
+For production use, consider:
+- Adding TLS/SSL for communication
+- Implementing client authentication
+- Encrypting datasets
+- Adding differential privacy mechanisms
 
 ## 🤝 Contributing
 
@@ -928,98 +978,26 @@ Contributions are welcome! To contribute:
 - Keep commits atomic and well-described
 - Update relevant documentation
 
-## � Additional Resources
+## 📚 Additional Resources
+
+### Project Documentation
+- 📄 **[Driver Pattern Documentation](docs/DRIVER_PATTERN.md)** - Detailed DriverContext pattern explanation
+- 💡 **[Driver Usage Examples](examples/driver_context_usage.py)** - Code examples and tests
 
 ### Federated Learning
-- [Flower Documentation](https://flower.dev/docs/) - FL framework used
-- [Federated Learning Book](https://www.federated-learning.com/) - Comprehensive guide
-- [FedAvg Paper](https://arxiv.org/abs/1602.05629) - Original federated averaging paper
+- 🌸 **[Flower Documentation](https://flower.dev/docs/)** - FL framework used in this project
+- 📖 **[Federated Learning Book](https://www.federated-learning.com/)** - Comprehensive guide to FL concepts
+- 📄 **[FedAvg Paper](https://arxiv.org/abs/1602.05629)** - Original federated averaging paper (McMahan et al., 2017)
 
 ### Design Patterns
-- [Refactoring Guru](https://refactoring.guru/design-patterns) - Pattern catalog
-- [Python Design Patterns](https://python-patterns.guide/) - Python-specific patterns
+- 🎨 **[Refactoring Guru](https://refactoring.guru/design-patterns)** - Comprehensive pattern catalog with examples
+- 🐍 **[Python Design Patterns](https://python-patterns.guide/)** - Python-specific pattern implementations
+- 🔄 **[Context Object Pattern](https://www.dofactory.com/net/context-object-design-pattern)** - Pattern reference and explanation
 
-### Docker
-- [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [Docker Compose](https://docs.docker.com/compose/)
+### Docker & DevOps
+- 🐳 **[Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)** - Official Docker guidelines
+- 📦 **[Docker Compose](https://docs.docker.com/compose/)** - Multi-container orchestration guide
 
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Issue**: Clients can't connect to server
-```bash
-# Check network connectivity
-docker network ls
-docker network inspect letsfed_fl_network
-
-# Verify server is running
-docker logs letsfed-rfl_server-1
-```
-
-**Issue**: Out of memory errors
-```bash
-# Reduce number of clients or batch size in config.yaml
-n_clients: 10  # Reduce from 30
-dataset:
-  batch_size: 16  # Reduce from 32
-```
-
-**Issue**: GPU not detected
-```bash
-# Verify NVIDIA Docker runtime
-docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
-
-# Check docker-compose.gpu.yml has proper GPU configuration
-```
-
-**Issue**: Import errors in containers
-```bash
-# Rebuild containers with --no-cache
-docker-compose build --no-cache
-```
-
-## 📊 Performance Benchmarks
-
-Typical performance metrics on standard hardware:
-
-| Metric | Value |
-|--------|-------|
-| **Build Time** | ~3-5 minutes |
-| **Container Size** | ~2.0 GB |
-| **Startup Time** | ~10-15 seconds |
-| **Round Duration** (30 clients) | ~2-3 minutes |
-| **Memory Usage** (per client) | ~500 MB |
-
-*Tested on: Intel i7, 16GB RAM, Docker 20.10*
-
-## 🔒 Security Considerations
-
-This is a **research framework** and should not be used in production without proper security review:
-
-- No authentication/authorization implemented
-- Network communication is not encrypted by default
-- Data is not encrypted at rest
-- No input validation for malicious data
-
-For production use, consider:
-- Adding TLS/SSL for communication
-- Implementing client authentication
-- Encrypting datasets
-- Adding differential privacy mechanisms
-
-## 📝 License
-
-[Add your license information here - e.g., MIT, Apache 2.0, GPL]
-
-## 🙏 Acknowledgments
-
-This research was supported by:
-- [Add funding sources]
-- [Add institutional support]
-- [Add collaborators]
-
-Special thanks to the [Flower](https://flower.dev/) team for providing an excellent federated learning framework.
 
 ## 📞 Contact
 
