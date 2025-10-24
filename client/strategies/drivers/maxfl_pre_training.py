@@ -31,4 +31,4 @@ class MaxFLPreTrainingDriver(Driver):
 
         loss, acc = net_tmp.evaluate(client.x_validation, client.y_validation)
 
-        client.maxfl_threshold = loss
+        client.l_fit_loss = loss

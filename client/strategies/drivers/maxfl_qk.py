@@ -39,5 +39,5 @@ class MaxFLQkDriver(Driver):
             parameters (NDArrays): The model parameters.
             config (Config): Configuration dictionary.
         """
-        loss_weight = self.sigmoid(np.sum(client.maxfl_loss) - client.maxfl_threshold)
+        loss_weight = self.sigmoid(np.sum(client.g_fit_loss) - np.sum(client.l_fit_loss))
         client.qk = loss_weight * (1 - loss_weight)

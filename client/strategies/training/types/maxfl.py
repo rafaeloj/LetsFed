@@ -29,9 +29,7 @@ class MaxFLClient(TrainingStrategy):
         Args:
             client: The federated learning client instance.
         """
-        pre_training = MaxFLPreTrainingDriver()
-        pre_training.run(client, None, None)
-        client.data_to_log["maxfl_threshold"] = client.maxfl_threshold
+        self.maxfl_pretraining_driver = MaxFLPreTrainingDriver()
         client.add_drivers(self._get_drivers())
 
     def _get_drivers(self) -> list[Driver]:
@@ -69,16 +67,9 @@ class MaxFLClient(TrainingStrategy):
         model_size = sum([layer.nbytes for layer in parameters])
         client.model_size = model_size
 
-        # Evaluate local model before training (for case when the client is not selected)
-        loss, acc = client.model.evaluate(client.x_train, client.y_train)
-        client.maxfl_loss = np.mean(loss)
-        client.g_fit_acc = np.mean(acc)
-        client.g_fit_loss = np.mean(loss)
-
-        # Apply drivers to compute qk
-        client.apply_drivers(parameters=parameters, config=config)
-        client.data_to_log["qk"] = client.qk
-        fit_response["qk"] = client.qk
+        # Pre-training on client local data to compute the real loss
+        self.maxfl_pretraining_driver.run(client, None, None)
+        client.data_to_log["l_fit_loss"] = client.l_fit_loss
 
         # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
@@ -92,6 +83,14 @@ class MaxFLClient(TrainingStrategy):
             )
             client.g_fit_acc = np.mean(history.history["accuracy"])
             client.g_fit_loss = np.mean(history.history["loss"])
+
+            # Apply drivers to compute qk
+            client.apply_drivers(parameters=parameters, config=config)
+            client.data_to_log["qk"] = client.qk
+            fit_response["qk"] = client.qk
+
+            if client.qk < client.conf.server.aggregation_method.maxfl_qk_threshold:
+                client.set_participating_state(False)
 
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
