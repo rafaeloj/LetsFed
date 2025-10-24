@@ -8,6 +8,7 @@ from flwr.common import (
 )
 
 from .....utils.utils import Utils
+from ...drivers.context import DriverContext
 from ...drivers.driver import Driver
 from ...drivers.maxfl_pre_training import MaxFLPreTrainingDriver
 from ...drivers.maxfl_qk import MaxFLQkDriver
@@ -68,8 +69,13 @@ class MaxFLClient(TrainingStrategy):
         client.model_size = model_size
 
         # Pre-training on client local data to compute the real loss
-        self.maxfl_pretraining_driver.run(client, None, None)
-        client.data_to_log["l_fit_loss"] = client.l_fit_loss
+        pre_training_context = DriverContext()
+        self.maxfl_pretraining_driver.run(client, None, None, pre_training_context)
+
+        # Apply pre-training results to client
+        if pre_training_context.has("l_fit_loss"):
+            client.l_fit_loss = pre_training_context.get("l_fit_loss")
+            client.data_to_log["l_fit_loss"] = client.l_fit_loss
 
         # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
@@ -84,12 +90,17 @@ class MaxFLClient(TrainingStrategy):
             client.g_fit_acc = np.mean(history.history["accuracy"])
             client.g_fit_loss = np.mean(history.history["loss"])
 
-            # Apply drivers to compute qk
-            client.apply_drivers(parameters=parameters, config=config)
-            client.data_to_log["qk"] = client.qk
-            fit_response["qk"] = client.qk
+            # Apply drivers to compute qk and get modifications
+            modifications = client.apply_drivers(parameters=parameters, config=config)
 
-            if client.qk < client.conf.server.aggregation_method.maxfl_qk_threshold:
+            # Log qk if it was computed
+            if "qk" in modifications:
+                client.data_to_log["qk"] = modifications["qk"]
+                fit_response["qk"] = modifications["qk"]
+
+            # Check if client should participate based on qk threshold
+            qk_threshold = client.conf.server.aggregation_method.maxfl_qk_threshold
+            if hasattr(client, "qk") and client.qk < qk_threshold:
                 client.set_participating_state(False)
 
         return client.get_parameters(), client.x_train.shape[0], fit_response

@@ -10,6 +10,7 @@ from ...conf import Environment
 from ...dataset_manager.dataset_manager import DSManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
+from .drivers.context import DriverContext
 from .drivers.driver import Driver
 from .training.base import TrainingStrategy
 
@@ -120,17 +121,30 @@ class FLClient(fl.client.NumPyClient):
         """
         self.drivers.extend(drivers)
 
-    def apply_drivers(self, parameters: NDArrays, config: Config) -> None:
+    def apply_drivers(self, parameters: NDArrays, config: Config) -> dict[str, float | int | bool]:
         """
-        Apply all registered drivers in sequence.
-        Implements the Chain of Responsibility pattern.
+        Apply all registered drivers in sequence using DriverContext.
+        Implements the Chain of Responsibility pattern with explicit side effects.
 
         Args:
             parameters: Model parameters
             config: Configuration dictionary
+
+        Returns:
+            Dictionary of all modifications made by drivers
         """
+        context = DriverContext()
+
+        # Run all drivers, collecting their results in the context
         for driver in self.drivers:
-            driver.run(self, parameters, config)
+            driver.run(self, parameters, config, context)
+
+        # Apply all modifications from context to client attributes
+        modifications = context.get_all()
+        for key, value in modifications.items():
+            setattr(self, key, value)
+
+        return modifications
 
     def get_drivers(self) -> list[Driver]:
         """

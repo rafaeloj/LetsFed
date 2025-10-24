@@ -6,6 +6,7 @@ from flwr.common import (
     NDArrays,
 )
 
+from .context import DriverContext
 from .driver import Driver
 
 if TYPE_CHECKING:
@@ -13,7 +14,19 @@ if TYPE_CHECKING:
 
 
 class MaxFLPreTrainingDriver(Driver):
-    def run(self, client: FLClient, parameters: NDArrays, config: Config) -> None:
+    """
+    MaxFL Pre-Training Driver for federated learning clients.
+
+    This driver performs pre-training on the client's local data to compute
+    the local fit loss before receiving the global model.
+
+    Modifies:
+        - l_fit_loss: Local fit loss computed from pre-training
+    """
+
+    def run(
+        self, client: FLClient, parameters: NDArrays, config: Config, context: DriverContext
+    ) -> None:
         """
         Run the driver with the given client, parameters, and config.
 
@@ -21,6 +34,7 @@ class MaxFLPreTrainingDriver(Driver):
             client (FLClient): The federated learning client.
             parameters (NDArrays): The model parameters.
             config (Config): Configuration dictionary.
+            context (DriverContext): Context for storing driver results.
         """
         net_tmp = copy.deepcopy(client.model)
         net_tmp.fit(
@@ -31,4 +45,5 @@ class MaxFLPreTrainingDriver(Driver):
 
         loss, acc = net_tmp.evaluate(client.x_validation, client.y_validation)
 
-        client.l_fit_loss = loss
+        # Store result in context instead of directly modifying client
+        context.set("l_fit_loss", float(loss))
