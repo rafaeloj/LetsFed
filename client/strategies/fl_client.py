@@ -43,13 +43,14 @@ class FLClient(fl.client.NumPyClient):
         # Initialize client parameters
         self.drivers: list[Driver] = []
         self.participating_state: bool = True
-        self.desired_state: bool = True
         self.selected: bool = False
         self.model_size: int = 0
         self.g_eval_acc: float = 0
         self.g_fit_acc: float = 0
         self.g_eval_loss: float = 0
         self.g_fit_loss: float = 0
+
+        # extra metrics generated during training by training strategies
         self.data_to_log: dict = {}
 
         # Initialize training strategy

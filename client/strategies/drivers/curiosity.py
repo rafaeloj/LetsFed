@@ -19,6 +19,7 @@ EXPLORING = int(os.environ.get("EXPLORING_STATE", "1"))
 
 class CuriosityDriver(Driver):
     """
+    (NOT TESTED)
     Driver for curiosity-based client selection.
 
     This driver manages the exploration and idle states of clients,

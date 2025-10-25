@@ -8,9 +8,7 @@ from flwr.common import (
 )
 
 from .....utils.utils import Utils
-from ...drivers.context import DriverContext
 from ...drivers.driver import Driver
-from ...drivers.maxfl_pre_training import MaxFLPreTrainingDriver
 from ...drivers.maxfl_qk import MaxFLQkDriver
 from ..base import TrainingStrategy
 
@@ -30,7 +28,6 @@ class MaxFLClient(TrainingStrategy):
         Args:
             client: The federated learning client instance.
         """
-        self.maxfl_pretraining_driver = MaxFLPreTrainingDriver()
         client.add_drivers(self._get_drivers())
 
     def _get_drivers(self) -> list[Driver]:
@@ -61,47 +58,29 @@ class MaxFLClient(TrainingStrategy):
         # Initialize fit response
         fit_response = {
             "cid": client.cid,
-            "participating_state": True,
+            "participating_state": client.get_participating_state(),
         }
 
         # Calculate and store model size
         model_size = sum([layer.nbytes for layer in parameters])
         client.model_size = model_size
 
-        # Pre-training on client local data to compute the real loss
-        pre_training_context = DriverContext()
-        self.maxfl_pretraining_driver.run(client, None, None, pre_training_context)
-
-        # Apply pre-training results to client
-        if pre_training_context.has("l_fit_loss"):
-            client.l_fit_loss = pre_training_context.get("l_fit_loss")
-            client.data_to_log["l_fit_loss"] = client.l_fit_loss
-
         # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
             client.cid, config["selected_by_server"].split(",")
         )
 
+        # Fitting model
         if client.selected:
-            client.set_parameters(parameters)
+            # Setting the parameters if client wants to participate
+            if client.get_participating_state():
+                client.set_parameters(parameters)
+
             history = client.model.fit(
                 client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
             )
             client.g_fit_acc = np.mean(history.history["accuracy"])
             client.g_fit_loss = np.mean(history.history["loss"])
-
-            # Apply drivers to compute qk and get modifications
-            modifications = client.apply_drivers(parameters=parameters, config=config)
-
-            # Log qk if it was computed
-            if "qk" in modifications:
-                client.data_to_log["qk"] = modifications["qk"]
-                fit_response["qk"] = modifications["qk"]
-
-            # Check if client should participate based on qk threshold
-            qk_threshold = client.conf.server.aggregation_method.maxfl_qk_threshold
-            if hasattr(client, "qk") and client.qk < qk_threshold:
-                client.set_participating_state(False)
 
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
@@ -125,9 +104,22 @@ class MaxFLClient(TrainingStrategy):
             client.cid, config["selected_by_server"].split(",")
         )
 
-        # Set weights if selected
+        # Apply drivers and determine participation
         if client.selected:
-            client.set_parameters(parameters)
+            # Apply drivers to compute qk and get modifications
+            modifications = client.apply_drivers(parameters=parameters, config=config)
+
+            # Log qk if it was computed
+            if "qk" in modifications:
+                client.data_to_log["qk"] = modifications["qk"]
+
+            # Check if client should participate based on qk threshold
+            qk_threshold = client.conf.server.aggregation_method.maxfl_qk_threshold
+            if hasattr(client, "qk") and client.qk < qk_threshold:
+                client.set_participating_state(True)
+                client.set_parameters(parameters)
+            else:
+                client.set_participating_state(False)
 
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_acc = np.mean(acc)
@@ -137,7 +129,6 @@ class MaxFLClient(TrainingStrategy):
             "acc": client.g_eval_acc,
             "loss": client.g_eval_loss,
             "participating_state": client.get_participating_state(),
-            "desired_state": client.get_participating_state(),
         }
 
         return loss, client.x_test.shape[0], eval_resp

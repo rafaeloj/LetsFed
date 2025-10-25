@@ -1,3 +1,4 @@
+import copy
 from typing import TYPE_CHECKING
 
 from flwr.common import (
@@ -41,7 +42,11 @@ class AccuracyDriver(Driver):
             context.set("willing", True)
             return
 
-        g_tmp_loss, _ = client.g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
+        # Creating the global model
+        g_model = copy.deepcopy(client.model)
+        g_model.set_weights(parameters)
+
+        g_tmp_loss, _ = g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
         c_tmp_loss, _ = client.model.evaluate(client.x_validation, client.y_validation, verbose=0)
 
         willing = self._client_willing(

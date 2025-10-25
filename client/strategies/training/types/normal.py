@@ -44,7 +44,7 @@ class NormalClient(TrainingStrategy):
             number of examples used for training, and additional metrics.
         """
         # Initialize fit response
-        fit_response = {"cid": client.cid, "participating_state": True, "desired_state": True}
+        fit_response = {"cid": client.cid, "participating_state": client.get_participating_state()}
 
         # Calculate model size
         model_size = sum([layer.nbytes for layer in parameters])
@@ -57,7 +57,10 @@ class NormalClient(TrainingStrategy):
 
         # Fitting model
         if client.selected:
+            # Setting the parameters
             client.set_parameters(parameters)
+
+            # Fitting model
             history = client.model.fit(
                 client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
             )
@@ -83,23 +86,22 @@ class NormalClient(TrainingStrategy):
         """
         # Analyze if the client is selected
         client.selected = Utils.is_select_by_server(
-            str(client.cid), config["selected_by_server"].split(",")
+            client.cid, config["selected_by_server"].split(",")
         )
 
         # Set weights if selected
         if client.selected:
             client.set_parameters(parameters)
 
+        # Evaluate the model
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_acc = np.mean(acc)
         client.g_eval_loss = np.mean(loss)
-
-        evaluation_response = {
+        eval_resp = {
             "cid": client.cid,
             "acc": client.g_eval_acc,
             "loss": client.g_eval_loss,
-            "participating_state": True,
-            "desired_state": True,
+            "participating_state": client.get_participating_state(),
         }
 
-        return loss, client.x_test.shape[0], evaluation_response
+        return loss, client.x_test.shape[0], eval_resp

@@ -44,7 +44,7 @@ class FedPerClient(TrainingStrategy):
             number of examples used for training, and additional metrics.
         """
         # Initialize fit response
-        fit_response = {"cid": client.cid, "participating_state": True, "desired_state": True}
+        fit_response = {"cid": client.cid, "participating_state": client.get_participating_state()}
 
         # Calculate and store model size
         model_size = sum([layer.nbytes for layer in parameters])
@@ -106,8 +106,7 @@ class FedPerClient(TrainingStrategy):
             "cid": client.cid,
             "acc": client.g_eval_acc,
             "loss": client.g_eval_loss,
-            "participating_state": True,
-            "desired_state": True,
+            "participating_state": client.get_participating_state(),
         }
 
         return loss, client.x_test.shape[0], evaluation_response
