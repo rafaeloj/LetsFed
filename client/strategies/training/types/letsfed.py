@@ -73,14 +73,15 @@ class LetsFedClient(TrainingStrategy):
         )
 
         # Setting global parameters for selected clients if they want to participate
-        if client.selected and client.get_participating_state():
-            client.set_parameters(parameters)
+        if client.selected:
+            if client.get_participating_state():
+                client.set_parameters(parameters)
 
-        history = client.model.fit(
-            client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
-        )
-        client.g_fit_acc = np.mean(history.history["accuracy"])
-        client.g_fit_loss = np.mean(history.history["loss"])
+            history = client.model.fit(
+                client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
+            )
+            client.g_fit_acc = np.mean(history.history["accuracy"])
+            client.g_fit_loss = np.mean(history.history["loss"])
 
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
@@ -91,10 +92,10 @@ class LetsFedClient(TrainingStrategy):
         Args:
             client (FLClient): The federated learning client.
         """
-        if not client.willing and client.get_participating_state():
+        if not client.willing:
             client.set_participating_state(False)
 
-        if client.willing and not client.get_participating_state():
+        if client.willing:
             client.set_participating_state(True)
 
     def evaluate(
@@ -117,13 +118,14 @@ class LetsFedClient(TrainingStrategy):
             str(client.cid), config["selected_by_server"].split(",")
         )
 
-        # Set global model weights and apply drivers
-        client.apply_drivers(client, parameters, config)
-        self._manager_client_state(client)
-
         # Analyzing if the client is selected by the server
-        if client.selected and client.get_participating_state():
-            client.set_parameters(parameters)
+        if client.selected:
+            # Set global model weights and apply drivers
+            client.apply_drivers(client, parameters, config)
+            self._manager_client_state(client)
+
+            if client.get_participating_state():
+                client.set_parameters(parameters)
 
         # Evaluate the model
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
