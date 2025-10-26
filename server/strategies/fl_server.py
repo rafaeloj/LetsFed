@@ -90,7 +90,7 @@ class FLServer(Strategy):
 
     def configure_fit(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
-    ) -> List[Tuple[ClientProxy | FitIns]]:
+    ) -> List[Tuple[ClientProxy, FitIns]]:
         """Configure the next round of training.
 
         Args:
@@ -102,21 +102,34 @@ class FLServer(Strategy):
             A list of tuples containing ClientProxy and FitIns.
         """
         self.current_round = server_round
+
+        # Step 1: Get ALL available clients from ClientManager
+        # We need to check which of our selected clients are actually online/available
+        all_available_clients = client_manager.sample(
+            num_clients=self.conf.n_clients,
+            min_num_clients=1,  # Accept at least 1 client (flexible)
+        )
+
+        # Step 2: Get the IDs of available clients
+        available_client_ids = [str(client.cid) for client in all_available_clients]
+
+        # Step 3: Use client selection strategy to choose from AVAILABLE clients
+        # This ensures we only select clients that are actually online
         clients_cids = self.client_selection.select(
-            server=self, server_round=server_round, list_of_clients=self.list_of_clients
+            server=self,
+            server_round=server_round,
+            list_of_clients=available_client_ids,  # Only select from available!
         )
         self.selected_clients = clients_cids
+
+        # Step 4: Create FitIns with configuration
         config = {
             "rounds": server_round,
             "selected_by_server": ",".join(clients_cids),
         }
         fit_ins = FitIns(parameters, config)
 
-        clients = client_manager.sample(
-            num_clients=self.conf.n_clients, min_num_clients=self.conf.n_clients
-        )
-
-        return [(client, fit_ins) for client in clients]
+        return [(client, fit_ins) for client in clients_cids]
 
     def aggregate_fit(
         self,
@@ -145,7 +158,7 @@ class FLServer(Strategy):
 
     def configure_evaluate(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
-    ) -> List[Tuple[ClientProxy | EvaluateIns]]:
+    ) -> List[Tuple[ClientProxy, EvaluateIns]]:
         """
         Configure the next round of evaluation.
 
@@ -164,10 +177,19 @@ class FLServer(Strategy):
 
         evaluate_ins = EvaluateIns(parameters=parameters, config=config)
 
-        clients = client_manager.sample(
-            num_clients=self.conf.n_clients, min_num_clients=self.conf.n_clients
+        # Get all available clients
+        all_available_clients = client_manager.sample(
+            num_clients=self.conf.n_clients,
+            min_num_clients=1,  # Accept at least 1 client
         )
-        return [(client, evaluate_ins) for client in clients]
+
+        # Filter to get only the clients that were selected for training, and that are available
+        # We evaluate the same clients that trained in this round
+        selected_proxies = [
+            client for client in all_available_clients if str(client.cid) in self.selected_clients
+        ]
+
+        return [(client, evaluate_ins) for client in selected_proxies]
 
     def aggregate_evaluate(
         self,
