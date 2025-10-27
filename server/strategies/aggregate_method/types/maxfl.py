@@ -1,19 +1,16 @@
-from functools import reduce
 from typing import TYPE_CHECKING, Optional, Union
 
 import keras
-import numpy as np
 from flwr.common import (
     EvaluateRes,
     FitRes,
-    NDArrays,
     Parameters,
     Scalar,
     ndarrays_to_parameters,
     parameters_to_ndarrays,
 )
 from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy.aggregate import weighted_loss_avg
+from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
 from .....dataset_manager.dataset_manager import DSManager
 from .....model.model_manager import ModelManager
@@ -26,6 +23,10 @@ if TYPE_CHECKING:
 
 
 class MaxFL(AggregateMethod):
+    """
+    MaxFL aggregation strategy.
+    """
+
     def init(self, server: FLServer) -> None:
         """
         Method to initialize parameters of specific solution
@@ -33,7 +34,9 @@ class MaxFL(AggregateMethod):
         Args:
             server: The federated learning server instance.
         """
-        server.model = self.load_model(server)
+        self.model = self.load_model(server)
+        self.g_learning_rate = server.conf.server.aggregation_method.maxfl_learning_rate
+        self.epsilon = server.conf.server.aggregation_method.maxfl_epsilon
 
     def load_model(self, server: FLServer) -> keras.Model:
         """
@@ -60,23 +63,17 @@ class MaxFL(AggregateMethod):
 
         return mm.get_model()
 
-    def _aggregate(self, weights_to_aggregate: list[tuple[NDArrays, float]]) -> NDArrays:
+    def _get_learning_rate(self, q_models_value: list[float]) -> float:
         """
-        Method to aggregate model weights from clients
+        Method to get the learning rate based on q_models values.
 
         Args:
-            weights_to_aggregate: List of tuples containing model weights and their corresponding
-                weights.
+            q_models_value: List of q_model values from clients.
 
         Returns:
-            The aggregated model weights.
+            The calculated learning rate.
         """
-        s = np.sum(np.array([qk for _, qk in weights_to_aggregate]))
-        weighted_weights = [[layer * qk for layer in layers] for layers, qk in weights_to_aggregate]
-
-        parameters = [reduce(np.add, w) / s for w in zip(*weighted_weights, strict=True)]
-
-        return parameters
+        return self.g_learning_rate / (sum(q_models_value) + self.epsilon)
 
     def agg_fit(
         self,
@@ -97,23 +94,28 @@ class MaxFL(AggregateMethod):
         Returns:
             A tuple containing the aggregated Parameters and a dictionary of Scalar metrics.
         """
+        # Construct weights results and q_models values
         weights_results = []
+        q_models_value: list[float] = []
         qk_s: float = 0.0
         for _, fit_res in results:
             cid = fit_res.metrics["cid"]
             qk = fit_res.metrics["qk"]
-            if fit_res.metrics["participating_state"]:
-                if Utils.is_select_by_server(cid, server.selected_clients):
+            if Utils.is_select_by_server(cid, server.selected_clients):
+                if fit_res.metrics["participating_state"]:
                     weights_results.append((parameters_to_ndarrays(fit_res.parameters), qk))
                     qk_s += qk
+                    q_models_value.append(fit_res.metrics["qk"])
 
+        # Aggregate weights from selected and participating clients.
         server.data_to_log["qk_s"] = qk_s / len(server.selected_clients)
-        weights_avg = self._aggregate(weights_results)
+        weights_avg = aggregate(weights_results)
+        learning_rate = self._get_learning_rate(q_models_value)
         new_weights = [
-            weight + (1 * weight_avg)
-            for weight, weight_avg in zip(server.model.get_weights(), weights_avg, strict=True)
+            weight - (learning_rate * (weight - weight_avg))  # Gradient descent
+            for weight, weight_avg in zip(self.model.get_weights(), weights_avg, strict=True)
         ]
-        server.model.set_weights(new_weights)
+        self.model.set_weights(new_weights)
 
         return ndarrays_to_parameters(new_weights), {}
 
@@ -136,20 +138,17 @@ class MaxFL(AggregateMethod):
         Returns:
             A tuple containing the aggregated loss (float) and a dictionary of Scalar metrics.
         """
+        # Check if there are any results
         if not results:
             return None, {}
 
+        # Aggregate loss from selected and participating clients
         loss_to_aggregated = []
-        participating_clients = []
-        non_participating_clients = []
         for _, eval_res in results:
             client_id = eval_res.metrics["cid"]
-            if eval_res.metrics["participating_state"]:
-                participating_clients.append(client_id)
-                if Utils.is_select_by_server(client_id, server.selected_clients):
+            if Utils.is_select_by_server(client_id, server.selected_clients):
+                if eval_res.metrics["participating_state"]:
                     loss_to_aggregated.append((eval_res.loss, eval_res.num_examples))
-            else:
-                non_participating_clients.append(client_id)
 
         should_pass = len(loss_to_aggregated) <= 1
         if should_pass:

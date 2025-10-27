@@ -28,6 +28,7 @@ class MaxFLClient(TrainingStrategy):
         Args:
             client: The federated learning client instance.
         """
+        client.qk = 1
         client.add_drivers(self._get_drivers())
 
     def _get_drivers(self) -> list[Driver]:
@@ -59,6 +60,7 @@ class MaxFLClient(TrainingStrategy):
         fit_response = {
             "cid": client.cid,
             "participating_state": client.get_participating_state(),
+            "qk": client.qk,
         }
 
         # Calculate and store model size
@@ -76,11 +78,11 @@ class MaxFLClient(TrainingStrategy):
             if client.get_participating_state():
                 client.set_parameters(parameters)
 
-            history = client.model.fit(
-                client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
-            )
-            client.g_fit_acc = np.mean(history.history["accuracy"])
-            client.g_fit_loss = np.mean(history.history["loss"])
+                history = client.model.fit(
+                    client.x_train, client.y_train, epochs=client.conf.client.epochs, verbose=0
+                )
+                client.g_fit_acc = np.mean(history.history["accuracy"])
+                client.g_fit_loss = np.mean(history.history["loss"])
 
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
@@ -112,6 +114,7 @@ class MaxFLClient(TrainingStrategy):
             # Log qk if it was computed
             if "qk" in modifications:
                 client.data_to_log["qk"] = modifications["qk"]
+                client.qk = modifications["qk"]
 
             # Check if client should participate based on qk threshold
             qk_threshold = client.conf.server.aggregation_method.maxfl_qk_threshold

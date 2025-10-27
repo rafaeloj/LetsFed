@@ -26,7 +26,7 @@ class RoundRobinSelection(ClientSelectionMethod):
         Args:
             server: The federated learning server instance.
         """
-        server.how_many_time_selected = np.zeros(server.conf.n_clients)
+        self.how_many_time_selected = np.zeros(server.conf.n_clients)
 
     def select(
         self,
@@ -51,7 +51,7 @@ class RoundRobinSelection(ClientSelectionMethod):
         clients_cid_int = [int(cid) for cid in list_of_clients]
 
         # Get how many times each client has been selected
-        how_many_time_selected_client = server.how_many_time_selected[clients_cid_int]
+        how_many_time_selected_client = self.how_many_time_selected[clients_cid_int]
 
         # Here I basically get an array of indices sorted by the values
         # of how_many_time_selected_client
@@ -67,7 +67,7 @@ class RoundRobinSelection(ClientSelectionMethod):
 
         # Update scores
         for cid_value_index in top_values_of_cid:
-            server.how_many_time_selected[cid_value_index] += 1
+            self.how_many_time_selected[cid_value_index] += 1
 
         # Get the indices of the selected clients
         top_clients = [str(cid) for cid in top_values_of_cid]

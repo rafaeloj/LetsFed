@@ -51,15 +51,16 @@ class FedAVG(AggregateMethod):
         Returns:
             A tuple containing the aggregated Parameters and a dictionary of Scalar metrics.
         """
-
+        # Check if there are any results
         if not results:
             return None, {}
 
+        # Aggregate weights from selected and participating clients
         weights_results = []
         for _, fit_res in results:
             cid = fit_res.metrics["cid"]
-            if fit_res.metrics["participating_state"]:
-                if Utils.is_select_by_server(cid, server.selected_clients):
+            if Utils.is_select_by_server(cid, server.selected_clients):
+                if fit_res.metrics["participating_state"]:
                     weights_results.append(
                         (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
                     )
@@ -90,20 +91,17 @@ class FedAVG(AggregateMethod):
         Returns:
             A tuple containing the aggregated loss (float) and a dictionary of Scalar metrics.
         """
+        # Check if there are any results
         if not results:
             return None, {}
 
+        # Aggregate loss from selected and participating clients
         loss_to_aggregated = []
-        participating_clients = []
-        non_participating_clients = []
         for _, eval_res in results:
             client_id = eval_res.metrics["cid"]
-            if eval_res.metrics["participating_state"]:
-                participating_clients.append(client_id)
-                if Utils.is_select_by_server(client_id, server.selected_clients):
+            if Utils.is_select_by_server(client_id, server.selected_clients):
+                if eval_res.metrics["participating_state"]:
                     loss_to_aggregated.append((eval_res.loss, eval_res.num_examples))
-            else:
-                non_participating_clients.append(client_id)
 
         should_pass = len(loss_to_aggregated) <= 1
         if should_pass:

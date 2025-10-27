@@ -63,30 +63,57 @@ class FLServer(Strategy):
         self.model: keras.Model = None
         self.data_to_log = {}
 
+        # CID Mapping: Bidirectional mapping between Flower UUIDs and numeric CIDs
+        # uuid_to_cid: Maps ClientProxy.cid (UUID string) -> numeric CID (string)
+        # cid_to_uuid: Maps numeric CID (string) -> ClientProxy.cid (UUID string)
+        self.uuid_to_cid: Dict[str, str] = {}
+        self.cid_to_uuid: Dict[str, str] = {}
+
         # Initialize strategies
         self.aggregate_method.init(self)
         self.client_selection.init(self)
 
-    def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
+    def _update_cid_mapping(self, proxy: ClientProxy, numeric_cid: str) -> None:
         """
-        Initialize model parameters using an initialization function.
+        Update the bidirectional mapping between Flower UUIDs and numeric CIDs.
+
+        This method is called whenever we receive metrics from a client containing
+        their numeric CID. It ensures we can always translate between:
+        - ClientProxy.cid (UUID) <-> numeric CID used in our data structures
 
         Args:
-            client_manager: ClientManager to sample clients from for initialization.
+            proxy: ClientProxy object with UUID
+            numeric_cid: Numeric CID from client metrics (e.g., "0", "1", ...)
         """
-        return None
+        uuid = str(proxy.cid)
 
-    def evaluate(
-        self, server_round: int, parameters: Parameters
-    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
+        # Update both mappings
+        self.uuid_to_cid[uuid] = numeric_cid
+        self.cid_to_uuid[numeric_cid] = uuid
+
+    def _get_numeric_cid(self, proxy: ClientProxy) -> Optional[str]:
         """
-        Evaluate model parameters using an evaluation function.
+        Get the numeric CID for a ClientProxy.
 
         Args:
-            server_round: Current server round.
-            parameters: Model parameters to evaluate.
+            proxy: ClientProxy object
+
+        Returns:
+            Numeric CID as string, or None if not yet mapped
         """
-        return None
+        return self.uuid_to_cid.get(str(proxy.cid))
+
+    def _get_proxy_uuid(self, numeric_cid: str) -> Optional[str]:
+        """
+        Get the UUID for a numeric CID.
+
+        Args:
+            numeric_cid: Numeric CID as string
+
+        Returns:
+            UUID as string, or None if not yet mapped
+        """
+        return self.cid_to_uuid.get(numeric_cid)
 
     def configure_fit(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
@@ -104,32 +131,54 @@ class FLServer(Strategy):
         self.current_round = server_round
 
         # Step 1: Get ALL available clients from ClientManager
-        # We need to check which of our selected clients are actually online/available
         all_available_clients = client_manager.sample(
             num_clients=self.conf.n_clients,
             min_num_clients=1,  # Accept at least 1 client (flexible)
         )
 
-        # Step 2: Get the IDs of available clients
-        available_client_ids = [str(client.cid) for client in all_available_clients]
+        # Step 2: Build list of available numeric CIDs
+        # For first round, UUID mapping might not exist yet, so we attempt to use
+        # existing mappings and fall back to all clients if no mapping exists
+        available_numeric_cids = []
+        for proxy in all_available_clients:
+            numeric_cid = self._get_numeric_cid(proxy)
+            if numeric_cid is not None:
+                available_numeric_cids.append(numeric_cid)
 
-        # Step 3: Use client selection strategy to choose from AVAILABLE clients
-        # This ensures we only select clients that are actually online
-        clients_cids = self.client_selection.select(
+        # If no mappings exist yet (first round), allow all numeric CIDs
+        if not available_numeric_cids:
+            available_numeric_cids = self.list_of_clients
+
+        # Step 3: Use client selection strategy to choose from AVAILABLE numeric CIDs
+        selected_numeric_cids = self.client_selection.select(
             server=self,
             server_round=server_round,
-            list_of_clients=available_client_ids,  # Only select from available!
+            list_of_clients=available_numeric_cids,
         )
-        self.selected_clients = clients_cids
+        self.selected_clients = selected_numeric_cids
 
-        # Step 4: Create FitIns with configuration
+        # Step 4: Map selected numeric CIDs back to ClientProxy objects
+        # Build a UUID->Proxy mapping for quick lookup
+        uuid_to_proxy = {str(proxy.cid): proxy for proxy in all_available_clients}
+
+        selected_proxies = []
+        for numeric_cid in selected_numeric_cids:
+            uuid = self._get_proxy_uuid(numeric_cid)
+            if uuid and uuid in uuid_to_proxy:
+                selected_proxies.append(uuid_to_proxy[uuid])
+
+        # If no proxies found (first round), use all available proxies
+        if not selected_proxies:
+            selected_proxies = all_available_clients
+
+        # Step 5: Create FitIns with configuration
         config = {
             "rounds": server_round,
-            "selected_by_server": ",".join(clients_cids),
+            "selected_by_server": ",".join(selected_numeric_cids),
         }
         fit_ins = FitIns(parameters, config)
 
-        return [(client, fit_ins) for client in clients_cids]
+        return [(proxy, fit_ins) for proxy in selected_proxies]
 
     def aggregate_fit(
         self,
@@ -185,11 +234,21 @@ class FLServer(Strategy):
 
         # Filter to get only the clients that were selected for training, and that are available
         # We evaluate the same clients that trained in this round
-        selected_proxies = [
-            client for client in all_available_clients if str(client.cid) in self.selected_clients
-        ]
+        # Build UUID->Proxy mapping for quick lookup
+        uuid_to_proxy = {str(proxy.cid): proxy for proxy in all_available_clients}
 
-        return [(client, evaluate_ins) for client in selected_proxies]
+        selected_proxies = []
+        for numeric_cid in self.selected_clients:
+            uuid = self._get_proxy_uuid(numeric_cid)
+            if uuid and uuid in uuid_to_proxy:
+                selected_proxies.append(uuid_to_proxy[uuid])
+
+        # If no proxies found (first round before mappings are established),
+        # use all available proxies
+        if not selected_proxies:
+            selected_proxies = all_available_clients
+
+        return [(proxy, evaluate_ins) for proxy in selected_proxies]
 
     def aggregate_evaluate(
         self,
@@ -253,16 +312,30 @@ class FLServer(Strategy):
         """
         Collect data from clients after evaluation.
 
+        This method:
+        1. Extracts numeric CID from client metrics
+        2. Updates UUID <-> CID mapping for future rounds
+        3. Stores client metrics in data structures indexed by numeric CID
+
         Args:
             results: List of (ClientProxy, EvaluateRes) tuples from client evaluations.
         """
-        for _, client in results:
-            cid = int(client.metrics["cid"])
-            acc = (client.metrics["acc"],)
-            participating_state = client.metrics["participating_state"]
-            loss = client.loss
-            self.clients_acc[cid] = acc[0]  ## Não consegui encontrar onde isso vira uma tupla...
-            self.clients_loss[cid] = loss
-            self.client_participating_state[cid] = participating_state
+        for proxy, eval_res in results:
+            # Extract numeric CID from client metrics
+            numeric_cid = str(int(eval_res.metrics["cid"]))
+
+            # Update the bidirectional mapping
+            self._update_cid_mapping(proxy, numeric_cid)
+
+            # Extract metrics
+            acc = eval_res.metrics["acc"]
+            participating_state = eval_res.metrics["participating_state"]
+            loss = eval_res.loss
+
+            # Store in data structures indexed by numeric CID
+            cid_idx = int(numeric_cid)
+            self.clients_acc[cid_idx] = acc
+            self.clients_loss[cid_idx] = loss
+            self.client_participating_state[cid_idx] = participating_state
 
         self.clients_acc_avg: float = np.mean(self.clients_acc)
