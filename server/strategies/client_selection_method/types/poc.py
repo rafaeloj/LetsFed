@@ -54,6 +54,5 @@ class POC(ClientSelectionMethod):
         clients2select = int(
             float(len(list_of_clients)) * float(server.conf.server.selection_method.perc_of_clients)
         )
-        selected_clients: list[str] = [cid for cid, _ in lc[:clients2select]]
 
-        return selected_clients
+        return selected_clients[:clients2select]
