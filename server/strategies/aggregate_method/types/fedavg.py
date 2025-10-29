@@ -11,9 +11,9 @@ from flwr.common import (
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
-from .....conf.structs import FedAvgAggregationMethodConfig
 from .....utils.utils import Utils
 from ..base import AggregationMethod
+from ..structs import FedAvgAggregationMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer

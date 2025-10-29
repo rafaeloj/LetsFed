@@ -11,10 +11,10 @@ from flwr.common import (
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
-from .....conf.structs import MaxFLAggregationMethodConfig
 from .....utils.utils import Utils
 from ...fl_server import FLServer
 from ..base import AggregationMethod
+from ..structs import MaxFLAggregationMethodConfig
 
 if TYPE_CHECKING:
     from .. import FLServer

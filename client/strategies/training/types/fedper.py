@@ -7,9 +7,9 @@ from flwr.common import (
     Scalar,
 )
 
-from .....conf.structs import FedPerTrainingStrategyConfig
 from .....utils.utils import Utils
 from ..base import TrainingStrategy
+from ..structs import FedPerTrainingStrategyConfig
 
 if TYPE_CHECKING:
     from ...client_builder import FLClient

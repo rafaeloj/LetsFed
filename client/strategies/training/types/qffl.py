@@ -8,9 +8,9 @@ from flwr.common import (
     Scalar,
 )
 
-from .....conf.structs import QFFLTrainingStrategyConfig
 from .....utils.utils import Utils
 from ..base import TrainingStrategy
+from ..structs import QFFLTrainingStrategyConfig
 
 if TYPE_CHECKING:
     from ...fl_client import FLClient

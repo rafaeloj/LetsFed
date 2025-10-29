@@ -6,8 +6,8 @@ This module implements the Factory pattern for creating aggregation strategies.
 
 from typing import Type
 
-from ....conf.structs import AggregationMethodConfig
 from .base import AggregationMethod
+from .structs import AggregationMethodConfig
 from .types.fedavg import FedAVG
 from .types.maxfl import MaxFL
 

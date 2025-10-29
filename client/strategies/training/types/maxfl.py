@@ -7,11 +7,11 @@ from flwr.common import (
     Scalar,
 )
 
-from .....conf.structs import MaxFLTrainingStrategyConfig
 from .....utils.utils import Utils
 from ...drivers.driver import Driver
 from ...drivers.maxfl_qk import MaxFLQkDriver
 from ..base import TrainingStrategy
+from ..structs import MaxFLTrainingStrategyConfig
 
 if TYPE_CHECKING:
     from ...fl_client import FLClient

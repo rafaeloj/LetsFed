@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .....conf.structs import LetsFedSelectionMethodConfig
 from ..base import ClientSelectionMethod
 from ..factory import ClientSelectionFactory
+from ..structs import LetsFedSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer

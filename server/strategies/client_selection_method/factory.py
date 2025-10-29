@@ -7,8 +7,8 @@ strategies.
 
 from typing import Type
 
-from ....conf.structs import SelectionMethodConfig
 from .base import ClientSelectionMethod
+from .structs import SelectionMethodConfig
 from .types.deev import DEEV
 from .types.letsfed import LetsFedSelection
 from .types.poc import POC

@@ -1,8 +1,8 @@
 from math import ceil
 from typing import TYPE_CHECKING
 
-from .....conf.structs import DeevSelectionMethodConfig
 from ..base import ClientSelectionMethod
+from ..structs import DeevSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer

@@ -1,8 +1,8 @@
 import random
 from typing import TYPE_CHECKING, List
 
-from .....conf.structs import RandomSelectionMethodConfig
 from ..base import ClientSelectionMethod
+from ..structs import RandomSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer

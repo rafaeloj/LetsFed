@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING, List
 
 import numpy as np
 
-from .....conf.structs import SelectionMethodConfig
 from ..base import ClientSelectionMethod
+from ..structs import SelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer

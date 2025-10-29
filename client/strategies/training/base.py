@@ -7,9 +7,9 @@ from flwr.common import (
     Scalar,
 )
 
-from ....conf.structs import TrainingStrategyConfig
 from ..drivers.context import DriverContext
 from ..drivers.driver import Driver
+from .structs import TrainingStrategyConfig
 
 if TYPE_CHECKING:
     from client.strategies.fl_client import FLClient

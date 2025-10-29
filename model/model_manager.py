@@ -4,7 +4,7 @@ from typing import List
 import keras
 import tensorflow as tf
 
-from conf import Environment
+from ..conf import Environment
 
 
 class ModelManager:

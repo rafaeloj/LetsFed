@@ -10,20 +10,20 @@ from typing import Type, Union
 from omegaconf import OmegaConf
 
 from .structs import (
-    DeevSelection,
+    DeevSelectionMethodConfig,
     Environment,
-    FedAvgAggregation,
-    FedPerTraining,
-    LetsFedSelection,
-    LetsFedTraining,
-    MaxFLAggregation,
-    MaxFLTraining,
-    NormalTraining,
-    PoCSelection,
-    QFFLAggregation,
-    QFFLTraining,
-    RandomSelection,
-    RoundRobinSelection,
+    FedAvgAggregationMethodConfig,
+    FedPerTrainingStrategyConfig,
+    LetsFedSelectionMethodConfig,
+    LetsFedTrainingStrategyConfig,
+    MaxFLAggregationMethodConfig,
+    MaxFLTrainingStrategyConfig,
+    NormalTrainingStrategyConfig,
+    PoCSelectionMethodConfig,
+    QFFLAggregationMethodConfig,
+    QFFLTrainingStrategyConfig,
+    RandomSelectionMethodConfig,
+    RoundRobinSelectionMethodConfig,
 )
 
 # Register all structured configs
@@ -35,35 +35,35 @@ OmegaConf.register_new_resolver("training_factory", lambda name: _get_training_c
 def _get_aggregation_class(name: str) -> Type:
     """Get aggregation method class by name."""
     mapping = {
-        "fedavg": FedAvgAggregation,
-        "maxfl": MaxFLAggregation,
-        "qffl": QFFLAggregation,
+        "fedavg": FedAvgAggregationMethodConfig,
+        "maxfl": MaxFLAggregationMethodConfig,
+        "qffl": QFFLAggregationMethodConfig,
     }
-    return mapping.get(name, FedAvgAggregation)
+    return mapping.get(name, FedAvgAggregationMethodConfig)
 
 
 def _get_selection_class(name: str) -> Type:
     """Get selection method class by name."""
     mapping = {
-        "random": RandomSelection,
-        "deev": DeevSelection,
-        "poc": PoCSelection,
-        "round_robin": RoundRobinSelection,
-        "letsfed": LetsFedSelection,
+        "random": RandomSelectionMethodConfig,
+        "deev": DeevSelectionMethodConfig,
+        "poc": PoCSelectionMethodConfig,
+        "round_robin": RoundRobinSelectionMethodConfig,
+        "letsfed": LetsFedSelectionMethodConfig,
     }
-    return mapping.get(name, RandomSelection)
+    return mapping.get(name, RandomSelectionMethodConfig)
 
 
 def _get_training_class(name: str) -> Type:
     """Get training strategy class by name."""
     mapping = {
-        "normal": NormalTraining,
-        "letsfed": LetsFedTraining,
-        "maxfl": MaxFLTraining,
-        "fedper": FedPerTraining,
-        "qffl": QFFLTraining,
+        "normal": NormalTrainingStrategyConfig,
+        "letsfed": LetsFedTrainingStrategyConfig,
+        "maxfl": MaxFLTrainingStrategyConfig,
+        "fedper": FedPerTrainingStrategyConfig,
+        "qffl": QFFLTrainingStrategyConfig,
     }
-    return mapping.get(name, NormalTraining)
+    return mapping.get(name, NormalTrainingStrategyConfig)
 
 
 def load_config(config_path: Union[str, Path]) -> Environment:

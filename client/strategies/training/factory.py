@@ -6,8 +6,8 @@ This module implements the Factory pattern for creating aggregation strategies.
 
 from typing import Type
 
-from ....conf.structs import TrainingStrategyConfig
 from .base import TrainingStrategy
+from .structs import TrainingStrategyConfig
 from .types.fedper import FedPerClient
 from .types.letsfed import LetsFedClient
 from .types.maxfl import MaxFLClient

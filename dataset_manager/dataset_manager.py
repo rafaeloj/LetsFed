@@ -7,85 +7,85 @@ from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
 from flwr_datasets.utils import divide_dataset
 from flwr_datasets.visualization import plot_comparison_label_distribution
 
-from ..conf.structs import Database
+from .structs import DatasetConfig
 
 
 class DSManager:
-    def __init__(self, n_clients: int, conf: Database) -> None:
+    def __init__(self, n_clients: int, conf: DatasetConfig) -> None:
         self.path = self._get_path_name(conf, n_clients)
         self.conf = conf
         self.train_partitioner = self.set_train_partitioner(n_clients=n_clients, conf=conf)
         self.test_partitioner = self.set_test_partitioner(n_clients=n_clients, conf=conf)
 
-    def _get_path_name(self, conf: Database, n_clients: int) -> str:
+    def _get_path_name(self, conf: DatasetConfig, n_clients: int) -> str:
         """
         Get the path name for the dataset based on configuration and client number.
 
         Args:
-            conf: Database configuration
+            conf: Dataset configuration
             n_clients: Number of clients
 
         Returns:
             str: Path name
         """
         path = f"{conf.path}/{conf.dataset}/{n_clients}"
-        if conf.partitioner.train.method == "dirichlet":
-            path = f"{path}/{conf.partitioner.train.dirichlet_alpha}"
-        if conf.partitioner.test.method == "dirichlet":
-            path = f"{path}/{conf.partitioner.test.dirichlet_alpha}"
+        if conf.train_partitioner.method == "dirichlet":
+            path = f"{path}/{conf.train_partitioner.dirichlet_alpha}"
+        if conf.test_partitioner.method == "dirichlet":
+            path = f"{path}/{conf.test_partitioner.dirichlet_alpha}"
         return path
 
     def set_train_partitioner(
-        self, n_clients: int, conf: Database
+        self, n_clients: int, conf: DatasetConfig
     ) -> DirichletPartitioner | IidPartitioner:
         """
         Set the training data partitioner.
 
         Args:
             n_clients: Number of clients
-            conf: Database configuration
+            conf: Dataset configuration
 
         Returns:
             DirichletPartitioner or IidPartitioner
         """
-        if conf.partitioner.train.method == "dirichlet":
+        if conf.train_partitioner.method == "dirichlet":
             return DirichletPartitioner(
                 num_partitions=n_clients,
-                alpha=conf.partitioner.train.dirichlet_alpha,
-                partition_by=conf.partitioner.train.partition_by,
-                min_partition_size=conf.partitioner.train.min_partition_size,
-                self_balancing=conf.partitioner.train.self_balacing,
-                shuffle=conf.partitioner.train.shuffle,
+                alpha=conf.train_partitioner.dirichlet_alpha,
+                partition_by=conf.train_partitioner.partition_by,
+                min_partition_size=conf.train_partitioner.min_partition_size,
+                self_balancing=conf.train_partitioner.self_balancing,
+                shuffle=conf.train_partitioner.shuffle,
             )
-        elif conf.partitioner.train.method == "iid":
+        elif conf.train_partitioner.method == "iid":
             return IidPartitioner(num_partitions=n_clients)
-        raise ValueError(f"Paritioner not implemented: {conf.partitioner.train.method}")
+        raise ValueError(f"Paritioner not implemented: {conf.train_partitioner.method}")
 
     def set_test_partitioner(
-        self, n_clients: int, conf: Database
+        self, n_clients: int, conf: DatasetConfig
     ) -> DirichletPartitioner | IidPartitioner:
         """
         Set the test data partitioner.
 
         Args:
             n_clients: Number of clients
-            conf: Database configuration
+            conf: Dataset configuration
 
         Returns:
             DirichletPartitioner or IidPartitioner
         """
-        if conf.partitioner.test.method == "dirichlet":
+        if conf.test_partitioner.method == "dirichlet":
             return DirichletPartitioner(
                 num_partitions=n_clients,
-                alpha=conf.partitioner.test.dirichlet_alpha,
-                partition_by=conf.partitioner.test.partition_by,
-                min_partition_size=conf.partitioner.test.min_partition_size,
-                self_balancing=conf.partitioner.test.self_balacing,
-                shuffle=conf.partitioner.test.shuffle,
+                alpha=conf.test_partitioner.dirichlet_alpha,
+                partition_by=conf.test_partitioner.partition_by,
+                min_partition_size=conf.test_partitioner.min_partition_size,
+                self_balancing=conf.test_partitioner.self_balancing,
+                shuffle=conf.test_partitioner.shuffle,
             )
-        elif conf.partitioner.test.method == "iid":
+        elif conf.test_partitioner.method == "iid":
             return IidPartitioner(num_partitions=n_clients)
-        raise ValueError(f"Paritioner not implemented: {conf.partitioner.test.method}")
+        raise ValueError(f"Paritioner not implemented: {conf.test_partitioner.method}")
 
     def load(self, dataset: str) -> None:
         """
@@ -129,9 +129,7 @@ class DSManager:
             raise Exception("Dataset not loaded")
         return self.fds.load_partition(partition_id=partition_id, split="test")
 
-    def load_locally(
-        self, partition_id: int, path: str = None
-    ) -> Tuple[Database, Database, Database]:
+    def load_locally(self, partition_id: int, path: str = None) -> Tuple[object, object, object]:
         """
         Load dataset from local storage.
 

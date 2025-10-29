@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from ....conf.structs import SelectionMethodConfig
+from .structs import SelectionMethodConfig
 
 if TYPE_CHECKING:
     from ..fl_server import FLServer

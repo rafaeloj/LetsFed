@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from .....conf.structs import PoCSelectionMethodConfig
 from ..base import ClientSelectionMethod
+from ..structs import PoCSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer

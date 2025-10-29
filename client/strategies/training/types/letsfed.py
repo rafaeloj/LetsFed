@@ -7,11 +7,11 @@ from flwr.common import (
     Scalar,
 )
 
-from .....conf.structs import LetsFedTrainingStrategyConfig
 from .....utils.utils import Utils
 from ...drivers.accuracy import AccuracyDriver
 from ...drivers.driver import Driver
 from ..base import TrainingStrategy
+from ..structs import LetsFedTrainingStrategyConfig
 
 if TYPE_CHECKING:
     from ...fl_client import FLClient

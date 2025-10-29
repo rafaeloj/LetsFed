@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Optional, Union
 from flwr.common import EvaluateRes, FitRes, Parameters, Scalar
 from flwr.server.client_proxy import ClientProxy
 
-from ....conf.structs import AggregationMethodConfig
 from ..fl_server import FLServer
+from .structs import AggregationMethodConfig
 
 if TYPE_CHECKING:
     from server.strategies.fl_server import FLServer
