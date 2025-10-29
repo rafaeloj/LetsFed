@@ -11,9 +11,9 @@ class ModelManager:
     def __init__(self, conf: Environment, input_shape: List[int], path: str = "") -> None:
         self.conf = conf
         self.input_shape = input_shape
-        self.model_path = f"/{conf.model_path}/{self.conf.model_type}.weights.h5"
+        self.model_path = f"/{conf.model.path}/{conf.model.type}.weights.h5"
         if path:
-            self.model_path = f"{path}/{conf.model_path}/{self.conf.model_type}.weights.h5"
+            self.model_path = f"{path}/{conf.model.path}/{conf.model.type}.weights.h5"
 
         # Initialize and load model
         self.model = self.get_model()
@@ -21,9 +21,9 @@ class ModelManager:
 
     def get_model(self) -> keras.Model:
         """Return model based on configuration."""
-        if self.conf.model_type == "dnn":
+        if self.conf.model.type == "dnn":
             return self.dnn()
-        if self.conf.model_type == "cnn":
+        if self.conf.model.type == "cnn":
             return self.cnn()
 
     def load_model(self) -> None:
@@ -52,7 +52,9 @@ class ModelManager:
             ]
         )
         model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=self.conf.client.learning_rate_client),
+            optimizer=keras.optimizers.Adam(
+                learning_rate=self.conf.client.training_strategy.learning_rate
+            ),
             loss="sparse_categorical_crossentropy",
             metrics=["accuracy"],
         )
@@ -84,7 +86,9 @@ class ModelManager:
             ]
         )
         model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=self.conf.client.learning_rate_client),
+            optimizer=keras.optimizers.Adam(
+                learning_rate=self.conf.client.training_strategy.learning_rate
+            ),
             loss="sparse_categorical_crossentropy",
             metrics=["accuracy"],
         )
