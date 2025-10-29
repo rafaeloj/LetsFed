@@ -62,7 +62,6 @@ class FLServer(Strategy):
         self.clients_loss_avg: float = 0.0
         self.clients_acc = np.zeros(conf.n_clients)
         self.clients_loss = np.zeros(conf.n_clients)
-        self.model: keras.Model = None
         self.data_to_log = {}
 
         # CID Mapping: Bidirectional mapping between Flower UUIDs and numeric CIDs
@@ -72,8 +71,13 @@ class FLServer(Strategy):
         self.cid_to_uuid: Dict[str, str] = {}
 
         # Load data and model
-        self._load_data()
-        self._load_model()
+        if conf.server.aggregation_method.name.lower() == "maxfl":
+            self.model: keras.Model
+            self.x_train, self.y_train = None, None
+            self.x_validation, self.y_validation = None, None
+            self.x_test, self.y_test = None, None
+            self._load_data()
+            self._load_model()
 
     def _load_model(self) -> None:
         """
