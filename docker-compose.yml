@@ -3,35 +3,37 @@ version: '3.8'
 services:
   # Federated Learning Server
   server:
-    build:
-      context: .
-      dockerfile: server/Dockerfile.new
+    image: ${SERVER_IMAGE:-server-flwr-cpu}
     container_name: fl_server
-    hostname: fl_server
-    ports:
-      - "9999:9999"
+    logging:
+      driver: local
     volumes:
-      # Mount configuration
-      - ./conf:/app/conf:ro
-      # Mount model weights (read-write for saving)
+      # Model weights (read-write for saving/loading)
       - ./model:/app/model:rw
-      # Mount logs (read-write)
+      # Logs (read-write)
       - ./logs:/app/logs:rw
-      # Development: live code updates (comment out in production)
-      - ./server/strategies:/app/server/strategies:ro
-    environment:
-      - PYTHONUNBUFFERED=1
     networks:
       - fl_network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.connect(('localhost', 9999)); s.close()"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
-  # Federated Learning Clients (template)
-  # Clients will be created dynamically based on n_clients in config
+  # Federated Learning Client Template
+  # This is a template that can be scaled or instantiated per client
+  client:
+    image: ${CLIENT_IMAGE:-client-flwr-cpu}
+    container_name: fl_client-${CID:-0}
+    logging:
+      driver: local
+    environment:
+      - CID=${CID:-0}
+    volumes:
+      # Model weights (read-write)
+      - model_data:/app/model:rw
+      # Logs (read-write)
+      - log_data:/app/logs:rw
+    networks:
+      - fl_network
+    depends_on:
+      server:
+        condition: service_healthy
 
 networks:
   fl_network:
@@ -42,4 +44,6 @@ networks:
 
 volumes:
   model_data:
+    driver: local
   log_data:
+    driver: local
