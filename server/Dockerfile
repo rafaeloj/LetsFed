@@ -28,8 +28,5 @@ COPY utils/ ./utils/
 # Set Python path
 ENV PYTHONPATH=/app
 
-# Expose server port
-EXPOSE 9999
-
 # Run server
 CMD ["python", "-u", "server/strategies_manager.py"]

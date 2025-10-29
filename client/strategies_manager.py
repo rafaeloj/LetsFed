@@ -8,7 +8,7 @@ from .strategies.client_builder import ClientBuilder
 
 
 def main() -> None:
-    cfg: Environment = OmegaConf.load("/client/conf/config.yaml")
+    cfg: Environment = OmegaConf.load("conf/config.yaml")
     fl.client.start_client(
         server_address=f"rfl_server:{cfg.server.port}",
         client=ClientBuilder.create(cid=os.environ.get("CID"), config=cfg).to_client(),

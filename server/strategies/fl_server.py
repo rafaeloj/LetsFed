@@ -18,7 +18,7 @@ from ...conf.structs import Environment
 from ...dataset_manager.dataset_manager import DSManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
-from .aggregate_method.base import AggregateMethod
+from .aggregate_method.base import AggregationMethod
 from .client_selection_method.base import ClientSelectionMethod
 
 logger = Logger(__name__)
@@ -36,7 +36,7 @@ class FLServer(Strategy):
     def __init__(
         self,
         client_selection: ClientSelectionMethod,
-        aggregate_method: AggregateMethod,
+        aggregate_method: AggregationMethod,
         conf: Environment,
     ) -> None:
         """
@@ -51,7 +51,7 @@ class FLServer(Strategy):
 
         # Initialize server parameters
         self.client_selection: ClientSelectionMethod = client_selection
-        self.aggregate_method: AggregateMethod = aggregate_method
+        self.aggregate_method: AggregationMethod = aggregate_method
         self.conf: Environment = conf
 
         self.list_of_clients: List[str] = [str(x) for x in range(conf.n_clients)]

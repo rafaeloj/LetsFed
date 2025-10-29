@@ -40,8 +40,5 @@ ENV CUDA_CACHE_MAXSIZE=2147483648
 # Permite que TensorFlow use todas as GPUs disponíveis
 ENV CUDA_VISIBLE_DEVICES=all
 
-# Expose server port
-EXPOSE 9999
-
 # Run server
 CMD ["python", "-u", "server/strategies_manager.py"]
