@@ -363,3 +363,4 @@ class FLServer(Strategy):
             self.client_participating_state[cid_idx] = participating_state
 
         self.clients_acc_avg: float = np.mean(self.clients_acc)
+        self.clients_loss_avg: float = np.mean(self.clients_loss)

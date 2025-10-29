@@ -26,10 +26,10 @@ class LetsFedSelection(ClientSelectionMethod):
             config: The selection method configuration.
         """
         super().__init__(config)
-        self.participating_select_method = ClientSelectionFactory.create(
+        self.participating_selection_method = ClientSelectionFactory.create(
             config.participating_selection_method
         )
-        self.non_participating_select_method = ClientSelectionFactory.create(
+        self.non_participating_selection_method = ClientSelectionFactory.create(
             config.non_participating_selection_method
         )
 
@@ -47,7 +47,7 @@ class LetsFedSelection(ClientSelectionMethod):
         Returns:
             A list of selected client IDs.
         """
-        return self.participating.select(
+        return self.participating_selection_method.select(
             server=server, server_round=server_round, list_of_clients=list_of_clients
         )
 
@@ -65,7 +65,7 @@ class LetsFedSelection(ClientSelectionMethod):
         Returns:
             A list of selected client IDs.
         """
-        return self.non_participating.select(
+        return self.non_participating_selection_method.select(
             server=server, server_round=server_round, list_of_clients=list_of_clients
         )
 
@@ -92,6 +92,11 @@ class LetsFedSelection(ClientSelectionMethod):
 
         participating_clients_selected = self._select_participating_clients(
             server=server, server_round=server_round, list_of_clients=participating_clients.tolist()
+        )
+
+        server.data_to_log["participating_clients_selected"] = participating_clients_selected
+        server.data_to_log["non_participating_clients_selected"] = (
+            non_participating_clients_selected
         )
 
         return non_participating_clients_selected + participating_clients_selected
