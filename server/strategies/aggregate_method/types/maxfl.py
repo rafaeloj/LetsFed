@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Optional, Union
 
-import keras
 from flwr.common import (
     EvaluateRes,
     FitRes,
@@ -12,56 +11,28 @@ from flwr.common import (
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
-from .....dataset_manager.dataset_manager import DSManager
-from .....model.model_manager import ModelManager
+from .....conf.structs import MaxFLAggregationMethodConfig
 from .....utils.utils import Utils
 from ...fl_server import FLServer
-from ..base import AggregateMethod
+from ..base import AggregationMethod
 
 if TYPE_CHECKING:
     from .. import FLServer
 
 
-class MaxFL(AggregateMethod):
+class MaxFL(AggregationMethod):
     """
     MaxFL aggregation strategy.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: MaxFLAggregationMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The aggregation method configuration.
         """
-        self.model = self.load_model(server)
-        self.g_learning_rate = server.conf.server.aggregation_method.maxfl_learning_rate
-        self.epsilon = server.conf.server.aggregation_method.maxfl_epsilon
-
-    def load_model(self, server: FLServer) -> keras.Model:
-        """
-        Method to load the model for federated learning
-
-        Args:
-            server: The federated learning server instance.
-
-        Returns:
-            The Keras model instance.
-        """
-        dm = DSManager(n_clients=server.conf.n_clients, conf=server.conf.db)
-        train, validation, test = dm.load_locally(partition_id=int(0))
-        keys = list(test.features.keys())
-        self.x_train, self.y_train, self.x_validation, self.y_validation = (
-            train[keys[0]],
-            train[keys[1]],
-            validation[keys[0]],
-            validation[keys[1]],
-        )
-        self.x_test, self.y_test = test[keys[0]], test[keys[1]]
-
-        mm = ModelManager(server.conf, input_shape=self.x_train.shape, path="app")
-
-        return mm.get_model()
+        super().__init__(config)
 
     def _get_learning_rate(self, q_models_value: list[float]) -> float:
         """
@@ -73,7 +44,7 @@ class MaxFL(AggregateMethod):
         Returns:
             The calculated learning rate.
         """
-        return self.g_learning_rate / (sum(q_models_value) + self.epsilon)
+        return self.config.learning_rate / (sum(q_models_value) + self.config.epsilon)
 
     def agg_fit(
         self,
@@ -113,9 +84,9 @@ class MaxFL(AggregateMethod):
         learning_rate = self._get_learning_rate(q_models_value)
         new_weights = [
             weight - (learning_rate * (weight - weight_avg))  # Gradient descent
-            for weight, weight_avg in zip(self.model.get_weights(), weights_avg, strict=True)
+            for weight, weight_avg in zip(server.model.get_weights(), weights_avg, strict=True)
         ]
-        self.model.set_weights(new_weights)
+        server.model.set_weights(new_weights)
 
         return ndarrays_to_parameters(new_weights), {}
 

@@ -2,7 +2,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .....conf.structs import LetsFedSelectionMethodConfig
 from ..base import ClientSelectionMethod
+from ..factory import ClientSelectionFactory
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
@@ -16,14 +18,20 @@ class LetsFedSelection(ClientSelectionMethod):
     while participating clients are selected using another strategy.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: LetsFedSelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The selection method configuration.
         """
-        pass
+        super().__init__(config)
+        self.participating_select_method = ClientSelectionFactory.create(
+            config.participating_selection_method
+        )
+        self.non_participating_select_method = ClientSelectionFactory.create(
+            config.non_participating_selection_method
+        )
 
     def _select_participating_clients(
         self, server: FLServer, server_round: int, list_of_clients: list[str]

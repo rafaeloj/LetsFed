@@ -8,6 +8,7 @@ from flwr.common import (
     Scalar,
 )
 
+from .....conf.structs import QFFLTrainingStrategyConfig
 from .....utils.utils import Utils
 from ..base import TrainingStrategy
 
@@ -20,14 +21,14 @@ class QFFLClient(TrainingStrategy):
     Quantized Federated Learning (QFFL) client strategy.
     """
 
-    def init(self, client: FLClient) -> None:
+    def __init__(self, config: QFFLTrainingStrategyConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            client: The federated learning client instance.
+            client: The training strategy configuration.
         """
-        pass
+        super().__init__(config)
 
     def fit(
         self, client: FLClient, parameters: NDArrays, config: Config
@@ -77,7 +78,7 @@ class QFFLClient(TrainingStrategy):
                 curr - prev
                 for curr, prev in zip(client.get_parameters(), prev_model_parameters, strict=True)
             ]
-            delta_parameters = delta_parameters * (1 / client.conf.client.eta)  ## QFFL
+            delta_parameters = delta_parameters * (1 / self.config.eta)  ## QFFL
 
             return delta_parameters, client.x_train.shape[0], fit_response
 

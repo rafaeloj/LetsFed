@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from .....conf.structs import PoCSelectionMethodConfig
 from ..base import ClientSelectionMethod
 
 if TYPE_CHECKING:
@@ -13,14 +14,14 @@ class POC(ClientSelectionMethod):
     Clients with performance below the average are prioritized for selection.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: PoCSelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The selection method configuration.
         """
-        pass
+        super().__init__(config)
 
     def select(
         self,
@@ -51,8 +52,6 @@ class POC(ClientSelectionMethod):
             if acc < server.clients_acc_avg:
                 selected_clients.append(cid)
 
-        clients2select = int(
-            float(len(list_of_clients)) * float(server.conf.server.selection_method.perc_of_clients)
-        )
+        clients2select = int(float(len(list_of_clients)) * float(self.config.perc_of_clients))
 
         return selected_clients[:clients2select]

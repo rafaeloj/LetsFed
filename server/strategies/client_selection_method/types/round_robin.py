@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, List
 
 import numpy as np
 
+from .....conf.structs import SelectionMethodConfig
 from ..base import ClientSelectionMethod
 
 if TYPE_CHECKING:
@@ -19,14 +20,15 @@ class RoundRobinSelection(ClientSelectionMethod):
     This strategy requires the server to maintain a count of selections for each client.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: SelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The selection method configuration.
         """
-        self.how_many_time_selected = np.zeros(server.conf.n_clients)
+        super().__init__(config)
+        self.how_many_time_selected = np.zeros(config.n_clients)
 
     def select(
         self,
@@ -59,10 +61,7 @@ class RoundRobinSelection(ClientSelectionMethod):
 
         # Get the top least called
         top_values_of_cid = sort_cids[
-            : int(
-                len(how_many_time_selected_client)
-                * server.conf.server.selection_method.perc_of_clients
-            )
+            : int(len(how_many_time_selected_client) * self.config.perc_of_clients)
         ]
 
         # Update scores

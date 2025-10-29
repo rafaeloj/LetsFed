@@ -7,6 +7,7 @@ from flwr.common import (
     Scalar,
 )
 
+from .....conf.structs import LetsFedTrainingStrategyConfig
 from .....utils.utils import Utils
 from ...drivers.accuracy import AccuracyDriver
 from ...drivers.driver import Driver
@@ -21,14 +22,15 @@ class LetsFedClient(TrainingStrategy):
     Federated Learning strategy for the LetsFed framework.
     """
 
-    def init(self, client: FLClient) -> None:
+    def __init__(self, config: LetsFedTrainingStrategyConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
             client: The federated learning client instance.
         """
-        client.add_drivers(self._get_drivers())
+        super().__init__(config)
+        self.add_drivers(self._get_drivers())
 
     def _get_drivers(self) -> list[Driver]:
         """
@@ -92,10 +94,10 @@ class LetsFedClient(TrainingStrategy):
         Args:
             client (FLClient): The federated learning client.
         """
-        if not client.willing:
+        if not self.willing:
             client.set_participating_state(False)
 
-        if client.willing:
+        if self.willing:
             client.set_participating_state(True)
 
     def evaluate(
@@ -121,7 +123,7 @@ class LetsFedClient(TrainingStrategy):
         # Analyzing if the client is selected by the server
         if client.selected:
             # Set global model weights and apply drivers
-            client.apply_drivers(client, parameters, config)
+            self.apply_drivers(client, parameters, config)
             self._manager_client_state(client)
 
             if client.get_participating_state():

@@ -7,6 +7,7 @@ from flwr.common import (
     Scalar,
 )
 
+from .....conf.structs import NormalTrainingStrategyConfig
 from .....utils.utils import Utils
 from ..base import TrainingStrategy
 
@@ -19,14 +20,14 @@ class NormalClient(TrainingStrategy):
     Normal training strategy for federated learning clients.
     """
 
-    def init(self, client: FLClient) -> None:
+    def __init__(self, config: NormalTrainingStrategyConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            client: The federated learning client instance.
+            config: The training strategy configuration.
         """
-        pass
+        super().__init__(config)
 
     def fit(
         self, client: FLClient, parameters: NDArrays, config: Config

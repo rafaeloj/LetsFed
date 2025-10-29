@@ -1,6 +1,7 @@
 from math import ceil
 from typing import TYPE_CHECKING
 
+from .....conf.structs import DeevSelectionMethodConfig
 from ..base import ClientSelectionMethod
 
 if TYPE_CHECKING:
@@ -17,14 +18,14 @@ class DEEV(ClientSelectionMethod):
     over rounds.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: DeevSelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The selection method configuration.
         """
-        pass
+        super().__init__(config)
 
     def select(
         self,
@@ -56,10 +57,8 @@ class DEEV(ClientSelectionMethod):
             if acc < server.clients_acc_avg:
                 selected_clients.append(cid)
 
-        if server.conf.server.selection_method.decay > 0.0:
-            the_chosen_ones = len(selected_clients) * (
-                1 - server.conf.server.selection_method.decay
-            ) ** int(server_round)
+        if self.config.decay > 0.0:
+            the_chosen_ones = len(selected_clients) * (1 - self.config.decay) ** int(server_round)
             selected_clients = selected_clients[: ceil(the_chosen_ones)]
 
         return selected_clients

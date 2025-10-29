@@ -34,8 +34,8 @@ class ServerBuilder:
             ValueError: If configuration is invalid
         """
         # Instantiating the aggregation and selection methods
-        aggregation_method = AggregationFactory.create(config)
-        selection_method = ClientSelectionFactory.create(config)
+        aggregation_method = AggregationFactory.create(config.server.aggregation_method)
+        selection_method = ClientSelectionFactory.create(config.server.selection_method)
 
         return FLServer(
             conf=config, client_selection=selection_method, aggregate_method=aggregation_method

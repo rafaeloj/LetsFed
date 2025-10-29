@@ -4,22 +4,26 @@ from typing import TYPE_CHECKING, Optional, Union
 from flwr.common import EvaluateRes, FitRes, Parameters, Scalar
 from flwr.server.client_proxy import ClientProxy
 
+from ....conf.structs import AggregationMethodConfig
 from ..fl_server import FLServer
 
 if TYPE_CHECKING:
     from server.strategies.fl_server import FLServer
 
 
-class AggregateMethod(ABC):
-    @abstractmethod
-    def init(self, server: FLServer) -> None:
+class AggregationMethod(ABC):
+    """
+    Abstract base class for aggregation methods.
+    """
+
+    def __init__(self, config: AggregationMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The aggregation method configuration.
         """
-        ...
+        self.config = config
 
     @abstractmethod
     def agg_fit(

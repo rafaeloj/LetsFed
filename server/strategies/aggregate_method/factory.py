@@ -6,9 +6,8 @@ This module implements the Factory pattern for creating aggregation strategies.
 
 from typing import Type
 
-from conf.structs import Environment
-
-from .base import AggregateMethod
+from ....conf.structs import AggregationMethodConfig
+from .base import AggregationMethod
 from .types.fedavg import FedAVG
 from .types.maxfl import MaxFL
 
@@ -21,18 +20,18 @@ class AggregationFactory:
     aggregation methods based on configuration.
     """
 
-    _registry: dict[str, Type[AggregateMethod]] = {
+    _registry: dict[str, Type[AggregationMethod]] = {
         "fedavg": FedAVG,
         "maxfl": MaxFL,
     }
 
     @classmethod
-    def create(cls, config: Environment) -> AggregateMethod:
+    def create(cls, config: AggregationMethodConfig) -> AggregationMethod:
         """
         Create an aggregation method based on configuration.
 
         Args:
-            config: Environment configuration
+            config: AggregationMethod configuration
 
         Returns:
             Instance of appropriate AggregateMethod subclass
@@ -40,7 +39,7 @@ class AggregationFactory:
         Raises:
             ValueError: If aggregation method is not recognized
         """
-        method = config.server.aggregation_method.name.lower()
+        method = config.name.lower()
 
         if method not in cls._registry:
             available = ", ".join(cls._registry.keys())
@@ -49,10 +48,10 @@ class AggregationFactory:
             )
 
         agg_class = cls._registry[method]
-        return agg_class()
+        return agg_class(config)
 
     @classmethod
-    def register(cls, name: str, agg_class: Type[AggregateMethod]) -> None:
+    def register(cls, name: str, agg_class: Type[AggregationMethod]) -> None:
         """
         Register a new aggregation method.
 
@@ -66,9 +65,9 @@ class AggregationFactory:
         if name in cls._registry:
             raise ValueError(f"Aggregation method '{name}' is already registered")
 
-        if not issubclass(agg_class, AggregateMethod):
+        if not issubclass(agg_class, AggregationMethod):
             raise ValueError(
-                "Aggregation class must be a subclass of AggregateMethod, " + f"got {agg_class}"
+                "Aggregation class must be a subclass of AggregationMethod, " + f"got {agg_class}"
             )
 
         cls._registry[name] = agg_class

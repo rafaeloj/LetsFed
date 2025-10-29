@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from ....conf.structs import SelectionMethodConfig
+
 if TYPE_CHECKING:
     from ..fl_server import FLServer
 
@@ -10,15 +12,14 @@ class ClientSelectionMethod(ABC):
     Abstract base class for client selection methods.
     """
 
-    @abstractmethod
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: SelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The selection method configuration.
         """
-        ...
+        self.config = config
 
     @abstractmethod
     def select(

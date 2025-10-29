@@ -15,6 +15,8 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import Strategy
 
 from ...conf.structs import Environment
+from ...dataset_manager.dataset_manager import DSManager
+from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
 from .aggregate_method.base import AggregateMethod
 from .client_selection_method.base import ClientSelectionMethod
@@ -69,9 +71,32 @@ class FLServer(Strategy):
         self.uuid_to_cid: Dict[str, str] = {}
         self.cid_to_uuid: Dict[str, str] = {}
 
-        # Initialize strategies
-        self.aggregate_method.init(self)
-        self.client_selection.init(self)
+        # Load data and model
+        self._load_data()
+        self._load_model()
+
+    def _load_model(self) -> None:
+        """
+        Load the model.
+        """
+        mm = ModelManager(conf=self.conf, input_shape=self.x_train.shape)
+        self.model = mm.get_model()
+
+    def _load_data(self) -> None:
+        """
+        Load the data.
+        """
+        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset)
+
+        train, validation, test = dm.load_locally(partition_id=0)
+        keys = list(test.features.keys())
+
+        # Get label names
+        self.labels = test.features["label"].names
+
+        self.x_train, self.y_train = train[keys[0]], train[keys[1]]
+        self.x_validation, self.y_validation = validation[keys[0]], validation[keys[1]]
+        self.x_test, self.y_test = test[keys[0]], test[keys[1]]
 
     def _update_cid_mapping(self, proxy: ClientProxy, numeric_cid: str) -> None:
         """
@@ -293,18 +318,17 @@ class FLServer(Strategy):
             "rounds": server_round,
             "acc": self.clients_acc_avg,
             "loss": np.mean(self.clients_loss),
-            "model_type": self.conf.model_type.lower(),
+            "model_type": self.conf.model.type.lower(),
             "n_selected": len(self.selected_clients),
             "selection": f"[{';'.join(self.selected_clients)}]",
-            "dataset": self.conf.db.dataset,
-            "threshold": self.conf.client.threshold,
+            "dataset": self.conf.dataset.dataset.lower(),
             "init_clients": self.conf.init_clients,
             "participating_state": f"[{';'.join([str(state) for state in self.client_participating_state])}]",  # noqa: E501
             "number_of_participating": np.count_nonzero(self.client_participating_state),
             "number_of_non_participating": np.count_nonzero(not self.client_participating_state),
-            "training_method": self.conf.client.training_strategy,
-            "aggregation_method": f"{self.conf.server.aggregation.method}-default",
-            "selection_method": self.conf.server.selection.method,
+            "training_method": self.conf.client.training_strategy.name.lower(),
+            "aggregation_method": f"{self.conf.server.aggregation_method.name.lower()}",
+            "selection_method": self.conf.server.selection_method.name.lower(),
             **self.data_to_log,
         }
 

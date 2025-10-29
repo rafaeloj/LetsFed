@@ -1,6 +1,7 @@
 import random
 from typing import TYPE_CHECKING, List
 
+from .....conf.structs import RandomSelectionMethodConfig
 from ..base import ClientSelectionMethod
 
 if TYPE_CHECKING:
@@ -13,14 +14,14 @@ class RandomSelection(ClientSelectionMethod):
     Clients are selected randomly in each round based on a specified percentage.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: RandomSelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The selection method configuration.
         """
-        pass
+        super().__init__(config)
 
     def select(
         self,
@@ -42,7 +43,7 @@ class RandomSelection(ClientSelectionMethod):
         if server_round == 1:
             return list_of_clients
 
-        perc = int(len(list_of_clients) * server.conf.server.selection_method.perc_of_clients)
+        perc = int(len(list_of_clients) * self.config.perc_of_clients)
         selected_clients = random.sample(list_of_clients, perc)
 
         return selected_clients

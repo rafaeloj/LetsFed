@@ -7,7 +7,7 @@ strategies.
 
 from typing import Type
 
-from ....conf.structs import Environment
+from ....conf.structs import SelectionMethodConfig
 from .base import ClientSelectionMethod
 from .types.deev import DEEV
 from .types.letsfed import LetsFedSelection
@@ -33,12 +33,12 @@ class ClientSelectionFactory:
     }
 
     @classmethod
-    def create(cls, config: Environment) -> ClientSelectionMethod:
+    def create(cls, config: SelectionMethodConfig) -> ClientSelectionMethod:
         """
         Create a client selection method based on configuration.
 
         Args:
-            config: Environment configuration
+            config: SelectionMethodConfig configuration
 
         Returns:
             Instance of appropriate ClientSelectionMethod subclass
@@ -46,7 +46,7 @@ class ClientSelectionFactory:
         Raises:
             ValueError: If selection method is not recognized
         """
-        method = config.server.selection_method.lower()
+        method = config.name.lower()
 
         if method not in cls._registry:
             available = ", ".join(cls._registry.keys())
@@ -55,7 +55,7 @@ class ClientSelectionFactory:
             )
 
         selection_class = cls._registry[method]
-        return selection_class()
+        return selection_class(config)
 
     @classmethod
     def register(cls, name: str, selection_class: Type[ClientSelectionMethod]) -> None:

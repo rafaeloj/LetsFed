@@ -11,26 +11,27 @@ from flwr.common import (
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
+from .....conf.structs import FedAvgAggregationMethodConfig
 from .....utils.utils import Utils
-from ..base import AggregateMethod
+from ..base import AggregationMethod
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
 
 
-class FedAVG(AggregateMethod):
+class FedAVG(AggregationMethod):
     """
     Federated Averaging (FedAvg) aggregation strategy.
     """
 
-    def init(self, server: FLServer) -> None:
+    def __init__(self, config: FedAvgAggregationMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            server: The federated learning server instance.
+            config: The aggregation method configuration.
         """
-        pass
+        super().__init__(config)
 
     def agg_fit(
         self,

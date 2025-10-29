@@ -7,6 +7,7 @@ from flwr.common import (
     Scalar,
 )
 
+from .....conf.structs import MaxFLTrainingStrategyConfig
 from .....utils.utils import Utils
 from ...drivers.driver import Driver
 from ...drivers.maxfl_qk import MaxFLQkDriver
@@ -21,15 +22,16 @@ class MaxFLClient(TrainingStrategy):
     MaxFL training strategy for federated learning clients.
     """
 
-    def init(self, client: FLClient) -> None:
+    def __init__(self, config: MaxFLTrainingStrategyConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
         Args:
-            client: The federated learning client instance.
+            config: The training strategy configuration.
         """
-        client.qk = 1
-        client.add_drivers(self._get_drivers())
+        super().__init__(config)
+        self.qk = 1
+        self.add_drivers(self._get_drivers())
 
     def _get_drivers(self) -> list[Driver]:
         """
@@ -60,7 +62,7 @@ class MaxFLClient(TrainingStrategy):
         fit_response = {
             "cid": client.cid,
             "participating_state": client.get_participating_state(),
-            "qk": client.qk,
+            "qk": self.qk,
         }
 
         # Calculate and store model size
@@ -109,16 +111,16 @@ class MaxFLClient(TrainingStrategy):
         # Apply drivers and determine participation
         if client.selected:
             # Apply drivers to compute qk and get modifications
-            modifications = client.apply_drivers(parameters=parameters, config=config)
+            modifications = self.apply_drivers(client, parameters=parameters, config=config)
 
             # Log qk if it was computed
             if "qk" in modifications:
                 client.data_to_log["qk"] = modifications["qk"]
-                client.qk = modifications["qk"]
+                self.qk = modifications["qk"]
 
             # Check if client should participate based on qk threshold
-            qk_threshold = client.conf.server.aggregation_method.maxfl_qk_threshold
-            if hasattr(client, "qk") and client.qk < qk_threshold:
+            qk_threshold = self.config.maxfl_qk_threshold
+            if hasattr(self, "qk") and self.qk < qk_threshold:
                 client.set_participating_state(True)
                 client.set_parameters(parameters)
             else:

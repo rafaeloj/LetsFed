@@ -39,6 +39,6 @@ class ClientBuilder:
         Raises:
             ValueError: If training strategy is not recognized
         """
-        training_strategy = TrainingStrategyFactory.create(config)
+        training_strategy = TrainingStrategyFactory.create(config.client.training_strategy)
 
         return FLClient(cid=cid, config=config, training_strategy=training_strategy)

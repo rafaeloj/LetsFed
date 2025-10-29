@@ -10,8 +10,6 @@ from ...conf import Environment
 from ...dataset_manager.dataset_manager import DSManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
-from .drivers.context import DriverContext
-from .drivers.driver import Driver
 from .training.base import TrainingStrategy
 
 logger = Logger(__name__)
@@ -37,11 +35,10 @@ class FLClient(fl.client.NumPyClient):
         self.x_train, self.y_train = None, None
         self.x_validation, self.y_validation = None, None
         self.x_test, self.y_test = None, None
-        self.load_data()
-        self.load_model()
+        self._load_data()
+        self._load_model()
 
         # Initialize client parameters
-        self.drivers: list[Driver] = []
         self.participating_state: bool = True
         self.selected: bool = False
         self.model_size: int = 0
@@ -53,21 +50,18 @@ class FLClient(fl.client.NumPyClient):
         # extra metrics generated during training by training strategies
         self.data_to_log: dict = {}
 
-        # Initialize training strategy
-        self.training_strategy.init(self)
-
-    def load_model(self) -> None:
+    def _load_model(self) -> None:
         """
         Load the model.
         """
         mm = ModelManager(conf=self.conf, input_shape=self.x_train.shape)
         self.model = mm.get_model()
 
-    def load_data(self) -> None:
+    def _load_data(self) -> None:
         """
         Load the data.
         """
-        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.db)
+        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset)
 
         train, validation, test = dm.load_locally(partition_id=int(self.cid))
         keys = list(test.features.keys())
@@ -111,50 +105,6 @@ class FLClient(fl.client.NumPyClient):
             parameters: Model parameters as NDArrays
         """
         self.model.set_weights(parameters)
-
-    def add_drivers(self, drivers: list[Driver]) -> None:
-        """
-        Add a list of drivers to the client.
-        Implements the Plugin Architecture pattern.
-
-        Args:
-            drivers: List of driver instances to add
-        """
-        self.drivers.extend(drivers)
-
-    def apply_drivers(self, parameters: NDArrays, config: Config) -> dict[str, float | int | bool]:
-        """
-        Apply all registered drivers in sequence using DriverContext.
-        Implements the Chain of Responsibility pattern with explicit side effects.
-
-        Args:
-            parameters: Model parameters
-            config: Configuration dictionary
-
-        Returns:
-            Dictionary of all modifications made by drivers
-        """
-        context = DriverContext()
-
-        # Run all drivers, collecting their results in the context
-        for driver in self.drivers:
-            driver.run(self, parameters, config, context)
-
-        # Apply all modifications from context to client attributes
-        modifications = context.get_all()
-        for key, value in modifications.items():
-            setattr(self, key, value)
-
-        return modifications
-
-    def get_drivers(self) -> list[Driver]:
-        """
-        Get the list of registered drivers.
-
-        Returns:
-            List of driver instances
-        """
-        return self.drivers
 
     def fit(self, parameters: NDArrays, config: Config) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
@@ -208,7 +158,7 @@ class FLClient(fl.client.NumPyClient):
             "g_eval_acc": self.g_eval_acc,
             "g_eval_loss": self.g_eval_loss,
             "training_method": self.conf.client.training_strategy,
-            "aggregation_method": f"{self.conf.server.aggregation.method}",
-            "selection_method": self.conf.server.selection.method,
+            "aggregation_method": f"{self.conf.server.aggregation_method}",
+            "selection_method": self.conf.server.selection_method,
             **self.data_to_log,
         }

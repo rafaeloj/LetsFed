@@ -16,34 +16,29 @@ from omegaconf import MISSING
 
 
 @dataclass
-class AggregationMethod:
+class AggregationMethodConfig:
     """Base class for aggregation methods."""
 
     name: str = MISSING
 
 
 @dataclass
-class FedAvgAggregation(AggregationMethod):
+class FedAvgAggregationMethodConfig(AggregationMethodConfig):
     """FedAvg aggregation method configuration."""
 
-    name: str = "fedavg"
-
 
 @dataclass
-class MaxFLAggregation(AggregationMethod):
+class MaxFLAggregationMethodConfig(AggregationMethodConfig):
     """MaxFL aggregation method configuration."""
 
-    name: str = "maxfl"
     epsilon: float = 10.0
     learning_rate: float = 0.01
-    pre_training_epochs: int = 5
 
 
 @dataclass
-class QFFLAggregation(AggregationMethod):
+class QFFLAggregationMethodConfig(AggregationMethodConfig):
     """QFFL aggregation method configuration."""
 
-    name: str = "qffl"
     rho: float = 0.1
     learning_rate: float = 0.01
 
@@ -54,49 +49,47 @@ class QFFLAggregation(AggregationMethod):
 
 
 @dataclass
-class SelectionMethod:
+class SelectionMethodConfig:
     """Base class for selection methods."""
 
     name: str = MISSING
+
+
+@dataclass
+class RandomSelectionMethodConfig(SelectionMethodConfig):
+    """Random selection method configuration."""
+
     perc_of_clients: float = 0.3
 
 
 @dataclass
-class RandomSelection(SelectionMethod):
-    """Random selection method configuration."""
-
-    name: str = "random"
-
-
-@dataclass
-class DeevSelection(SelectionMethod):
+class DeevSelectionMethodConfig(SelectionMethodConfig):
     """DEEV selection method configuration."""
 
-    name: str = "deev"
     decay: float = 0.95
 
 
 @dataclass
-class PoCSelection(SelectionMethod):
+class PoCSelectionMethodConfig(SelectionMethodConfig):
     """PoC selection method configuration."""
 
-    name: str = "poc"
+    perc_of_clients: float = 0.3
 
 
 @dataclass
-class RoundRobinSelection(SelectionMethod):
+class RoundRobinSelectionMethodConfig(SelectionMethodConfig):
     """Round Robin selection method configuration."""
 
-    name: str = "round_robin"
+    perc_of_clients: float = 0.3
+    n_clients: int = 10
 
 
 @dataclass
-class LetsFedSelection(SelectionMethod):
+class LetsFedSelectionMethodConfig(SelectionMethodConfig):
     """LetsFed selection method configuration."""
 
-    name: str = "letsfed"
-    participating_method: str = "random"
-    non_participating_method: str = "poc"
+    participating_selection_method: str = "random"
+    non_participating_selection_method: str = "poc"
 
 
 # ============================================================================
@@ -105,46 +98,43 @@ class LetsFedSelection(SelectionMethod):
 
 
 @dataclass
-class TrainingStrategy:
+class TrainingStrategyConfig:
     """Base class for training strategies."""
 
     name: str = MISSING
+    learning_rate: float = 0.01
 
 
 @dataclass
-class NormalTraining(TrainingStrategy):
+class NormalTrainingStrategyConfig(TrainingStrategyConfig):
     """Normal training strategy configuration."""
 
-    name: str = "normal"
-
 
 @dataclass
-class LetsFedTraining(TrainingStrategy):
+class LetsFedTrainingStrategyConfig(TrainingStrategyConfig):
     """LetsFed training strategy configuration."""
 
-    name: str = "letsfed"
-    threshold: float = 1.0
+    threshold_accuracy: float = 1.0
 
 
 @dataclass
-class MaxFLTraining(TrainingStrategy):
+class MaxFLTrainingStrategyConfig(TrainingStrategyConfig):
     """MaxFL training strategy configuration."""
 
-    name: str = "maxfl"
+    maxfl_qk_threshold: float = 0.5
+    pre_training_epochs: int = 10
 
 
 @dataclass
-class FedPerTraining(TrainingStrategy):
+class FedPerTrainingStrategyConfig(TrainingStrategyConfig):
     """FedPer training strategy configuration."""
 
-    name: str = "fedper"
-
 
 @dataclass
-class QFFLTraining(TrainingStrategy):
+class QFFLTrainingStrategyConfig(TrainingStrategyConfig):
     """QFFL training strategy configuration."""
 
-    name: str = "qffl"
+    eta: float = 0.1
 
 
 # ============================================================================
@@ -159,8 +149,8 @@ class ServerConfig:
     ip: str = MISSING
     port: int = MISSING
 
-    aggregation_method: AggregationMethod = MISSING
-    selection_method: SelectionMethod = MISSING
+    aggregation_method: AggregationMethodConfig = MISSING
+    selection_method: SelectionMethodConfig = MISSING
 
 
 @dataclass
@@ -169,7 +159,7 @@ class ClientConfig:
 
     epochs: int = MISSING
     learning_rate: float = MISSING
-    training_strategy: TrainingStrategy = MISSING
+    training_strategy: TrainingStrategyConfig = MISSING
 
     # LetsFed specific
     participating: bool = True

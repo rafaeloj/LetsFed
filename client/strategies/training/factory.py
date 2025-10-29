@@ -6,8 +6,7 @@ This module implements the Factory pattern for creating aggregation strategies.
 
 from typing import Type
 
-from conf.structs import Environment
-
+from ....conf.structs import TrainingStrategyConfig
 from .base import TrainingStrategy
 from .types.fedper import FedPerClient
 from .types.letsfed import LetsFedClient
@@ -33,7 +32,7 @@ class TrainingStrategyFactory:
     }
 
     @classmethod
-    def create(cls, config: Environment) -> TrainingStrategy:
+    def create(cls, config: TrainingStrategyConfig) -> TrainingStrategy:
         """
         Create a training strategy based on configuration.
 
@@ -46,7 +45,7 @@ class TrainingStrategyFactory:
         Raises:
             ValueError: If training strategy is not recognized
         """
-        method = config.client.training_strategy.name.lower()
+        method = config.name.lower()
 
         if method not in cls._registry:
             available = ", ".join(cls._registry.keys())
@@ -55,7 +54,7 @@ class TrainingStrategyFactory:
             )
 
         strategy_class = cls._registry[method]
-        return strategy_class()
+        return strategy_class(config)
 
     @classmethod
     def register(cls, name: str, strategy_class: Type[TrainingStrategy]) -> None:
