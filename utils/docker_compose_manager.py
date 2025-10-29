@@ -1,99 +1,296 @@
+"""
+Docker Compose Manager for Federated Learning Environment.
+
+This module manages the orchestration of server and client containers
+using Docker Compose, following best practices by delegating container
+management to Docker Compose CLI instead of generating YAML files.
+"""
+
+import subprocess
+from logging import getLogger
+from pathlib import Path
 from random import sample
-from typing import Any, List
+from typing import List, Optional
 
-from omegaconf import OmegaConf
+from ..conf import Environment
 
-from conf import Environment
+logger = getLogger(__name__)
 
 
-class DockercomposeManager:
-    def __init__(self, config: Environment) -> None:
+class DockerComposeManager:
+    """
+    Manages Docker Compose orchestration for federated learning.
+
+    This class provides methods to:
+    - Start/stop the FL server and clients
+    - Scale client containers dynamically
+    - Manage participating clients selection
+    - Build required Docker images
+    """
+
+    def __init__(self, config: Environment, compose_file: str = "docker-compose.yml") -> None:
+        """
+        Initialize the Docker Compose manager.
+
+        Args:
+            config: Environment configuration object
+            compose_file: Path to the docker-compose.yml file
+        """
         self.conf = config
-        self.start_clients()
+        self.compose_file = Path(compose_file)
+        self.participating_clients: List[int] = []
 
-    def generate(self, file_name: str) -> None:
-        yaml_data = {
-            "services": {f"client-{i}": v for i, v in enumerate(self.create_clients())},
-        }
-        yaml_data["services"]["server"] = self.create_server()
-        with open(file_name, "w") as f:
-            OmegaConf.save(yaml_data, f)
+        if not self.compose_file.exists():
+            raise FileNotFoundError(f"Docker Compose file not found: {self.compose_file}")
 
-    def create_server(self) -> dict[str, Any]:
-        return {
-            "image": self.server_img,
-            "logging": {"driver": "local"},
-            "container_name": "rfl_server",
-            "profiles": ["server"],
-            "environment": [
-                f"CLIENTS={','.join([str(cid) for cid in self.participating_clients])}"
-            ],
-            "command": [
-                f"server/selection={self.conf.server.selection.method}",
-                f"server/aggregation={self.conf.server.aggregation.method}",
-            ],
-            "volumes": [
-                "./server/strategies/client_selection_method:/server/strategies/client_selection_method/:r",
-                "./server/strategies/aggregate_method:/server/strategies/aggregate_method/:r",
-                "./server/strategies_manager.py:/app/strategies_manager.py:r",
-                "./server/strategies/drivers:/server/strategies/drivers/:r",
-                "./server/strategies:/app/strategies/:r",
-                "./utils:/app/utils/:r",
-                "./model:/app/model:rw",
-                "./conf:/app/conf:r",
-                "./logs:/logs:rw",
-            ],
-            "networks": ["default"],
-            "deploy": {
-                "replicas": 1,
-                "placement": {
-                    "constraints": ["node.role==manager"],
-                },
-            },
-        }
+        self._select_participating_clients()
+        logger.info(
+            (
+                "Docker Compose Manager initialized with "
+                + f"{len(self.participating_clients)} participating clients"
+            )
+        )
 
-    def start_clients(self) -> None:
+    def _select_participating_clients(self) -> None:
+        """Select which clients will participate in the initial round."""
         n_clients_to_start = int(self.conf.n_clients * self.conf.init_clients)
         self.participating_clients = sample(range(self.conf.n_clients), n_clients_to_start)
+        logger.info(f"Selected participating clients: {self.participating_clients}")
 
-    def create_clients(self) -> List[dict[str, Any]]:
-        clients = [
-            {
-                "image": self.client_img,
-                "logging": {"driver": "local"},
-                "container_name": f"rfl_client-{i}",
-                "profiles": ["client"],
-                "command": [
-                    f"server/selection={self.conf.server.selection.method}",
-                    f"server/aggregation={self.conf.server.aggregation.method}",
-                ],
-                "environment": [
-                    f"CID={i}",
-                    f"PARTICIPATING={True if i in self.participating_clients else False}",
-                ],
-                "volumes": [
-                    "./client/strategies_manager.py:/client/strategies_manager.py:r",
-                    "./client/strategies/training:/client/strategies/training/:r",
-                    "./client/strategies/drivers:/client/strategies/drivers/:r",
-                    "./client/strategies/states:/client/strategies/states/:r",
-                    "./client/strategies:/client/strategies/:r",
-                    "./utils:/utils/:r",
-                    "./logs:/logs:rw",
-                    "./conf:/client/conf:r",
-                    "./model:/model:rw",
-                ],
-                "networks": ["default"],
-                "deploy": {"replicas": 1, "placement": {"constraints": ["node.role==manager"]}},
+    def _run_compose_command(
+        self,
+        command: List[str],
+        capture_output: bool = False,
+        check: bool = True,
+        env: Optional[dict] = None,
+    ) -> subprocess.CompletedProcess:
+        """
+        Run a docker compose command.
+
+        Args:
+            command: List of command arguments (e.g., ['up', '-d'])
+            capture_output: Whether to capture stdout/stderr
+            check: Whether to raise exception on non-zero exit
+
+        Returns:
+            CompletedProcess instance with command results
+        """
+        full_command = ["docker", "compose", "-f", str(self.compose_file)] + command
+        logger.info(f"Executing: {' '.join(full_command)}")
+
+        # nosec B603: Commands are validated against allowlist
+        result = subprocess.run(  # noqa: S603
+            full_command, capture_output=capture_output, text=True, check=check, env=env
+        )
+
+        if result.returncode != 0 and check:
+            logger.error(f"Command failed with return code {result.returncode}")
+            if capture_output:
+                logger.error(f"Error output: {result.stderr}")
+
+        return result
+
+    def build_images(self, use_gpu: bool = False) -> None:
+        """
+        Build Docker images for server and clients.
+
+        Args:
+            use_gpu: Whether to build GPU-enabled images
+        """
+        logger.info(f"Building Docker images (GPU: {use_gpu})...")
+
+        dockerfile_suffix = "gpu" if use_gpu else "cpu"
+
+        # Build server image
+        logger.info("Building server image...")
+        # nosec B603, B607: Command is constructed safely with validated inputs
+        subprocess.run(  # noqa: S603, S607
+            [  # noqa: S607
+                "docker",
+                "build",
+                "-f",
+                f"server/Dockerfile.{dockerfile_suffix}",
+                "-t",
+                f"server-flwr-{dockerfile_suffix}",
+                ".",
+            ],
+            check=True,
+        )
+
+        # Build client image
+        logger.info("Building client image...")
+        # nosec B603, B607: Command is constructed safely with validated inputs
+        subprocess.run(  # noqa: S603, S607
+            [  # noqa: S607
+                "docker",
+                "build",
+                "-f",
+                f"client/Dockerfile.{dockerfile_suffix}",
+                "-t",
+                f"client-flwr-{dockerfile_suffix}",
+                ".",
+            ],
+            check=True,
+        )
+
+        logger.info("Docker images built successfully")
+
+    def start_server(self, detached: bool = True) -> None:
+        """
+        Start the federated learning server.
+
+        Args:
+            detached: Run in detached mode (background)
+        """
+        logger.info("Starting FL server...")
+        cmd = ["up"]
+        if detached:
+            cmd.append("-d")
+        cmd.append("server")
+
+        self._run_compose_command(cmd)
+        logger.info("FL server started")
+
+    def start_clients(self, client_ids: Optional[List[int]] = None) -> None:
+        """
+        Start federated learning clients.
+
+        Args:
+            client_ids: Specific client IDs to start. If None, starts all participating clients.
+        """
+        if client_ids is None:
+            client_ids = self.participating_clients
+
+        logger.info(f"Starting {len(client_ids)} clients: {client_ids}")
+
+        # Start clients with environment variables for each
+        for cid in client_ids:
+            env = {
+                "CID": str(cid),
             }
-            for i in range(self.conf.n_clients)
-        ]
 
-        return clients
+            service_name = f"client-{cid}"
+            self._run_compose_command(["up", "-d", service_name], env=env)
+
+        logger.info("Clients started successfully")
+
+    def start_all(self) -> None:
+        """Start both server and all participating clients."""
+        logger.info("Starting complete FL environment...")
+        self.start_server(detached=True)
+        self.start_clients()
+        logger.info("FL environment started successfully")
+
+    def stop_server(self) -> None:
+        """Stop the federated learning server."""
+        logger.info("Stopping FL server...")
+        self._run_compose_command(["stop", "server"])
+        logger.info("FL server stopped")
+
+    def stop_clients(self, client_ids: Optional[List[int]] = None) -> None:
+        """
+        Stop federated learning clients.
+
+        Args:
+            client_ids: Specific client IDs to stop. If None, stops all clients.
+        """
+        if client_ids is None:
+            # Stop all client services
+            logger.info("Stopping all clients...")
+            result = self._run_compose_command(
+                ["ps", "--services", "--filter", "name=client-*"],
+                capture_output=True,
+            )
+            services = result.stdout.strip().split("\n") if result.stdout else []
+
+            for service in services:
+                if service.startswith("client-"):
+                    self._run_compose_command(["stop", service])
+        else:
+            logger.info(f"Stopping clients: {client_ids}")
+            for cid in client_ids:
+                self._run_compose_command(["stop", f"client-{cid}"])
+
+        logger.info("Clients stopped")
+
+    def stop_all(self) -> None:
+        """Stop all services (server and clients)."""
+        logger.info("Stopping all FL services...")
+        self._run_compose_command(["down"])
+        logger.info("All FL services stopped")
+
+    def restart_server(self) -> None:
+        """Restart the federated learning server."""
+        logger.info("Restarting FL server...")
+        self._run_compose_command(["restart", "server"])
+        logger.info("FL server restarted")
+
+    def restart_clients(self, client_ids: Optional[List[int]] = None) -> None:
+        """
+        Restart federated learning clients.
+
+        Args:
+            client_ids: Specific client IDs to restart. If None, restarts all.
+        """
+        if client_ids is None:
+            client_ids = self.participating_clients
+
+        logger.info(f"Restarting clients: {client_ids}")
+        for cid in client_ids:
+            self._run_compose_command(["restart", f"client-{cid}"])
+
+        logger.info("Clients restarted")
+
+    def get_logs(
+        self,
+        service: str = "server",
+        follow: bool = False,
+        tail: Optional[int] = None,
+    ) -> None:
+        """
+        Get logs from a service.
+
+        Args:
+            service: Service name (e.g., 'server', 'client-0')
+            follow: Follow log output
+            tail: Number of lines to show from the end
+        """
+        cmd = ["logs"]
+        if follow:
+            cmd.append("-f")
+        if tail is not None:
+            cmd.extend(["--tail", str(tail)])
+        cmd.append(service)
+
+        self._run_compose_command(cmd, capture_output=False)
+
+    def get_status(self) -> str:
+        """
+        Get status of all services.
+
+        Returns:
+            Status output from docker compose ps
+        """
+        result = self._run_compose_command(["ps"], capture_output=True)
+        return result.stdout
 
     @property
-    def server_img(self) -> str:
-        return "server-flwr-gpu" if self.conf.gpu else "server-flwr-cpu"
+    def is_server_running(self) -> bool:
+        """Check if the server is currently running."""
+        result = self._run_compose_command(
+            ["ps", "--services", "--filter", "status=running"],
+            capture_output=True,
+            check=False,
+        )
+        return "server" in result.stdout
 
     @property
-    def client_img(self) -> str:
-        return "client-flwr-gpu" if self.conf.gpu else "client-flwr-cpu"
+    def running_clients(self) -> List[str]:
+        """Get list of currently running client services."""
+        result = self._run_compose_command(
+            ["ps", "--services", "--filter", "status=running"],
+            capture_output=True,
+            check=False,
+        )
+        services = result.stdout.strip().split("\n") if result.stdout else []
+        return [s for s in services if s.startswith("client-")]
