@@ -88,8 +88,8 @@ class RoundRobinSelectionMethodConfig(SelectionMethodConfig):
 class LetsFedSelectionMethodConfig(SelectionMethodConfig):
     """LetsFed selection method configuration."""
 
-    participating_selection_method: str = "random"
-    non_participating_selection_method: str = "poc"
+    participating_selection_method: SelectionMethodConfig = MISSING
+    non_participating_selection_method: SelectionMethodConfig = MISSING
 
 
 # ============================================================================
