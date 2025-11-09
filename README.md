@@ -63,14 +63,18 @@ A modular and extensible **Federated Learning research framework** built on [Flo
 
 ## ✨ Key Features
 
-- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Builder Pattern, Chain of Responsibility, and Context Object Pattern
-- **🔌 Extensible Design**: Plugin-based driver system with DriverContext for composable and testable client behaviors
+- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Injection Pattern, Chain of Responsibility, and Context Object Pattern
+- **🔌 Extensible Design**: Plugin-based driver system with DriverContext for composable and testable behaviors
+  - Drivers managed by strategies
+  - DriverContext transfers results without polluting client/server state
+  - Strategy state encapsulated in constructors (`__init__`)
 - **🎛️ Multiple Strategy Support**:
-  - **Aggregation**: FedAvg, MaxFL
+  - **Aggregation**: FedAvg, MaxFL (with optional server-side model)
   - **Client Selection**: Random, DEEV, PoC, Round Robin, LetsFed
   - **Training**: Normal, LetsFed, MaxFL, FedPer, QFFL
-- **🐳 Containerized Deployment**: Docker and Docker Compose with GPU support
-- **⚙️ YAML Configuration**: Type-safe configuration management with OmegaConf
+- **🐳 Containerized Deployment**: Orchestrated via `run_experiments.py` and `docker_compose_manager.py`
+- **⚙️ Modular Configuration**: Each module has its own `structs.py` with dataclass configs
+  - Factories receive module-specific config dataclasses
 - **📊 Comprehensive Logging**: Automatic metrics tracking for analysis
 - **🎯 Type Safety**: Full type hints throughout the codebase
 - **🧪 Testable Design**: DriverContext pattern enables easy unit testing without complex mocks
@@ -81,17 +85,20 @@ A modular and extensible **Federated Learning research framework** built on [Flo
 LetsFed/
 ├── 🖥️  server/                        # Federated Learning Server
 │   ├── strategies/
-│   │   ├── fl_server.py              # Main server implementation (Strategy Pattern)
-│   │   ├── factory.py                # ServerBuilder (Builder Pattern)
+│   │   ├── fl_server.py              # Main server (uses ClientManager for CID/ClientProxy mapping)
+│   │   ├── server_builder.py         # ServerBuilder (Dependency Injection via Builder)
+│   │   ├── structs.py                # Server-specific config dataclasses
 │   │   ├── aggregate_method/         # Aggregation strategies (Factory Pattern)
 │   │   │   ├── base.py               # Base aggregation interface
 │   │   │   ├── factory.py            # AggregationFactory
+│   │   │   ├── structs.py            # Aggregation config dataclasses
 │   │   │   └── types/
 │   │   │       ├── fedavg.py         # FedAvg aggregation
-│   │   │       └── maxfl.py          # MaxFL aggregation
+│   │   │       └── maxfl.py          # MaxFL aggregation (server has own model)
 │   │   └── client_selection_method/  # Selection strategies (Factory Pattern)
 │   │       ├── base.py               # Base selection interface
 │   │       ├── factory.py            # ClientSelectionFactory
+│   │       ├── structs.py            # Selection config dataclasses
 │   │       └── types/
 │   │           ├── random.py         # Random selection
 │   │           ├── deev.py           # DEEV selection
@@ -104,11 +111,13 @@ LetsFed/
 │
 ├── 📱 client/                         # Federated Learning Client
 │   ├── strategies/
-│   │   ├── fl_client.py              # Main client implementation (Strategy Pattern)
-│   │   ├── factory.py                # ClientBuilder (Builder Pattern)
+│   │   ├── fl_client.py              # Main client (participation decided in evaluate())
+│   │   ├── client_builder.py         # ClientBuilder (Dependency Injection via Builder)
+│   │   ├── structs.py                # Client-specific config dataclasses
 │   │   ├── training/                 # Training strategies (Factory Pattern)
-│   │   │   ├── base.py               # Base training interface
-│   │   │   ├── factory.py            # TrainingStrategyFactory
+│   │   │   ├── base.py               # Base training (manages drivers, __init__ state)
+│   │   │   ├── factory.py            # TrainingStrategyFactory (receives module config)
+│   │   │   ├── structs.py            # Training config dataclasses
 │   │   │   └── types/
 │   │   │       ├── normal.py         # Standard FedAvg training
 │   │   │       ├── letsfed.py        # LetsFed training
@@ -116,20 +125,19 @@ LetsFed/
 │   │   │       ├── fedper.py         # FedPer training
 │   │   │       └── qffl.py           # QFFL training
 │   │   └── drivers/                  # Modular behaviors (Chain of Responsibility + Context Object)
-│   │       ├── driver.py             # Base driver interface
+│   │       ├── driver.py             # Base driver interface (run receives DriverContext)
 │   │       ├── context.py            # DriverContext for explicit side effects
 │   │       ├── accuracy.py           # Accuracy-based decision driver
 │   │       ├── curiosity.py          # Curiosity-driven participation
-│   │       ├── maxfl_qk.py           # MaxFL quality metric
-│   │       └── maxfl_pre_training.py # MaxFL initialization
+│   │       └── maxfl_qk.py           # MaxFL quality metric (embeds pre-training logic)
 │   ├── strategies_manager.py         # Client entrypoint
 │   ├── Dockerfile                    # Client container (CPU)
 │   └── Dockerfile.gpu                # Client container (GPU)
 │
-├── ⚙️  conf/                          # Configuration Management
+├── ⚙️  conf/                          # Central Configuration
 │   ├── config.yaml                   # Main configuration file
 │   ├── loader.py                     # Config loader with validation
-│   └── structs.py                    # Type-safe config dataclasses
+│   └── structs.py                    # Top-level config dataclasses
 │
 ├── 📊 dataset_manager/                # Dataset Handling
 │   ├── dataset_manager.py            # Dataset partitioning logic
@@ -141,11 +149,11 @@ LetsFed/
 │   ├── logger.py                     # Metrics logging system
 │   ├── docker_compose_manager.py     # Dynamic compose generator
 │   └── utils.py                      # Helper functions
-││
+│
+├── 🚀 run_experiments.py              # Experiment orchestration script
 ├── 📋 requirements-client.txt         # Client dependencies
 ├── 📋 requirements-server.txt         # Server dependencies
-├── 🐳 docker-compose.yml              # Container orchestration (CPU)
-├── 🐳 docker-compose.gpu.yml          # Container orchestration (GPU)
+├── 🐳 docker-compose.yml              # Container orchestration
 ├── 🔨 build.sh                        # Build script
 └── 🧪 test/                           # Testing and analysis
     └── teste.ipynb                   # Results analysis notebook
@@ -203,7 +211,14 @@ graph TB
 
 ### 1. Strategy Pattern + Dependency Injection
 
-The core classes (`FLServer` and `FLClient`) are **generic implementations** that delegate behavior to injected strategies:
+The core classes (`FLServer` and `FLClient`) are **generic implementations** that delegate behavior to injected strategies. Server and client are created via **Builder classes**, which inject strategies created by their respective factories.
+
+**Key Architectural Informations:**
+- **Strategy state encapsulation**: Strategies have `__init__` constructors and store their special attributes internally
+- **Driver and DriverContext management in strategies**: Methods `add_drivers()` and `apply_drivers()` strategy classes. `apply_drivers()` creates a `DriverContext`, applies drivers sequentially, then adds values to **strategy attributes**
+- **Client participation decision**: Clients decide participation in the `evaluate()` method after receiving aggregated weights, setting their `participant_state` for the next round
+- **Server-side client management**: Server's `configure_fit()` uses `ClientManager` to list connected clients before selection, requiring CID-to-ClientProxy mapping
+- **Server model support**: Server can have its own model used by certain aggregation methods (e.g., MaxFL)
 
 ```mermaid
 classDiagram
@@ -260,7 +275,19 @@ classDiagram
 
 ### 2. Factory Pattern
 
-Used for creating different strategy implementations:
+Used for creating different strategy implementations. **Important**: Factories receive **module-specific config dataclasses**. Each module has its own `structs.py` with configuration dataclasses.
+
+**Factory Signature Change:**
+```python
+# OLD: Factory.create(config: Environment)
+# NEW: Factory.create(config: ModuleSpecificConfig)
+
+# Example:
+class TrainingStrategyFactory:
+    @staticmethod
+    def create(config: TrainingConfig) -> TrainingStrategy:  # Module-specific config
+        ...
+```
 
 ```mermaid
 graph LR
@@ -299,9 +326,13 @@ graph LR
     TSF -.->|creates| MT
 ```
 
-### 3. Builder Pattern
+### 3. Builder/Injection Pattern
 
-Simplifies construction of `FLServer` and `FLClient` with all dependencies:
+Simplifies construction of `FLServer` and `FLClient` with all dependencies. **Server and client use Builder pattern** (dependency injection).
+
+**Builder files:**
+- `server/strategies/server_builder.py` - Builds FLServer with injected strategies
+- `client/strategies/client_builder.py` - Builds FLClient with injected training strategy
 
 ```mermaid
 sequenceDiagram
@@ -320,7 +351,12 @@ sequenceDiagram
 
 ### 4. Chain of Responsibility (Drivers)
 
-Training strategies can compose behaviors through a **pipeline of drivers**:
+Training strategies compose behaviors through a **pipeline of drivers** managed by the strategy itself.
+
+**Key Implementation Details:**
+- **Driver method signature**: `run(client, parameters, config, context: DriverContext) -> None`
+- **DriverContext flow**: Created by strategy's `apply_drivers()`, passed to each driver sequentially, then results extracted and stored in **strategy attributes**
+- **Strategy responsibility**: Strategies manage their own drivers via `add_drivers()` and `apply_drivers()` methods
 
 ```mermaid
 graph LR
@@ -430,10 +466,12 @@ class Driver(ABC):
         client: FLClient,
         parameters: NDArrays,
         config: Config,
-        context: DriverContext  # New parameter
+        context: DriverContext  # Context for storing results
     ) -> None:
         """
         Run driver and store results in context.
+
+        Drivers read from client but write to context, not client directly.
 
         Example:
             context.set('qk', computed_qk)
@@ -442,23 +480,54 @@ class Driver(ABC):
         ...
 ```
 
-**FLClient.apply_drivers() (Updated):**
+**Strategy.apply_drivers() (Updated):**
 ```python
-def apply_drivers(self, parameters: NDArrays, config: Config) -> dict:
-    """Apply all drivers using DriverContext"""
+def apply_drivers(self, client: FLClient, parameters: NDArrays, config: Config) -> dict:
+    """Apply all drivers using DriverContext, store results in strategy attributes"""
     context = DriverContext()
 
     # Run all drivers, collecting results in context
     for driver in self.drivers:
-        driver.run(self, parameters, config, context)
+        driver.run(client, parameters, config, context)
 
-    # Apply modifications from context to client
+    # Apply modifications from context to STRATEGY (not client)
     modifications = context.get_all()
     for key, value in modifications.items():
-        setattr(self, key, value)
+        setattr(self, key, value)  # Strategy encapsulates its state
 
     return modifications  # For logging/debugging
 ```
+
+**Example: Combining Drivers**
+
+```python
+class LetsFedTraining(TrainingStrategy):
+    def __init__(self, config: TrainingConfig):
+        """Strategy now has __init__ and stores its own state"""
+        self.config = config
+        self.willing = False  # Strategy attribute, not client attribute
+        self.curiosity = False
+        # ... other strategy-specific attributes
+
+    def _get_drivers(self):
+        return [
+            AccuracyDriver(),      # Decide participation → sets 'willing' in strategy
+            CuriosityDriver(),     # Manage exploration → sets 'curiosity', 'state' in strategy
+            MaxFLQkDriver(),       # Add quality metric → sets 'qk' in strategy (reused from MaxFL!)
+        ]
+
+    def apply_drivers(self, client, parameters, config):
+        """Drivers write to strategy attributes via DriverContext"""
+        context = DriverContext()
+        for driver in self.drivers:
+            driver.run(client, parameters, config, context)
+
+        # Store in strategy (self), not client
+        for key, value in context.get_all().items():
+            setattr(self, key, value)
+```
+
+This demonstrates the power of the **Chain of Responsibility pattern**: drivers from different strategies can be freely combined, and strategy state is properly encapsulated!
 
 ### Federated Learning Flow
 
@@ -466,31 +535,40 @@ def apply_drivers(self, parameters: NDArrays, config: Config) -> dict:
 sequenceDiagram
     participant Server
     participant ClientManager
+    participant SelectionMethod
     participant Client1
     participant Client2
+    participant Strategy1
+    participant Strategy2
 
     Note over Server: Round N starts
 
-    Server->>Server: configure_fit()
-    Server->>Server: selection.select()
-    Server->>ClientManager: sample_clients()
-    ClientManager-->>Server: [Client1, Client2]
+    Server->>ClientManager: list_clients()
+    ClientManager-->>Server: Connected clients (ClientProxy list)
+    Server->>Server: Map CID to ClientProxy
+    Server->>SelectionMethod: select(client_manager, num_clients)
+    SelectionMethod-->>Server: [Client1, Client2]
 
     par Training Phase
         Server->>Client1: fit(parameters)
         Server->>Client2: fit(parameters)
 
-        Client1->>Client1: apply_drivers()
-        Client1->>Client1: training_strategy.fit()
-        Client1-->>Server: updated_weights_1
+        Client1->>Strategy1: fit(client, parameters, config)
+        Strategy1->>Strategy1: apply_drivers(client, params, config)
+        Note over Strategy1: DriverContext created<br/>Drivers run sequentially<br/>Results stored in strategy
+        Strategy1->>Strategy1: training logic
+        Strategy1-->>Client1: weights, num_examples, metrics
+        Client1-->>Server: FitRes
 
-        Client2->>Client2: apply_drivers()
-        Client2->>Client2: training_strategy.fit()
-        Client2-->>Server: updated_weights_2
+        Client2->>Strategy2: fit(client, parameters, config)
+        Strategy2->>Strategy2: apply_drivers(client, params, config)
+        Strategy2->>Strategy2: training logic
+        Strategy2-->>Client2: weights, num_examples, metrics
+        Client2-->>Server: FitRes
     end
 
-    Server->>Server: aggregate_fit()
-    Server->>Server: aggregation.agg_fit()
+    Server->>Server: aggregate_fit(results)
+    Note over Server: Aggregation may use<br/>server's own model
 
     Note over Server: Evaluation Phase
 
@@ -498,11 +576,16 @@ sequenceDiagram
         Server->>Client1: evaluate(parameters)
         Server->>Client2: evaluate(parameters)
 
-        Client1->>Client1: training_strategy.evaluate()
-        Client1-->>Server: metrics_1
+        Client1->>Strategy1: evaluate(client, parameters, config)
+        Strategy1->>Strategy1: compute metrics
+        Note over Strategy1: Client decides participation<br/>for next round here
+        Strategy1-->>Client1: loss, num_examples, metrics
+        Client1-->>Server: EvaluateRes
 
-        Client2->>Client2: training_strategy.evaluate()
-        Client2-->>Server: metrics_2
+        Client2->>Strategy2: evaluate(client, parameters, config)
+        Strategy2->>Strategy2: compute metrics
+        Strategy2-->>Client2: loss, num_examples, metrics
+        Client2-->>Server: EvaluateRes
     end
 
     Server->>Server: aggregate_evaluate()
@@ -566,30 +649,6 @@ client:
     # threshold: 1.0
 ```
 
-#### Driver System (Modular Behaviors)
-
-Drivers are **composable components** that add specific behaviors to training strategies using the **DriverContext pattern**:
-
-| Driver | Purpose | Sets in Context |
-|--------|---------|-----------------|
-| **AccuracyDriver** | Decides if client wants to participate | `willing` (bool) |
-| **CuriosityDriver** | Manages exploration/exploitation states | `curiosity` (bool), `state` (int), `rounds_intention` (int) |
-| **MaxFLQkDriver** | Calculates client quality metric | `qk` (float) |
-| **MaxFLPreTrainingDriver** | Computes local fit loss via pre-training | `l_fit_loss` (float) |
-
-**Example: Combining Drivers**
-
-```python
-class LetsFedTraining(TrainingStrategy):
-    def _get_drivers(self):
-        return [
-            AccuracyDriver(),      # Decide participation → sets 'willing'
-            CuriosityDriver(),     # Manage exploration → sets 'curiosity', 'state'
-            MaxFLQkDriver(),       # Add quality metric → sets 'qk' (reused from MaxFL!)
-        ]
-```
-
-This demonstrates the power of the **Chain of Responsibility pattern**: drivers from different strategies can be freely combined!
 
 ## 🔧 Extending the Framework
 
@@ -602,26 +661,40 @@ The framework is designed for easy extensibility. Here's how to add new componen
 ```python
 from ..base import TrainingStrategy
 from ...drivers.driver import Driver
+from ...drivers.context import DriverContext
 
 class MyCustomTraining(TrainingStrategy):
-    def init(self, client):
-        # Initialize client-specific parameters
-        client.add_drivers(self._get_drivers())
+    def __init__(self, config: TrainingConfig):
+        """Strategies now have __init__ and store their own state"""
+        self.config = config
+        self.my_custom_metric = 0.0  # Strategy attribute
+        self.drivers = self._get_drivers()
 
     def _get_drivers(self) -> list[Driver]:
-        # Return list of drivers to use
+        """Return list of drivers to use"""
         return [AccuracyDriver(), MyCustomDriver()]
 
+    def apply_drivers(self, client, parameters, config):
+        """Apply drivers and store results in strategy (not client)"""
+        context = DriverContext()
+        for driver in self.drivers:
+            driver.run(client, parameters, config, context)
+
+        # Store in strategy attributes
+        for key, value in context.get_all().items():
+            setattr(self, key, value)
+
     def fit(self, client, parameters, config):
-        # Implement training logic
+        """Implement training logic"""
         client.model.set_weights(parameters)
-        client.apply_drivers(parameters, config)
-        # ... training code ...
+        self.apply_drivers(client, parameters, config)
+        # ... training code using self.my_custom_metric ...
         return updated_weights, num_examples, metrics
 
     def evaluate(self, client, parameters, config):
-        # Implement evaluation logic
-        # ...
+        """Implement evaluation logic - client decides participation here"""
+        # ... evaluation code ...
+        # Client sets its participation state for next round
         return loss, num_examples, metrics
 ```
 
@@ -630,21 +703,33 @@ class MyCustomTraining(TrainingStrategy):
 ```python
 class TrainingStrategyFactory:
     @staticmethod
-    def create(config: Environment) -> TrainingStrategy:
+    def create(config: TrainingConfig) -> TrainingStrategy:  # Module-specific config!
         strategies = {
-            "normal": NormalClient,
-            "letsfed": LetsFedClient,
+            "normal": NormalTraining,
+            "letsfed": LetsFedTraining,
             "my_custom": MyCustomTraining,  # Add here
         }
-        return strategies[config.client.training_strategy.name]()
+        strategy_class = strategies[config.name]
+        return strategy_class(config)  # Pass config to __init__
 ```
 
-3. **Use in configuration**:
+3. **Add config dataclass** in `client/strategies/training/structs.py`:
+
+```python
+@dataclass
+class MyCustomTrainingConfig:
+    name: str
+    my_parameter: float
+    # ... other parameters
+```
+
+4. **Use in configuration**:
 
 ```yaml
 client:
   training_strategy:
     name: my_custom
+    my_parameter: 1.5
 ```
 
 ### Adding a New Driver
@@ -829,14 +914,29 @@ graph TB
 
 ### Scaling Clients
 
-Modify the number of clients in `docker-compose.yml` or use the manager:
+The framework uses `run_experiments.py` for experiment orchestration with updated `docker_compose_manager.py`:
 
 ```bash
+# Run experiment with orchestration script
+python run_experiments.py
+
+# Or use docker-compose manager directly
 python utils/docker_compose_manager.py --n-clients 50
 docker-compose up
 ```
 
 ## ⚙️ Configuration Reference
+
+### Modular Configuration System
+
+Each module has its own `structs.py` with dataclass configurations:
+- `conf/structs.py` - Top-level environment config
+- `server/strategies/structs.py` - Server-specific config
+- `server/strategies/aggregate_method/structs.py` - Aggregation method configs
+- `server/strategies/client_selection_method/structs.py` - Selection method configs
+- `client/strategies/structs.py` - Client-specific config
+- `client/strategies/training/structs.py` - Training strategy configs
+
 
 ### Complete Configuration Example
 
@@ -895,6 +995,31 @@ model:
   # Model-specific parameters...
 ```
 
+## 🛠️ Development
+
+### Project Philosophy
+
+This framework follows key software engineering principles:
+
+- **🎯 SOLID Principles**
+  - Single Responsibility: Each class has one clear purpose
+  - Open/Closed: Extend via new classes, not modifications
+  - Liskov Substitution: Strategies are interchangeable
+  - Interface Segregation: Focused, minimal interfaces
+  - Dependency Inversion: Depend on abstractions, not concretions
+
+- **🎨 Design Patterns**
+  - Strategy Pattern for algorithm selection
+  - Factory Pattern for strategy creation (receives module-specific configs)
+  - Builder/Injection Pattern for server/client construction (dependency injection)
+  - Chain of Responsibility for driver pipeline (managed by strategies)
+  - Context Object Pattern for explicit side effects and testability
+
+- **📦 Modular Design**
+  - Clear separation of concerns
+  - Composable components
+  - Minimal coupling, high cohesion
+
 
 
 ## 🎓 Research & Publications
@@ -915,32 +1040,6 @@ If you use this framework in your research, please cite:
   doi={10.1109/ICMLA61862.2024.00055}
 }
 ```
-
-## 🛠️ Development
-
-### Project Philosophy
-
-This framework follows key software engineering principles:
-
-- **🎯 SOLID Principles**
-  - Single Responsibility: Each class has one clear purpose
-  - Open/Closed: Extend via new classes, not modifications
-  - Liskov Substitution: Strategies are interchangeable
-  - Interface Segregation: Focused, minimal interfaces
-  - Dependency Inversion: Depend on abstractions, not concretions
-
-- **🎨 Design Patterns**
-  - Strategy Pattern for algorithm selection
-  - Factory Pattern for object creation
-  - Builder Pattern for complex construction
-  - Chain of Responsibility for driver pipeline
-  - Context Object Pattern for explicit side effects and testability
-
-- **📦 Modular Design**
-  - Clear separation of concerns
-  - Composable components
-  - Minimal coupling, high cohesion
-
 
 ## 🔒 Security Considerations
 
