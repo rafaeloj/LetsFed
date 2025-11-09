@@ -9,9 +9,9 @@ services:
       driver: local
     volumes:
       # Model weights (read-write for saving/loading)
-      - ./model:/app/model:rw
+      - model_data:/app/model:rw
       # Logs (read-write)
-      - ./logs:/app/logs:rw
+      - log_data:/app/logs:rw
     networks:
       - fl_network
 

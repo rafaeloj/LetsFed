@@ -9,22 +9,26 @@ from typing import Type, Union
 
 from omegaconf import OmegaConf
 
-from .structs import (
-    DeevSelectionMethodConfig,
-    Environment,
-    FedAvgAggregationMethodConfig,
+from ..client.strategies.training.structs import (
     FedPerTrainingStrategyConfig,
-    LetsFedSelectionMethodConfig,
     LetsFedTrainingStrategyConfig,
-    MaxFLAggregationMethodConfig,
     MaxFLTrainingStrategyConfig,
     NormalTrainingStrategyConfig,
-    PoCSelectionMethodConfig,
-    QFFLAggregationMethodConfig,
     QFFLTrainingStrategyConfig,
+)
+from ..server.strategies.aggregate_method.structs import (
+    FedAvgAggregationMethodConfig,
+    MaxFLAggregationMethodConfig,
+    QFFLAggregationMethodConfig,
+)
+from ..server.strategies.client_selection_method.structs import (
+    DeevSelectionMethodConfig,
+    LetsFedSelectionMethodConfig,
+    PoCSelectionMethodConfig,
     RandomSelectionMethodConfig,
     RoundRobinSelectionMethodConfig,
 )
+from .structs import Environment
 
 # Register all structured configs
 OmegaConf.register_new_resolver("aggregation_factory", lambda name: _get_aggregation_class(name))

@@ -1,6 +1,6 @@
 # General Configuration
 rounds: 10
-n_clients: 30
+n_clients: 5
 init_clients: 1.0
 gpu: false
 log_path: logs
@@ -24,7 +24,7 @@ server:
   # Selection configuration
   selection_method:
     name: random  # Options: random, deev, poc, round_robin, letsfed
-    perc_of_clients: 0.3
+    perc_of_clients: 0.5
     # DEEV specific parameters (only used when name is deev)
     # decay: 0.95
     # LetsFed specific parameters (only used when name is letsfed)
