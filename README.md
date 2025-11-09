@@ -807,14 +807,14 @@ Similar process in `server/strategies/aggregate_method/types/`.
 
 ```mermaid
 graph TB
-    subgraph "Easy to Extend"
+    subgraph EasyToExtend["Easy to Extend"]
         NT[New Training Strategy]
         ND[New Driver]
         NS[New Selection Method]
         NA[New Aggregation Method]
     end
 
-    subgraph "No Changes Needed"
+    subgraph NoChangesNeeded["No Changes Needed"]
         FC[FLClient]
         FS[FLServer]
         CF[Config System]
@@ -830,8 +830,8 @@ graph TB
     Factory2 -->|no change| FS
     Factory3 -->|no change| FS
 
-    style "Easy to Extend" fill:#c8e6c9
-    style "No Changes Needed" fill:#fff9c4
+    style EasyToExtend fill:#c8e6c9
+    style NoChangesNeeded fill:#fff9c4
 ```
 
 **Key Principle**: You extend behavior by **adding new classes**, not by **modifying existing ones** (Open/Closed Principle).
