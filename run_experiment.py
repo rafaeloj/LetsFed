@@ -6,9 +6,12 @@ This script shows how to orchestrate federated learning experiments using
 Docker Compose with proper separation of concerns.
 """
 
+from logging import getLogger
+
 from .conf.loader import load_config
 from .utils.docker_compose_manager import DockerComposeManager
-from .utils.logger import logger
+
+logger = getLogger(__name__)
 
 
 def main() -> None:
