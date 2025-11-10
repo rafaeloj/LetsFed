@@ -1,7 +1,7 @@
 import flwr as fl
 
-from ..conf import Environment
 from ..conf.loader import load_config
+from ..conf.structs import Environment
 from .strategies.server_builder import ServerBuilder
 
 

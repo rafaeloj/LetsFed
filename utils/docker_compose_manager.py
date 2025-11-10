@@ -12,7 +12,7 @@ from pathlib import Path
 from random import sample
 from typing import List, Optional
 
-from ..conf import Environment
+from ..conf.structs import Environment
 
 logger = getLogger(__name__)
 

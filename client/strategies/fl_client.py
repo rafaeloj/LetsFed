@@ -6,7 +6,7 @@ from flwr.common import (
 )
 from keras import Model
 
-from ...conf import Environment
+from ...conf.structs import Environment
 from ...dataset_manager.dataset_manager import DSManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger

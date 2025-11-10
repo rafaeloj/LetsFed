@@ -1,5 +1,5 @@
 # General Configuration
-rounds: 10
+rounds: 5
 n_clients: 5
 init_clients: 1.0
 gpu: false

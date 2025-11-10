@@ -3,7 +3,7 @@ import os
 import flwr as fl
 from omegaconf import OmegaConf
 
-from ..conf import Environment
+from ..conf.structs import Environment
 from .strategies.client_builder import ClientBuilder
 
 
