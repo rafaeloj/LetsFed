@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, List
 
 import numpy as np
 
-from ....utils.logger import Logger
+from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
 from ..structs import SelectionMethodConfig
 
