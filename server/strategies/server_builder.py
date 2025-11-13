@@ -6,9 +6,12 @@ learning servers with their required strategies (aggregation and client selectio
 """
 
 from ...conf.structs import Environment
+from ...utils.logger import Logger
 from .aggregate_method.factory import AggregationFactory
 from .client_selection_method.factory import ClientSelectionFactory
 from .fl_server import FLServer
+
+logger = Logger(__name__)
 
 
 class ServerBuilder:
@@ -34,6 +37,7 @@ class ServerBuilder:
             ValueError: If configuration is invalid
         """
         # Instantiating the aggregation and selection methods
+        logger.info("Building FLServer with specified strategies")
         aggregation_method = AggregationFactory.create(config.server.aggregation_method)
         selection_method = ClientSelectionFactory.create(config.server.selection_method)
 

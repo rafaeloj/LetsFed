@@ -1,10 +1,13 @@
 from typing import TYPE_CHECKING
 
+from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
 from ..structs import PoCSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
+
+logger = Logger(__name__)
 
 
 class POC(ClientSelectionMethod):
@@ -40,7 +43,9 @@ class POC(ClientSelectionMethod):
         Returns:
             A list of selected client IDs.
         """
+        logger.debug(f"Round {server_round}: POC selecting from {len(list_of_clients)} clients")
         if server_round == 1:
+            logger.info(f"Round {server_round}: POC selecting all clients")
             return list_of_clients
 
         lc: list[tuple[str, float]] = [
@@ -53,5 +58,10 @@ class POC(ClientSelectionMethod):
                 selected_clients.append(cid)
 
         clients2select = int(float(len(list_of_clients)) * float(self.config.perc_of_clients))
+
+        logger.info(
+            f"Round {server_round}: POC selected {len(selected_clients[:clients2select])}/"
+            + f"{len(list_of_clients)} clients"
+        )
 
         return selected_clients[:clients2select]

@@ -6,8 +6,11 @@ learning clients with their required training strategy.
 """
 
 from ...conf.structs import Environment
+from ...utils.logger import Logger
 from .fl_client import FLClient
 from .training.factory import TrainingStrategyFactory
+
+logger = Logger(__name__)
 
 
 class ClientBuilder:
@@ -39,6 +42,7 @@ class ClientBuilder:
         Raises:
             ValueError: If training strategy is not recognized
         """
+        logger.info(f"Building FLClient {cid}")
         training_strategy = TrainingStrategyFactory.create(config.client.training_strategy)
 
         return FLClient(cid=cid, config=config, training_strategy=training_strategy)

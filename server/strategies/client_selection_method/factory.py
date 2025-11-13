@@ -7,6 +7,7 @@ strategies.
 
 from typing import Type
 
+from ....utils.logger import Logger
 from .base import ClientSelectionMethod
 from .structs import SelectionMethodConfig
 from .types.deev import DEEV
@@ -14,6 +15,8 @@ from .types.letsfed import LetsFedSelection
 from .types.poc import POC
 from .types.random import RandomSelection
 from .types.round_robin import RoundRobinSelection
+
+logger = Logger(__name__)
 
 
 class ClientSelectionFactory:
@@ -46,6 +49,7 @@ class ClientSelectionFactory:
         Raises:
             ValueError: If selection method is not recognized
         """
+        logger.info(f"Creating selection method: {config.name}")
         method = config.name.lower()
 
         if method not in cls._registry:

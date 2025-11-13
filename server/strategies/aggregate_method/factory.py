@@ -6,10 +6,13 @@ This module implements the Factory pattern for creating aggregation strategies.
 
 from typing import Type
 
+from ....utils.logger import Logger
 from .base import AggregationMethod
 from .structs import AggregationMethodConfig
 from .types.fedavg import FedAVG
 from .types.maxfl import MaxFL
+
+logger = Logger(__name__)
 
 
 class AggregationFactory:
@@ -39,6 +42,7 @@ class AggregationFactory:
         Raises:
             ValueError: If aggregation method is not recognized
         """
+        logger.info(f"Creating aggregation method: {config.name}")
         method = config.name.lower()
 
         if method not in cls._registry:

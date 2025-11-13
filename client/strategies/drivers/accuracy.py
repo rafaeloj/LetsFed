@@ -6,11 +6,14 @@ from flwr.common import (
     NDArrays,
 )
 
+from ....utils.logger import Logger
 from .context import DriverContext
 from .driver import Driver
 
 if TYPE_CHECKING:
     from ..fl_client import FLClient
+
+logger = Logger(__name__)
 
 
 class AccuracyDriver(Driver):
@@ -36,9 +39,12 @@ class AccuracyDriver(Driver):
             config (Config): Configuration dictionary.
             context (DriverContext): Context for storing driver results.
         """
+        logger.debug(f"Client {client.cid}: AccuracyDriver started")
+
         # Case for first round
         server_round = config["rounds"]
         if server_round == 1:
+            logger.info(f"Client {client.cid}: First round - willing to participate")
             context.set("willing", True)
             return
 
@@ -49,10 +55,21 @@ class AccuracyDriver(Driver):
         g_tmp_loss, _ = g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
         c_tmp_loss, _ = client.model.evaluate(client.x_validation, client.y_validation, verbose=0)
 
+        logger.debug(
+            f"Client {client.cid}: AccuracyDriver - "
+            + f"Global loss: {g_tmp_loss:.4f}, Client loss: {c_tmp_loss:.4f}"
+        )
+
         willing = self._client_willing(
             global_loss=g_tmp_loss,
             client_loss=c_tmp_loss,
             threshold=client.conf.client.training_strategy.threshold_accuracy,
+        )
+
+        logger.info(
+            f"Client {client.cid}: AccuracyDriver - "
+            + f"Willing: {willing} (ratio={c_tmp_loss / g_tmp_loss:.4f}, "
+            + f"threshold={client.conf.client.training_strategy.threshold_accuracy})"
         )
 
         # Store result in context instead of directly modifying client

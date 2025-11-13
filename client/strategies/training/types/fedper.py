@@ -7,12 +7,15 @@ from flwr.common import (
     Scalar,
 )
 
+from .....utils.logger import Logger
 from .....utils.utils import Utils
 from ..base import TrainingStrategy
 from ..structs import FedPerTrainingStrategyConfig
 
 if TYPE_CHECKING:
     from ...client_builder import FLClient
+
+logger = Logger(__name__)
 
 
 class FedPerClient(TrainingStrategy):
@@ -28,6 +31,7 @@ class FedPerClient(TrainingStrategy):
             config: The training strategy configuration.
         """
         super().__init__(config)
+        logger.info("FedPerClient training strategy initialized")
 
     def fit(
         self, client: "FLClient", parameters: NDArrays, config: Config
@@ -44,17 +48,20 @@ class FedPerClient(TrainingStrategy):
             tuple[NDArrays, int, dict[str, Scalar]]: Updated model parameters,
             number of examples used for training, and additional metrics.
         """
+        logger.debug(f"Client {client.cid}: Starting FedPer fit operation")
         # Initialize fit response
         fit_response = {"cid": client.cid, "participating_state": client.get_participating_state()}
 
         # Calculate and store model size
         model_size = sum([layer.nbytes for layer in parameters])
         client.model_size = model_size
+        logger.debug(f"Client {client.cid}: Model size = {model_size / (1024**2):.2f} MB")
 
         # Determine if client is selected by server
         client.selected = Utils.is_select_by_server(
             client.cid, config["selected_by_server"].split(",")
         )
+        logger.info(f"Client {client.cid}: Selected = {client.selected}")
 
         if client.selected:
             # Store the last layer
@@ -69,6 +76,11 @@ class FedPerClient(TrainingStrategy):
             )
             client.g_fit_acc = np.mean(history.history["accuracy"])
             client.g_fit_loss = np.mean(history.history["loss"])
+
+            logger.info(
+                f"Client {client.cid}: Training completed - "
+                + f"Acc: {client.g_fit_acc:.4f}, Loss: {client.g_fit_loss:.4f}"
+            )
 
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
@@ -87,21 +99,28 @@ class FedPerClient(TrainingStrategy):
             tuple[NDArrays, int, dict[str, Scalar]]: Loss, number of examples used for evaluation,
             and additional metrics.
         """
+        logger.debug(f"Client {client.cid}: Starting FedPer evaluation")
         # Determine if client is selected by server
         client.selected = Utils.is_select_by_server(
             str(client.cid), config["selected_by_server"].split(",")
         )
+        logger.info(f"Client {client.cid}: Selected = {client.selected}")
 
         # Set weights and replace the last layer with the stored one
         if client.selected:
             last_layer = client.model.layers[-1]
             client.set_parameters(parameters)
             client.model.layers[-1] = last_layer
+            logger.debug(f"Client {client.cid}: Model parameters set for evaluation")
 
         # Evaluate the model
         loss, acc = client.model.evaluate(client.x_test, client.y_test)
         client.g_eval_loss = np.mean(loss)
         client.g_eval_acc = np.mean(acc)
+        logger.info(
+            f"Client {client.cid}: Evaluation completed - "
+            + f"Acc: {client.g_eval_acc:.4f}, Loss: {client.g_eval_loss:.4f}"
+        )
 
         evaluation_response = {
             "cid": client.cid,

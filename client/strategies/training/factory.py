@@ -6,6 +6,7 @@ This module implements the Factory pattern for creating aggregation strategies.
 
 from typing import Type
 
+from ....utils.logger import Logger
 from .base import TrainingStrategy
 from .structs import TrainingStrategyConfig
 from .types.fedper import FedPerClient
@@ -13,6 +14,8 @@ from .types.letsfed import LetsFedClient
 from .types.maxfl import MaxFLClient
 from .types.normal import NormalClient
 from .types.qffl import QFFLClient
+
+logger = Logger(__name__)
 
 
 class TrainingStrategyFactory:
@@ -45,6 +48,7 @@ class TrainingStrategyFactory:
         Raises:
             ValueError: If training strategy is not recognized
         """
+        logger.info(f"Creating training strategy: {config.name}")
         method = config.name.lower()
 
         if method not in cls._registry:

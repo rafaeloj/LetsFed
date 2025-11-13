@@ -11,12 +11,15 @@ from flwr.common import (
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
+from .....utils.logger import Logger
 from .....utils.utils import Utils
 from ..base import AggregationMethod
 from ..structs import FedAvgAggregationMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
+
+logger = Logger(__name__)
 
 
 class FedAVG(AggregationMethod):
@@ -52,8 +55,11 @@ class FedAVG(AggregationMethod):
         Returns:
             A tuple containing the aggregated Parameters and a dictionary of Scalar metrics.
         """
+        logger.debug(f"FedAvg aggregation: Processing {len(results)} training results")
+
         # Check if there are any results
         if not results:
+            logger.warning("FedAvg aggregation: No results to aggregate")
             return None, {}
 
         # Aggregate weights from selected and participating clients
@@ -67,8 +73,10 @@ class FedAVG(AggregationMethod):
                     )
 
         if len(weights_results) == 0:
+            logger.warning("FedAvg aggregation: No participating clients to aggregate")
             return None, {}
 
+        logger.debug(f"FedAvg aggregation: Aggregating {len(weights_results)} client models")
         parameters_aggregated = ndarrays_to_parameters(aggregate(weights_results))
 
         return parameters_aggregated, {}

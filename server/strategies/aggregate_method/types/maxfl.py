@@ -1,3 +1,4 @@
+from logging import getLogger
 from typing import TYPE_CHECKING, Optional, Union
 
 from flwr.common import (
@@ -18,6 +19,8 @@ from ..structs import MaxFLAggregationMethodConfig
 if TYPE_CHECKING:
     from ...fl_server import FLServer
 
+logger = getLogger(__name__)
+
 
 class MaxFL(AggregationMethod):
     """
@@ -32,6 +35,11 @@ class MaxFL(AggregationMethod):
             config: The aggregation method configuration.
         """
         super().__init__(config)
+        logger.info(
+            "MaxFL aggregation initialized - "
+            + f"lr={config.learning_rate}, epsilon={config.epsilon}, "
+            + f"pre_training_epochs={config.pre_training_epochs}"
+        )
 
     def _get_learning_rate(self, q_models_value: list[float]) -> float:
         """
@@ -43,7 +51,9 @@ class MaxFL(AggregationMethod):
         Returns:
             The calculated learning rate.
         """
-        return self.config.learning_rate / (sum(q_models_value) + self.config.epsilon)
+        lr = self.config.learning_rate / (sum(q_models_value) + self.config.epsilon)
+        logger.debug(f"Computed learning rate: {lr:.6f} (sum_qk={sum(q_models_value):.4f})")
+        return lr
 
     def agg_fit(
         self,
@@ -64,10 +74,16 @@ class MaxFL(AggregationMethod):
         Returns:
             A tuple containing the aggregated Parameters and a dictionary of Scalar metrics.
         """
+        logger.info(
+            f"Round {server_round}: MaxFL aggregating fit results from "
+            + f"{len(results)} clients ({len(failures)} failures)"
+        )
+
         # Construct weights results and q_models values
         weights_results = []
         q_models_value: list[float] = []
         qk_s: float = 0.0
+
         for _, fit_res in results:
             cid = fit_res.metrics["cid"]
             qk = fit_res.metrics["qk"]
@@ -76,16 +92,36 @@ class MaxFL(AggregationMethod):
                     weights_results.append((parameters_to_ndarrays(fit_res.parameters), qk))
                     qk_s += qk
                     q_models_value.append(fit_res.metrics["qk"])
+                    logger.debug(f"Round {server_round}: Client {cid} - qk={qk:.4f}, participating")
+                else:
+                    logger.debug(
+                        f"Round {server_round}: Client {cid} - qk={qk:.4f}, not participating"
+                    )  # noqa: E501
+
+        if not weights_results:
+            logger.warning(f"Round {server_round}: No participating clients for aggregation")
+            return None, {}
 
         # Aggregate weights from selected and participating clients.
-        server.data_to_log["qk_s"] = qk_s / len(server.selected_clients)
+        avg_qk = qk_s / len(server.selected_clients)
+        server.data_to_log["qk_s"] = avg_qk
+        logger.info(
+            f"Round {server_round}: Aggregating {len(weights_results)} client models "
+            + f"(avg_qk={avg_qk:.4f})"
+        )
+
         weights_avg = aggregate(weights_results)
         learning_rate = self._get_learning_rate(q_models_value)
+
         new_weights = [
             weight - (learning_rate * (weight - weight_avg))  # Gradient descent
             for weight, weight_avg in zip(server.model.get_weights(), weights_avg, strict=True)
         ]
         server.model.set_weights(new_weights)
+
+        logger.info(
+            f"Round {server_round}: MaxFL aggregation completed with lr={learning_rate:.6f}"
+        )
 
         return ndarrays_to_parameters(new_weights), {}
 
@@ -106,10 +142,15 @@ class MaxFL(AggregationMethod):
             failures: List of failures that occurred during client evaluation.
 
         Returns:
-            A tuple containing the aggregated loss (float) and a dictionary of Scalar metrics.
+            A tuple containing the aggregated loss and a dictionary of Scalar metrics.
         """
-        # Check if there are any results
+        logger.debug(
+            f"Round {server_round}: MaxFL aggregating evaluation results from "
+            + f"{len(results)} clients"
+        )
+
         if not results:
+            logger.warning(f"Round {server_round}: No evaluation results to aggregate")
             return None, {}
 
         # Aggregate loss from selected and participating clients

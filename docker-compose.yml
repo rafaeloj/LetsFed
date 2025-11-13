@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Federated Learning Server
   server:
@@ -8,10 +6,10 @@ services:
     logging:
       driver: local
     volumes:
-      # Model weights (read-write for saving/loading)
-      - model_data:/app/model:rw
-      # Logs (read-write)
-      - log_data:/app/logs:rw
+      # Model weights (bind mount from host)
+      - ./model:/app/model:rw
+      # Logs and datasets (bind mount from host)
+      - ./logs:/app/logs:rw
     networks:
       - fl_network
     healthcheck:
@@ -31,10 +29,10 @@ services:
     environment:
       - CID=${CID:-0}
     volumes:
-      # Model weights (read-write)
-      - model_data:/app/model:rw
-      # Logs (read-write)
-      - log_data:/app/logs:rw
+      # Model weights (bind mount from host)
+      - ./model:/app/model:rw
+      # Logs and datasets (bind mount from host)
+      - ./logs:/app/logs:rw
     networks:
       - fl_network
     depends_on:
@@ -47,9 +45,3 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
-
-volumes:
-  model_data:
-    driver: local
-  log_data:
-    driver: local

@@ -26,6 +26,7 @@ class FLClient(fl.client.NumPyClient):
 
     def __init__(self, cid: str, config: Environment, training_strategy: TrainingStrategy) -> None:
         # Initialize the federated client.
+        logger.info(f"Initializing FLClient {cid}")
         self.cid: str = cid
         self.conf: Environment = config
         self.training_strategy: TrainingStrategy = training_strategy
@@ -50,17 +51,27 @@ class FLClient(fl.client.NumPyClient):
         # extra metrics generated during training by training strategies
         self.data_to_log: dict = {}
 
+        logger.info(
+            f"Client {cid} initialized successfully with "
+            + f"{len(self.x_train)} training samples, "
+            + f"{len(self.x_validation)} validation samples, "
+            + f"{len(self.x_test)} test samples"
+        )
+
     def _load_model(self) -> None:
         """
         Load the model.
         """
+        logger.debug(f"Client {self.cid}: Loading model")
         mm = ModelManager(conf=self.conf, input_shape=self.x_train.shape)
         self.model = mm.get_model()
+        logger.info(f"Client {self.cid}: Model loaded successfully")
 
     def _load_data(self) -> None:
         """
         Load the data.
         """
+        logger.info(f"Client {self.cid}: Loading dataset partition")
         dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset)
 
         train, validation, test = dm.load_locally(partition_id=int(self.cid))
@@ -72,6 +83,12 @@ class FLClient(fl.client.NumPyClient):
         self.x_train, self.y_train = train[keys[0]], train[keys[1]]
         self.x_validation, self.y_validation = validation[keys[0]], validation[keys[1]]
         self.x_test, self.y_test = test[keys[0]], test[keys[1]]
+
+        logger.info(
+            f"Client {self.cid}: Data loaded - "
+            + f"Train: {len(self.x_train)}, Val: {len(self.x_validation)}, "
+            + f"Test: {len(self.x_test)} samples"
+        )
 
     def get_participating_state(self) -> bool:
         """
@@ -86,6 +103,8 @@ class FLClient(fl.client.NumPyClient):
         Args:
             state: New participating state
         """
+        if state != self.participating_state:
+            logger.debug(f"Client {self.cid}: Participation state changed to {state}")
         self.participating_state = state
 
     def get_parameters(self) -> NDArrays:
@@ -117,7 +136,10 @@ class FLClient(fl.client.NumPyClient):
         Returns:
             Updated model parameters, number of examples used for training, and additional metrics
         """
-        return self.training_strategy.fit(self, parameters, config)
+        logger.info(f"Client {self.cid}: Starting fit for round {config.get('rounds', 'unknown')}")
+        result = self.training_strategy.fit(self, parameters, config)
+        logger.debug(f"Client {self.cid}: Fit completed")
+        return result
 
     def evaluate(
         self, parameters: NDArrays, config: Config
@@ -132,8 +154,15 @@ class FLClient(fl.client.NumPyClient):
         Returns:
             Loss, number of examples used for evaluation, and additional metrics.
         """
+        logger.info(
+            f"Client {self.cid}: Starting evaluation for round {config.get('rounds', 'unknown')}"
+        )
         loss, size, conf = self.training_strategy.evaluate(self, parameters, config)
-        logger.log(f"/c-data-{self.cid}.csv", data=self.get_log_data(config))
+        logger.log_metrics(f"/c-data-{self.cid}.csv", data=self.get_log_data(config))
+        logger.debug(
+            f"Client {self.cid}: Evaluation completed - "
+            + f"Loss: {loss:.4f}, Accuracy: {conf.get('acc', 0):.4f}"
+        )
         return loss, size, conf
 
     def get_log_data(self, config: Config) -> dict[str, Scalar]:

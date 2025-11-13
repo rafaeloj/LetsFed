@@ -1,11 +1,14 @@
 from math import ceil
 from typing import TYPE_CHECKING
 
+from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
 from ..structs import DeevSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
+
+logger = Logger(__name__)
 
 
 class DEEV(ClientSelectionMethod):
@@ -44,7 +47,9 @@ class DEEV(ClientSelectionMethod):
         Returns:
             A list of selected client IDs.
         """
+        logger.debug(f"Round {server_round}: DEEV selecting from {len(list_of_clients)} clients")
         if server_round == 1:
+            logger.info(f"Round {server_round}: DEEV selecting all clients")
             return list_of_clients
 
         # Select clients with accuracy below average
@@ -60,5 +65,10 @@ class DEEV(ClientSelectionMethod):
         if self.config.decay > 0.0:
             the_chosen_ones = len(selected_clients) * (1 - self.config.decay) ** int(server_round)
             selected_clients = selected_clients[: ceil(the_chosen_ones)]
+
+        logger.info(
+            f"Round {server_round}: DEEV selected {len(selected_clients)}/"
+            + f"{len(list_of_clients)} clients"
+        )
 
         return selected_clients

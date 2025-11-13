@@ -47,6 +47,12 @@ class FLServer(Strategy):
             client_selection: Client selection strategy
             aggregate_method: Model aggregation strategy
         """
+        logger.info("Initializing FL Server")
+        logger.info(f"Configuration: {conf.n_clients} clients, {conf.rounds} rounds")
+        logger.info(f"Aggregation: {conf.server.aggregation_method.name}")
+        logger.info(f"Selection: {conf.server.selection_method.name}")
+        logger.info(f"Training strategy: {conf.client.training_strategy.name}")
+
         super().__init__()
 
         # Initialize server parameters
@@ -72,6 +78,7 @@ class FLServer(Strategy):
 
         # Load data and model
         if conf.server.aggregation_method.name.lower() == "maxfl":
+            logger.info("Loading server-side data and model for MaxFL aggregation")
             self.model: keras.Model
             self.x_train, self.y_train = None, None
             self.x_validation, self.y_validation = None, None
@@ -79,17 +86,22 @@ class FLServer(Strategy):
             self._load_data()
             self._load_model()
 
+        logger.info("FL Server initialization completed")
+
     def _load_model(self) -> None:
         """
         Load the model.
         """
+        logger.debug(f"Loading server model (type: {self.conf.model.type})")
         mm = ModelManager(conf=self.conf, input_shape=self.x_train.shape)
         self.model = mm.get_model()
+        logger.info("Server model loaded successfully")
 
     def _load_data(self) -> None:
         """
         Load the data.
         """
+        logger.debug("Loading server dataset partition (partition 0)")
         dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset)
 
         train, validation, test = dm.load_locally(partition_id=0)
@@ -101,6 +113,11 @@ class FLServer(Strategy):
         self.x_train, self.y_train = train[keys[0]], train[keys[1]]
         self.x_validation, self.y_validation = validation[keys[0]], validation[keys[1]]
         self.x_test, self.y_test = test[keys[0]], test[keys[1]]
+
+        logger.info(
+            "Server dataset loaded - "
+            + f"Train: {len(self.x_train)}, Val: {len(self.x_validation)}, Test: {len(self.x_test)}"
+        )
 
     def _update_cid_mapping(self, proxy: ClientProxy, numeric_cid: str) -> None:
         """
@@ -196,6 +213,10 @@ class FLServer(Strategy):
         Returns:
             A list of tuples containing ClientProxy and FitIns.
         """
+        logger.info("=" * 60)
+        logger.info(f"Round {server_round}/{self.conf.rounds} - Configuring training")
+        logger.info("=" * 60)
+
         self.current_round = server_round
 
         # Step 1: Get ALL available clients from ClientManager
@@ -203,6 +224,7 @@ class FLServer(Strategy):
             num_clients=self.conf.n_clients,
             min_num_clients=1,  # Accept at least 1 client (flexible)
         )
+        logger.debug(f"Available clients: {len(all_available_clients)}")
 
         # Step 2: Build list of available numeric CIDs
         # For first round, UUID mapping might not exist yet, so we attempt to use
@@ -216,6 +238,7 @@ class FLServer(Strategy):
         # If no mappings exist yet (first round), allow all numeric CIDs
         if not available_numeric_cids:
             available_numeric_cids = self.list_of_clients
+            logger.debug("First round: Using all client IDs (UUID mapping not yet established)")
 
         # Step 3: Use client selection strategy to choose from AVAILABLE numeric CIDs
         selected_numeric_cids = self.client_selection.select(
@@ -224,6 +247,12 @@ class FLServer(Strategy):
             list_of_clients=available_numeric_cids,
         )
         self.selected_clients = selected_numeric_cids
+
+        logger.info(
+            f"Client selection ({self.conf.server.selection_method.name}): "
+            + f"{len(selected_numeric_cids)}/{len(available_numeric_cids)} clients selected"
+        )
+        logger.info(f"Selected clients: {sorted([int(c) for c in selected_numeric_cids])}")
 
         # Step 4: Map selected numeric CIDs back to ClientProxy objects
         # Build a UUID->Proxy mapping for quick lookup
@@ -268,9 +297,23 @@ class FLServer(Strategy):
             aggregated_parameters is the aggregated model parameters and
             aggregated_metrics is a dictionary of aggregated metrics.
         """
+        logger.info(f"Round {server_round} - Aggregating training results")
+        logger.info(f"Successful: {len(results)}, Failures: {len(failures)}")
+
+        if failures:
+            logger.warning(f"Training failures detected: {len(failures)}")
+            for i, failure in enumerate(failures[:3]):  # Log first 3 failures
+                logger.warning(f"Failure {i + 1}: {failure}")
+
+        if not results:
+            logger.error("No successful training results to aggregate!")
+            return None, {}
+
         parameters, config = self.aggregate_method.agg_fit(
             server=self, server_round=server_round, results=results, failures=failures
         )
+
+        logger.info(f"Aggregation ({self.conf.server.aggregation_method.name}) completed")
         return parameters, config
 
     def configure_evaluate(
@@ -287,10 +330,12 @@ class FLServer(Strategy):
         Returns:
             A list of tuples containing ClientProxy and EvaluateIns.
         """
+        logger.info(f"Round {server_round} - Configuring evaluation")
         config = {
             "rounds": server_round,
             "selected_by_server": ",".join(self.selected_clients),
         }
+        logger.debug(f"Evaluation config: {config}")
 
         evaluate_ins = EvaluateIns(parameters=parameters, config=config)
 
@@ -299,6 +344,7 @@ class FLServer(Strategy):
             num_clients=self.conf.n_clients,
             min_num_clients=1,  # Accept at least 1 client
         )
+        logger.debug(f"Available clients for evaluation: {len(all_available_clients)}")
 
         # Filter to get only the clients that were selected for training, and that are available
         # We evaluate the same clients that trained in this round
@@ -338,9 +384,28 @@ class FLServer(Strategy):
             the aggregated loss across all clients and aggregated_metrics is a dictionary
             of aggregated metrics.
         """
+        logger.info(f"Round {server_round} - Aggregating evaluation results")
+        logger.info(f"Successful: {len(results)}, Failures: {len(failures)}")
+
+        if failures:
+            logger.warning(f"Evaluation failures detected: {len(failures)}")
+
+        if not results:
+            logger.error("No successful evaluation results to aggregate!")
+            return None, {}
+
         loss, config = self.aggregate_method.agg_eval(self, server_round, results, failures)
         self._collect_clients_data(results)
-        logger.log(
+
+        # Log round summary
+        logger.info(f"Round {server_round} completed:")
+        logger.info(f"  Average Accuracy: {self.clients_acc_avg:.4f}")
+        logger.info(f"  Average Loss: {self.clients_loss_avg:.4f}")
+        logger.info(
+            f"  Participating clients: {np.count_nonzero(self.client_participating_state)}/{len(self.client_participating_state)}"  # noqa: E501
+        )  # noqa: E501
+
+        logger.log_metrics(
             "/s-data.csv",
             data=self.get_log_data(server_round),
         )

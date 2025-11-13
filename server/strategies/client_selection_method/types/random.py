@@ -1,11 +1,14 @@
 import random
 from typing import TYPE_CHECKING, List
 
+from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
 from ..structs import RandomSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
+
+logger = Logger(__name__)
 
 
 class RandomSelection(ClientSelectionMethod):
@@ -41,9 +44,17 @@ class RandomSelection(ClientSelectionMethod):
             A list of selected client IDs.
         """
         if server_round == 1:
+            logger.debug(
+                f"Random selection (Round 1): Selecting all {len(list_of_clients)} clients"
+            )
             return list_of_clients
 
         perc = int(len(list_of_clients) * self.config.perc_of_clients)
         selected_clients = random.sample(list_of_clients, perc)
+
+        logger.debug(
+            f"Random selection: {len(selected_clients)}/{len(list_of_clients)} clients "
+            + f"({self.config.perc_of_clients * 100:.0f}%)"
+        )
 
         return selected_clients
