@@ -1,12 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from flwr.common import (
     Config,
     NDArrays,
 )
 
-from ..fl_client import FLClient
 from .context import DriverContext
+
+if TYPE_CHECKING:
+    from ..fl_client import FLClient
 
 
 class Driver(ABC):
@@ -29,7 +32,7 @@ class Driver(ABC):
 
     @abstractmethod
     def run(
-        self, client: FLClient, parameters: NDArrays, config: Config, context: DriverContext
+        self, client: "FLClient", parameters: NDArrays, config: Config, context: DriverContext
     ) -> None:
         """
         Run the driver with the given client, parameters, and config.

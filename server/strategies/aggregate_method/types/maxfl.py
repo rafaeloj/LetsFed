@@ -12,12 +12,11 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 
 from .....utils.utils import Utils
-from ...fl_server import FLServer
 from ..base import AggregationMethod
 from ..structs import MaxFLAggregationMethodConfig
 
 if TYPE_CHECKING:
-    from .. import FLServer
+    from ...fl_server import FLServer
 
 
 class MaxFL(AggregationMethod):
@@ -48,7 +47,7 @@ class MaxFL(AggregationMethod):
 
     def agg_fit(
         self,
-        server: FLServer,
+        server: "FLServer",
         server_round: int,
         results: list[tuple[ClientProxy, FitRes]],
         failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],

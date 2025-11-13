@@ -40,9 +40,6 @@ client:
     # LetsFed specific parameters (only used when name is letsfed)
     # threshold: 1.0
 
-  # LetsFed specific
-  participating: true
-
 # Dataset Configuration
 dataset:
   dataset: fashion_mnist

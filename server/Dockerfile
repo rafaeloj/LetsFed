@@ -20,13 +20,17 @@ COPY requirements-server.txt .
 RUN pip install --no-cache-dir -r requirements-server.txt
 
 # Copy application code
-COPY server/ ./server/
-COPY conf/ ./conf/
-COPY model/ ./model/
-COPY utils/ ./utils/
+RUN mkdir app/
+COPY server/ app/server/
+COPY client/ app/client/
+COPY conf/ app/conf/
+COPY dataset_manager/ app/dataset_manager/
+COPY model/ app/model/
+COPY utils/ app/utils/
+COPY __init__.py app/
 
 # Set Python path
 ENV PYTHONPATH=/app
 
-# Run server
-CMD ["python", "-u", "server/strategies_manager.py"]
+# Run server as module
+CMD ["python3", "-m", "app.server.strategies_manager"]

@@ -99,7 +99,11 @@ class DockerComposeManager:
         """
         logger.info(f"Building Docker images (GPU: {use_gpu})...")
 
-        dockerfile_suffix = "gpu" if use_gpu else "cpu"
+        dockerfile_name = "Dockerfile.gpu" if use_gpu else "Dockerfile"
+        image_suffix = "gpu" if use_gpu else "cpu"
+
+        # Get the directory containing the compose file (project root)
+        project_dir = self.compose_file.parent
 
         # Build server image
         logger.info("Building server image...")
@@ -109,12 +113,13 @@ class DockerComposeManager:
                 "docker",
                 "build",
                 "-f",
-                f"server/Dockerfile.{dockerfile_suffix}",
+                f"server/{dockerfile_name}",
                 "-t",
-                f"server-flwr-{dockerfile_suffix}",
+                f"server-flwr-{image_suffix}",
                 ".",
             ],
             check=True,
+            cwd=project_dir,
         )
 
         # Build client image
@@ -125,12 +130,13 @@ class DockerComposeManager:
                 "docker",
                 "build",
                 "-f",
-                f"client/Dockerfile.{dockerfile_suffix}",
+                f"client/{dockerfile_name}",
                 "-t",
-                f"client-flwr-{dockerfile_suffix}",
+                f"client-flwr-{image_suffix}",
                 ".",
             ],
             check=True,
+            cwd=project_dir,
         )
 
         logger.info("Docker images built successfully")
@@ -163,14 +169,16 @@ class DockerComposeManager:
 
         logger.info(f"Starting {len(client_ids)} clients: {client_ids}")
 
-        # Start clients with environment variables for each
+        # Start clients using docker compose run with different CIDs
         for cid in client_ids:
             env = {
                 "CID": str(cid),
             }
 
-            service_name = f"client-{cid}"
-            self._run_compose_command(["up", "-d", service_name], env=env)
+            # Use 'run' instead of 'up' to create multiple instances with same service
+            # --detach runs in background
+            # The container name will be set by container_name in docker-compose.yml using ${CID}
+            self._run_compose_command(["run", "--detach", "client"], env=env)
 
         logger.info("Clients started successfully")
 
@@ -195,21 +203,30 @@ class DockerComposeManager:
             client_ids: Specific client IDs to stop. If None, stops all clients.
         """
         if client_ids is None:
-            # Stop all client services
+            # Stop all client containers that match the pattern
             logger.info("Stopping all clients...")
-            result = self._run_compose_command(
-                ["ps", "--services", "--filter", "name=client-*"],
+            # Use docker ps to find all client containers
+            # nosec B603, B607: Command is constructed safely with validated inputs
+            result = subprocess.run(  # noqa: S603, S607
+                ["docker", "ps", "-a", "--filter", "name=fl_client-", "--format", "{{.Names}}"],  # noqa: S607
                 capture_output=True,
+                text=True,
+                check=False,
             )
-            services = result.stdout.strip().split("\n") if result.stdout else []
+            container_names = result.stdout.strip().split("\n") if result.stdout.strip() else []
 
-            for service in services:
-                if service.startswith("client-"):
-                    self._run_compose_command(["stop", service])
+            for container_name in container_names:
+                if container_name.startswith("fl_client-"):
+                    # nosec B603, B607: Command is constructed safely
+                    subprocess.run(["docker", "stop", container_name], check=False)  # noqa: S603, S607
+                    subprocess.run(["docker", "rm", container_name], check=False)  # noqa: S603, S607
         else:
             logger.info(f"Stopping clients: {client_ids}")
             for cid in client_ids:
-                self._run_compose_command(["stop", f"client-{cid}"])
+                container_name = f"fl_client-{cid}"
+                # nosec B603, B607: Command is constructed safely
+                subprocess.run(["docker", "stop", container_name], check=False)  # noqa: S603, S607
+                subprocess.run(["docker", "rm", container_name], check=False)  # noqa: S603, S607
 
         logger.info("Clients stopped")
 
@@ -237,7 +254,9 @@ class DockerComposeManager:
 
         logger.info(f"Restarting clients: {client_ids}")
         for cid in client_ids:
-            self._run_compose_command(["restart", f"client-{cid}"])
+            container_name = f"fl_client-{cid}"
+            # nosec B603, B607: Command is constructed safely
+            subprocess.run(["docker", "restart", container_name], check=False)  # noqa: S603, S607
 
         logger.info("Clients restarted")
 
@@ -286,11 +305,13 @@ class DockerComposeManager:
 
     @property
     def running_clients(self) -> List[str]:
-        """Get list of currently running client services."""
-        result = self._run_compose_command(
-            ["ps", "--services", "--filter", "status=running"],
+        """Get list of currently running client containers."""
+        # nosec B603, B607: Command is constructed safely
+        result = subprocess.run(  # noqa: S603, S607
+            ["docker", "ps", "--filter", "name=fl_client-", "--format", "{{.Names}}"],  # noqa: S607
             capture_output=True,
+            text=True,
             check=False,
         )
-        services = result.stdout.strip().split("\n") if result.stdout else []
-        return [s for s in services if s.startswith("client-")]
+        container_names = result.stdout.strip().split("\n") if result.stdout.strip() else []
+        return [name for name in container_names if name.startswith("fl_client-")]

@@ -4,11 +4,10 @@ from typing import TYPE_CHECKING, Optional, Union
 from flwr.common import EvaluateRes, FitRes, Parameters, Scalar
 from flwr.server.client_proxy import ClientProxy
 
-from ..fl_server import FLServer
 from .structs import AggregationMethodConfig
 
 if TYPE_CHECKING:
-    from server.strategies.fl_server import FLServer
+    from ..fl_server import FLServer
 
 
 class AggregationMethod(ABC):
@@ -28,7 +27,7 @@ class AggregationMethod(ABC):
     @abstractmethod
     def agg_fit(
         self,
-        server: FLServer,
+        server: "FLServer",
         server_round: int,
         results: list[tuple[ClientProxy, FitRes]],
         failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],
@@ -50,7 +49,7 @@ class AggregationMethod(ABC):
     @abstractmethod
     def agg_eval(
         self,
-        server: FLServer,
+        server: "FLServer",
         server_round: int,
         results: list[tuple[ClientProxy, EvaluateRes]],
         failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],

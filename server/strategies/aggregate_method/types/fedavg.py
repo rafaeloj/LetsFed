@@ -35,7 +35,7 @@ class FedAVG(AggregationMethod):
 
     def agg_fit(
         self,
-        server: FLServer,
+        server: "FLServer",
         server_round: int,
         results: list[tuple[ClientProxy, FitRes]],
         failures: list[Union[tuple[ClientProxy, FitRes], BaseException]],
@@ -75,7 +75,7 @@ class FedAVG(AggregationMethod):
 
     def agg_eval(
         self,
-        server: FLServer,
+        server: "FLServer",
         server_round: int,
         results: list[tuple[ClientProxy, EvaluateRes]],
         failures: list[Union[tuple[ClientProxy, EvaluateRes], BaseException]],

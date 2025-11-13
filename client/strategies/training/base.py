@@ -12,7 +12,7 @@ from ..drivers.driver import Driver
 from .structs import TrainingStrategyConfig
 
 if TYPE_CHECKING:
-    from client.strategies.fl_client import FLClient
+    from ..fl_client import FLClient
 
 
 class TrainingStrategy(ABC):
@@ -41,7 +41,7 @@ class TrainingStrategy(ABC):
         self.drivers.extend(drivers)
 
     def apply_drivers(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> dict[str, float | int | bool]:
         """
         Apply all registered drivers in sequence using DriverContext.
@@ -79,7 +79,7 @@ class TrainingStrategy(ABC):
 
     @abstractmethod
     def fit(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
         Train the model on the client data.
@@ -96,7 +96,7 @@ class TrainingStrategy(ABC):
 
     @abstractmethod
     def evaluate(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
         Evaluate the model on the client test data.

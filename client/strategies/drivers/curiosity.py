@@ -32,7 +32,7 @@ class CuriosityDriver(Driver):
     """
 
     def run(
-        self, client: FLClient, parameters: NDArrays, config: Config, context: DriverContext
+        self, client: "FLClient", parameters: NDArrays, config: Config, context: DriverContext
     ) -> None:
         """
         Run the driver with the given client, parameters, and config.
@@ -57,7 +57,7 @@ class CuriosityDriver(Driver):
 
         context.set("curiosity", state)
 
-    def explore(self, client: FLClient, context: DriverContext) -> bool:
+    def explore(self, client: "FLClient", context: DriverContext) -> bool:
         """
         Explore the environment.
         """
@@ -67,13 +67,13 @@ class CuriosityDriver(Driver):
             return False
         return True
 
-    def on_exploration(self, client: FLClient) -> bool:
+    def on_exploration(self, client: "FLClient") -> bool:
         """
         Check if the client is currently exploring.
         """
         return client.rounds_intention > 0 and client.state == EXPLORING
 
-    def start_exploration(self, client: FLClient, context: DriverContext) -> bool:
+    def start_exploration(self, client: "FLClient", context: DriverContext) -> bool:
         """
         Start the exploration phase for the client.
 
@@ -88,13 +88,13 @@ class CuriosityDriver(Driver):
         self.set_exploring(client=client, context=context)
         return True
 
-    def set_exploring(self, client: FLClient, context: DriverContext) -> None:
+    def set_exploring(self, client: "FLClient", context: DriverContext) -> None:
         """
         Set the client state to exploring.
         """
         context.set("state", EXPLORING)
 
-    def set_idle(self, client: FLClient, context: DriverContext) -> None:
+    def set_idle(self, client: "FLClient", context: DriverContext) -> None:
         """
         Set the client state to idle.
         """

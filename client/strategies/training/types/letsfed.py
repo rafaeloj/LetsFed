@@ -45,7 +45,7 @@ class LetsFedClient(TrainingStrategy):
         return drivers
 
     def fit(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
         Train the model on the client data.
@@ -87,7 +87,7 @@ class LetsFedClient(TrainingStrategy):
 
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
-    def _manager_client_state(self, client: FLClient) -> None:
+    def _manager_client_state(self, client: "FLClient") -> None:
         """
         Manage the client's participation state.
 
@@ -101,7 +101,7 @@ class LetsFedClient(TrainingStrategy):
             client.set_participating_state(True)
 
     def evaluate(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
         Evaluate the model on the client test data.

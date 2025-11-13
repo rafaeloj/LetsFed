@@ -34,7 +34,7 @@ class LetsFedSelection(ClientSelectionMethod):
         )
 
     def _select_participating_clients(
-        self, server: FLServer, server_round: int, list_of_clients: list[str]
+        self, server: "FLServer", server_round: int, list_of_clients: list[str]
     ) -> list[str]:
         """
         Select participating clients based on their performance.
@@ -52,7 +52,7 @@ class LetsFedSelection(ClientSelectionMethod):
         )
 
     def _select_non_participating_clients(
-        self, server: FLServer, server_round: int, list_of_clients: list[str]
+        self, server: "FLServer", server_round: int, list_of_clients: list[str]
     ) -> list[str]:
         """
         Select non-participating clients based on their performance.
@@ -69,7 +69,9 @@ class LetsFedSelection(ClientSelectionMethod):
             server=server, server_round=server_round, list_of_clients=list_of_clients
         )
 
-    def select(self, server: FLServer, server_round: int, list_of_clients: list[str]) -> list[str]:
+    def select(
+        self, server: "FLServer", server_round: int, list_of_clients: list[str]
+    ) -> list[str]:
         """
         Select clients based on LetsFed strategy.
 

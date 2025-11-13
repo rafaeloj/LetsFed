@@ -29,7 +29,7 @@ class DEEV(ClientSelectionMethod):
 
     def select(
         self,
-        server: FLServer,
+        server: "FLServer",
         server_round: int,
         list_of_clients: list[str],
     ) -> list[str]:

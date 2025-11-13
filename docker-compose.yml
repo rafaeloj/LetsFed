@@ -14,6 +14,12 @@ services:
       - log_data:/app/logs:rw
     networks:
       - fl_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 9999), timeout=1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   # Federated Learning Client Template
   # This is a template that can be scaled or instantiated per client

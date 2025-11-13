@@ -20,14 +20,17 @@ COPY requirements-client.txt .
 RUN pip install --no-cache-dir -r requirements-client.txt
 
 # Copy application code
-COPY client/ ./client/
-COPY conf/ ./conf/
-COPY dataset_manager/ ./dataset_manager/
-COPY model/ ./model/
-COPY utils/ ./utils/
+RUN mkdir app/
+COPY server/ app/server/
+COPY client/ app/client/
+COPY conf/ app/conf/
+COPY dataset_manager/ app/dataset_manager/
+COPY model/ app/model/
+COPY utils/ app/utils/
+COPY __init__.py app/
 
 # Set Python path
 ENV PYTHONPATH=/app
 
-# Run client
-CMD ["python", "-u", "client/strategies_manager.py"]
+# Run client as module
+CMD ["python3", "-m", "app.client.strategies_manager"]

@@ -25,7 +25,7 @@ class AccuracyDriver(Driver):
     """
 
     def run(
-        self, client: FLClient, parameters: NDArrays, config: Config, context: DriverContext
+        self, client: "FLClient", parameters: NDArrays, config: Config, context: DriverContext
     ) -> None:
         """
         Run the driver with the given client, parameters, and config.

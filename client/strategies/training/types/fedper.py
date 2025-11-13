@@ -30,7 +30,7 @@ class FedPerClient(TrainingStrategy):
         super().__init__(config)
 
     def fit(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
         Train the model on the client data.
@@ -73,7 +73,7 @@ class FedPerClient(TrainingStrategy):
         return client.get_parameters(), client.x_train.shape[0], fit_response
 
     def evaluate(
-        self, client: FLClient, parameters: NDArrays, config: Config
+        self, client: "FLClient", parameters: NDArrays, config: Config
     ) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """
         Evaluate the model on the client test data.

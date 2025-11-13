@@ -7,6 +7,7 @@ Docker Compose with proper separation of concerns.
 """
 
 from logging import getLogger
+from pathlib import Path
 
 from .conf.loader import load_config
 from .utils.docker_compose_manager import DockerComposeManager
@@ -19,11 +20,14 @@ def main() -> None:
 
     # Load configuration
     logger.info("Loading configuration...")
-    config = load_config("conf/config.yaml")
+    # Use path relative to this file's location
+    config_path = Path(__file__).parent / "conf" / "config.yaml"
+    config = load_config(config_path)
 
     # Initialize Docker Compose Manager
     logger.info("Initializing Docker Compose Manager...")
-    manager = DockerComposeManager(config=config, compose_file="docker-compose.yml")
+    compose_file = Path(__file__).parent / "docker-compose.yml"
+    manager = DockerComposeManager(config=config, compose_file=str(compose_file))
 
     try:
         # Build Docker images if needed
