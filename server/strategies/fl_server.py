@@ -144,6 +144,45 @@ class FLServer(Strategy):
         """
         return self.cid_to_uuid.get(numeric_cid)
 
+    def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
+        """
+        Initialize global model parameters.
+
+        This method is called once at the beginning of the federated learning process.
+        It returns the initial parameters for the global model.
+
+        Args:
+            client_manager: ClientManager to sample clients from.
+
+        Returns:
+            Initial parameters for the global model, or None to use random initialization.
+        """
+        # Return None to let Flower use the default initialization
+        # Override this method if you need custom initialization
+        return None
+
+    def evaluate(
+        self, server_round: int, parameters: Parameters
+    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
+        """
+        Evaluate the global model on the server side.
+
+        This method is called after each round of training to evaluate the global model.
+        It can be used to evaluate the model on a centralized test set.
+
+        Args:
+            server_round: Current server round.
+            parameters: Model parameters to evaluate.
+
+        Returns:
+            A tuple of (loss, metrics) where loss is the evaluation loss and
+            metrics is a dictionary of evaluation metrics. Returns None to skip
+            centralized evaluation.
+        """
+        # Return None to skip centralized evaluation
+        # Override this method if you want to evaluate on server-side data
+        return None
+
     def configure_fit(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, FitIns]]:

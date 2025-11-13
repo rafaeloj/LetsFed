@@ -6,7 +6,7 @@ from .strategies.server_builder import ServerBuilder
 
 
 def main() -> None:
-    cfg: Environment = load_config("conf/config.yaml")
+    cfg: Environment = load_config("app/conf/config.yaml")
     fl.server.start_server(
         server_address=f"{cfg.server.ip}:{cfg.server.port}",
         config=fl.server.ServerConfig(num_rounds=cfg.rounds),

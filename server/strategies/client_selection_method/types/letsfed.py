@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from ..base import ClientSelectionMethod
-from ..factory import ClientSelectionFactory
 from ..structs import LetsFedSelectionMethodConfig
 
 if TYPE_CHECKING:
@@ -26,6 +25,10 @@ class LetsFedSelection(ClientSelectionMethod):
             config: The selection method configuration.
         """
         super().__init__(config)
+
+        # Import here to avoid circular dependency
+        from ..factory import ClientSelectionFactory
+
         self.participating_selection_method = ClientSelectionFactory.create(
             config.participating_selection_method
         )
