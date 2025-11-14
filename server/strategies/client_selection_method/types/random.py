@@ -1,3 +1,4 @@
+import math
 import random
 from typing import TYPE_CHECKING, List
 
@@ -49,7 +50,7 @@ class RandomSelection(ClientSelectionMethod):
             )
             return list_of_clients
 
-        perc = int(len(list_of_clients) * self.config.perc_of_clients)
+        perc = math.ceil(len(list_of_clients) * self.config.perc_of_clients)
         selected_clients = random.sample(list_of_clients, perc)
 
         logger.debug(

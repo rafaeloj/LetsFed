@@ -1,3 +1,4 @@
+import math
 from typing import TYPE_CHECKING, List
 
 import numpy as np
@@ -71,7 +72,7 @@ class RoundRobinSelection(ClientSelectionMethod):
         sort_cids = np.argsort(how_many_time_selected_client)
 
         # Get the top least called
-        num_to_select = int(len(how_many_time_selected_client) * self.config.perc_of_clients)
+        num_to_select = math.ceil(len(how_many_time_selected_client) * self.config.perc_of_clients)
         top_values_of_cid = sort_cids[:num_to_select]
 
         logger.debug(

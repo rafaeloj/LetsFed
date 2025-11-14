@@ -181,7 +181,6 @@ class FLClient(fl.client.NumPyClient):
         return {
             "rounds": config["rounds"],
             "participating_state": self.participating_state,
-            "desired_state": self.desired_state,
             "selected": self.selected,
             "cid": self.cid,
             "model_size": self.model_size,

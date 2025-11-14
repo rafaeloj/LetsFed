@@ -1,3 +1,4 @@
+import math
 from typing import TYPE_CHECKING
 
 from .....utils.logger import Logger
@@ -57,7 +58,7 @@ class POC(ClientSelectionMethod):
             if acc < server.clients_acc_avg:
                 selected_clients.append(cid)
 
-        clients2select = int(float(len(list_of_clients)) * float(self.config.perc_of_clients))
+        clients2select = math.ceil(float(len(list_of_clients)) * float(self.config.perc_of_clients))
 
         logger.info(
             f"Round {server_round}: POC selected {len(selected_clients[:clients2select])}/"

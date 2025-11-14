@@ -440,7 +440,7 @@ class FLServer(Strategy):
             "init_clients": self.conf.init_clients,
             "participating_state": f"[{';'.join([str(state) for state in self.client_participating_state])}]",  # noqa: E501
             "number_of_participating": np.count_nonzero(self.client_participating_state),
-            "number_of_non_participating": np.count_nonzero(not self.client_participating_state),
+            "number_of_non_participating": np.count_nonzero(~self.client_participating_state),
             "training_method": self.conf.client.training_strategy.name.lower(),
             "aggregation_method": f"{self.conf.server.aggregation_method.name.lower()}",
             "selection_method": self.conf.server.selection_method.name.lower(),
