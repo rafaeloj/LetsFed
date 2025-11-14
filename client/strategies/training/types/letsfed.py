@@ -107,7 +107,7 @@ class LetsFedClient(TrainingStrategy):
         else:
             logger.debug(f"Client {client.cid}: Skipping training (not selected)")
 
-        return client.get_parameters(), client.x_train.shape[0], fit_response
+        return client.get_parameters(config), client.x_train.shape[0], fit_response
 
     def _manager_client_state(self, client: "FLClient") -> None:
         """

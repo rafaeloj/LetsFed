@@ -37,6 +37,7 @@ client:
   learning_rate: 0.0001
   training_strategy:
     name: normal  # Options: normal, letsfed, maxfl, fedper, qffl
+    learning_rate: 0.01
     # LetsFed specific parameters (only used when name is letsfed)
     # threshold: 1.0
 

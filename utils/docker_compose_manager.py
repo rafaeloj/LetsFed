@@ -178,7 +178,7 @@ class DockerComposeManager:
             # Use 'run' instead of 'up' to create multiple instances with same service
             # --detach runs in background
             # The container name will be set by container_name in docker-compose.yml using ${CID}
-            self._run_compose_command(["run", "--detach", "client"], env=env)
+            self._run_compose_command(["up", "--detach", "client"], env=env)
 
         logger.info("Clients started successfully")
 

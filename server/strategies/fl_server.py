@@ -220,11 +220,15 @@ class FLServer(Strategy):
         self.current_round = server_round
 
         # Step 1: Get ALL available clients from ClientManager
+        # Use num_available() to get actual number of connected clients
+        num_available = client_manager.num_available()
+        logger.debug(f"Number of available clients: {num_available}")
+
         all_available_clients = client_manager.sample(
-            num_clients=self.conf.n_clients,
+            num_clients=num_available,  # Sample all available clients
             min_num_clients=1,  # Accept at least 1 client (flexible)
         )
-        logger.debug(f"Available clients: {len(all_available_clients)}")
+        logger.debug(f"Sampled clients: {len(all_available_clients)}")
 
         # Step 2: Build list of available numeric CIDs
         # For first round, UUID mapping might not exist yet, so we attempt to use
@@ -340,8 +344,11 @@ class FLServer(Strategy):
         evaluate_ins = EvaluateIns(parameters=parameters, config=config)
 
         # Get all available clients
+        num_available = client_manager.num_available()
+        logger.debug(f"Number of available clients for evaluation: {num_available}")
+
         all_available_clients = client_manager.sample(
-            num_clients=self.conf.n_clients,
+            num_clients=num_available,  # Sample all available clients
             min_num_clients=1,  # Accept at least 1 client
         )
         logger.debug(f"Available clients for evaluation: {len(all_available_clients)}")

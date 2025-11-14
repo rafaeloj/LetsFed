@@ -1,8 +1,17 @@
+import logging
+
 import flwr as fl
 
 from ..conf.loader import load_config
 from ..conf.structs import Environment
 from .strategies.server_builder import ServerBuilder
+
+# Configure logging at module level
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def main() -> None:

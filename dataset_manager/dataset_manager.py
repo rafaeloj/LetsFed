@@ -160,10 +160,12 @@ class DSManager:
             Tuple[Dataset,Dataset,Dataset]: Train, Validation, Test
         """
         logger.info(f"Loading data from local storage for partition {partition_id}")
-        p = f"/{self.path}"
+        # Use relative path (works both in host and container with WORKDIR /app)
+        p = self.path
         if path:
             p = path.lower()
 
+        logger.debug(f"Dataset base path: {p}")
         test_folder = os.path.exists(f"{p}/test/{partition_id}")
         train_folder = os.path.exists(f"{p}/train/{partition_id}")
         validation_folder = os.path.exists(f"{p}/validation/{partition_id}")

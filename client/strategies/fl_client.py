@@ -107,9 +107,12 @@ class FLClient(fl.client.NumPyClient):
             logger.debug(f"Client {self.cid}: Participation state changed to {state}")
         self.participating_state = state
 
-    def get_parameters(self) -> NDArrays:
+    def get_parameters(self, config: Config) -> NDArrays:
         """
         Get the model parameters.
+
+        Args:
+            config: Configuration dictionary
 
         Returns:
             Model parameters as NDArrays

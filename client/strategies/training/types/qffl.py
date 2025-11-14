@@ -71,7 +71,7 @@ class QFFLClient(TrainingStrategy):
         if client.selected:
             # Setting the parameters
             client.set_parameters(parameters)
-            prev_model_parameters = copy.deepcopy(client.get_parameters())
+            prev_model_parameters = copy.deepcopy(client.get_parameters(config))
             logger.debug(f"Client {client.cid}: Model parameters set for training")
 
             # Fitting model
@@ -84,7 +84,9 @@ class QFFLClient(TrainingStrategy):
             # Calculate delta parameters
             delta_parameters = [
                 curr - prev
-                for curr, prev in zip(client.get_parameters(), prev_model_parameters, strict=True)
+                for curr, prev in zip(
+                    client.get_parameters(config), prev_model_parameters, strict=True
+                )
             ]
             delta_parameters = delta_parameters * (1 / self.config.eta)  ## QFFL
 
@@ -95,7 +97,7 @@ class QFFLClient(TrainingStrategy):
 
             return delta_parameters, client.x_train.shape[0], fit_response
 
-        return client.get_parameters(), client.x_train.shape[0], fit_response
+        return client.get_parameters(config), client.x_train.shape[0], fit_response
 
     def evaluate(
         self, client: "FLClient", parameters: NDArrays, config: Config

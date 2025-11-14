@@ -82,7 +82,7 @@ class FedPerClient(TrainingStrategy):
                 + f"Acc: {client.g_fit_acc:.4f}, Loss: {client.g_fit_loss:.4f}"
             )
 
-        return client.get_parameters(), client.x_train.shape[0], fit_response
+        return client.get_parameters(config), client.x_train.shape[0], fit_response
 
     def evaluate(
         self, client: "FLClient", parameters: NDArrays, config: Config

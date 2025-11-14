@@ -69,11 +69,12 @@ class Logger:
 
     def _configure_logging(self) -> None:
         """Configure the root logger with handlers and formatters."""
-        # Set default level
-        self._logger.setLevel(logging.INFO)
+        # Get root logger to configure globally
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
 
         # Avoid duplicate handlers
-        if self._logger.handlers:
+        if root_logger.handlers:
             return
 
         # Create console handler with formatting
@@ -86,8 +87,11 @@ class Logger:
         )
         console_handler.setFormatter(formatter)
 
-        # Add handler to logger
-        self._logger.addHandler(console_handler)
+        # Add handler to root logger
+        root_logger.addHandler(console_handler)
+
+        # Also configure this logger
+        self._logger.setLevel(logging.INFO)
 
     # Standard logging methods delegated to Python's logging module
 

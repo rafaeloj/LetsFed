@@ -113,7 +113,7 @@ class MaxFLClient(TrainingStrategy):
         else:
             logger.debug(f"Client {client.cid}: Skipping training (not selected)")
 
-        return client.get_parameters(), client.x_train.shape[0], fit_response
+        return client.get_parameters(config), client.x_train.shape[0], fit_response
 
     def evaluate(
         self, client: "FLClient", parameters: NDArrays, config: Config

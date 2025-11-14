@@ -5,6 +5,7 @@ services:
     container_name: fl_server
     logging:
       driver: local
+    user: "${UID:-1000}:${GID:-1000}"  # Use host user's UID/GID to avoid permission issues
     volumes:
       # Model weights (bind mount from host)
       - ./model:/app/model:rw
@@ -26,8 +27,10 @@ services:
     container_name: fl_client-${CID:-0}
     logging:
       driver: local
+    user: "${UID:-1000}:${GID:-1000}"  # Use host user's UID/GID to avoid permission issues
     environment:
       - CID=${CID:-0}
+      - SERVER_ADDRESS=server  # DNS name of the server service
     volumes:
       # Model weights (bind mount from host)
       - ./model:/app/model:rw
