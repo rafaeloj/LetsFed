@@ -152,9 +152,6 @@ def _validate_config(config: Environment) -> None:
     if config.client.epochs < 1:
         raise ValueError("client epochs must be at least 1")
 
-    if config.client.learning_rate <= 0:
-        raise ValueError("client learning_rate must be positive")
-
 
 def save_config(config: Environment, config_path: Union[str, Path]) -> None:
     """

@@ -51,17 +51,25 @@ class ModelManager:
         self.model.save_weights(self.model_path)
 
     def dnn(self) -> keras.Model:
-        """Define a simple DNN model."""
+        """Define a simple DNN model with proper regularization."""
         logger.debug("Building DNN model architecture")
+
+        # Use L2 regularization to prevent overfitting
+        l2_reg = tf.keras.regularizers.l2(0.001)
+
         model: keras.Model = tf.keras.models.Sequential(
             [
                 tf.keras.layers.Input(shape=self.input_shape[1:]),
                 tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(128, activation="relu"),
-                tf.keras.layers.Dropout(0.25),
-                tf.keras.layers.Dense(64, activation="relu"),
-                tf.keras.layers.Dropout(0.25),
-                tf.keras.layers.Dense(32, activation="relu"),
+                # First hidden layer with batch normalization
+                tf.keras.layers.Dense(128, activation="relu", kernel_regularizer=l2_reg),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Dropout(0.3),
+                # Second hidden layer
+                tf.keras.layers.Dense(64, activation="relu", kernel_regularizer=l2_reg),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Dropout(0.3),
+                # Output layer
                 tf.keras.layers.Dense(10, activation="softmax"),
             ]
         )
@@ -70,7 +78,12 @@ class ModelManager:
                 learning_rate=self.conf.client.training_strategy.learning_rate
             ),
             loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"],
+            metrics=[
+                "accuracy",
+                keras.metrics.Precision(name="precision"),
+                keras.metrics.Recall(name="recall"),
+                keras.metrics.AUC(name="auc"),
+            ],
         )
         logger.info(f"DNN model built with {model.count_params()} parameters")
         return model
@@ -106,7 +119,12 @@ class ModelManager:
                 learning_rate=self.conf.client.training_strategy.learning_rate
             ),
             loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"],
+            metrics=[
+                "accuracy",
+                keras.metrics.Precision(name="precision"),
+                keras.metrics.Recall(name="recall"),
+                keras.metrics.AUC(name="auc"),
+            ],
         )
         logger.info(f"CNN model built with {model.count_params()} parameters")
         return model

@@ -1,5 +1,5 @@
 # General Configuration
-rounds: 5
+rounds: 20
 n_clients: 5
 init_clients: 1.0
 gpu: false
@@ -33,11 +33,10 @@ server:
 
 # Client Configuration
 client:
-  epochs: 5
-  learning_rate: 0.0001
+  epochs: 10
   training_strategy:
     name: normal  # Options: normal, letsfed, maxfl, fedper, qffl
-    learning_rate: 0.01
+    learning_rate: 0.001  # Balanced learning rate
     # LetsFed specific parameters (only used when name is letsfed)
     # threshold: 1.0
 
@@ -51,18 +50,18 @@ dataset:
 
   train_partitioner:
     method: dirichlet  # Options: dirichlet, iid
-    dirichlet_alpha: 0.1
+    dirichlet_alpha: 1.0  # Increased from 0.1 for more balanced distribution
     partition_by: label
-    self_balancing: false
-    min_partition_size: 10
+    self_balancing: true  # Enable self-balancing for more uniform partitions
+    min_partition_size: 100  # Increased to ensure sufficient data per client
     shuffle: true
 
   test_partitioner:
-    method: dirichlet
-    dirichlet_alpha: 0.1
+    method: iid  # Use IID for test data to get global evaluation
+    # dirichlet_alpha: 1.0
     partition_by: label
     self_balancing: false
-    min_partition_size: 10
+    min_partition_size: 250  # Ensure enough test samples per client
     shuffle: true
 
 # Model Configuration

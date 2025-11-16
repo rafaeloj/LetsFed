@@ -114,6 +114,13 @@ class FLServer(Strategy):
         self.x_validation, self.y_validation = validation[keys[0]], validation[keys[1]]
         self.x_test, self.y_test = test[keys[0]], test[keys[1]]
 
+        # Normalize image data to [-1, 1] range for better convergence
+        # This centers the data around 0, which works better with gradient descent
+        # and modern weight initialization methods (Xavier/He)
+        self.x_train = (self.x_train.astype("float32") - 127.5) / 127.5
+        self.x_validation = (self.x_validation.astype("float32") - 127.5) / 127.5
+        self.x_test = (self.x_test.astype("float32") - 127.5) / 127.5
+
         logger.info(
             "Server dataset loaded - "
             + f"Train: {len(self.x_train)}, Val: {len(self.x_validation)}, Test: {len(self.x_test)}"
@@ -459,6 +466,8 @@ class FLServer(Strategy):
         Args:
             results: List of (ClientProxy, EvaluateRes) tuples from client evaluations.
         """
+        logger.debug(f"Collecting data from {len(results)} clients")
+
         for proxy, eval_res in results:
             # Extract numeric CID from client metrics
             numeric_cid = str(int(eval_res.metrics["cid"]))
@@ -477,5 +486,23 @@ class FLServer(Strategy):
             self.clients_loss[cid_idx] = loss
             self.client_participating_state[cid_idx] = participating_state
 
-        self.clients_acc_avg: float = np.mean(self.clients_acc)
-        self.clients_loss_avg: float = np.mean(self.clients_loss)
+            logger.debug(
+                f"Client {numeric_cid}: acc={acc:.4f}, loss={loss:.4f}, "
+                + f"participating={participating_state}"
+            )
+
+        # Calculate average ONLY for clients that participated in this round
+        selected_indices = [int(cid) for cid in self.selected_clients]
+
+        if selected_indices:
+            self.clients_acc_avg = float(np.mean([self.clients_acc[i] for i in selected_indices]))
+            self.clients_loss_avg = float(np.mean([self.clients_loss[i] for i in selected_indices]))
+            logger.debug(f"Calculated averages from {len(selected_indices)} participating clients")
+            logger.debug(
+                f"Average accuracy: {self.clients_acc_avg:.4f}, "
+                + f"Average loss: {self.clients_loss_avg:.4f}"
+            )
+        else:
+            logger.warning("No participating clients found for averaging metrics!")
+            self.clients_acc_avg = 0.0
+            self.clients_loss_avg = 0.0

@@ -71,7 +71,7 @@ class Logger:
         """Configure the root logger with handlers and formatters."""
         # Get root logger to configure globally
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
+        root_logger.setLevel(logging.DEBUG)
 
         # Avoid duplicate handlers
         if root_logger.handlers:
@@ -79,7 +79,7 @@ class Logger:
 
         # Create console handler with formatting
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(logging.DEBUG)
 
         # Create formatter
         formatter = logging.Formatter(
@@ -91,7 +91,7 @@ class Logger:
         root_logger.addHandler(console_handler)
 
         # Also configure this logger
-        self._logger.setLevel(logging.INFO)
+        self._logger.setLevel(logging.DEBUG)
 
     # Standard logging methods delegated to Python's logging module
 
