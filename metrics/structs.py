@@ -24,36 +24,6 @@ class MetricsConfig:
         if self.metrics is None:
             self.metrics = {}
 
-    def add_metric(self, metric_config: MetricConfig) -> None:
-        """
-        Add a metric configuration.
-
-        Args:
-            metric_config: Metric configuration to add
-        """
-        self.metrics[metric_config.name] = metric_config
-
-    def get_metric(self, name: str) -> MetricConfig | None:
-        """
-        Get a metric configuration by name.
-
-        Args:
-            name: Name of the metric
-
-        Returns:
-            Metric configuration or None if not found
-        """
-        return self.metrics.get(name)
-
-    def get_metric_names(self) -> list[str]:
-        """
-        Get list of all metric names.
-
-        Returns:
-            List of metric names
-        """
-        return list(self.metrics.keys())
-
     def is_empty(self) -> bool:
         """
         Check if no metrics are configured.

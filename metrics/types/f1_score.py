@@ -26,7 +26,7 @@ class F1ScoreMetric(Metric):
         Args:
             config: Configuration for the F1 Score metric
         """
-        super().__init__(name=config.name)
+        super().__init__(name=config)
         self.average = config.average
         self.zero_division = config.zero_division
 

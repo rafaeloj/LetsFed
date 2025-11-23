@@ -118,39 +118,30 @@ class MaxFLClient(TrainingStrategy):
                     verbose=0,
                 )
 
-                # Calculate metrics using MetricsManager
-                # Calculate train metrics
-                train_pred_probs = client.model.predict(client.x_train, verbose=0)
-                train_metrics = client.metrics_manager.calculate_metrics(
-                    client.y_train, train_pred_probs
+                # Calculate training metrics
+                y_train_pred_proba = client.model.predict(client.x_train, verbose=0)
+                client.fit_train_metrics = client.metrics_manager.calculate_metrics(
+                    client.y_train, y_train_pred_proba
                 )
-
-                client.fit_train_metrics["acc"] = train_metrics["accuracy"]
                 client.fit_train_metrics["loss"] = np.mean(history.history["loss"])
-                client.fit_train_metrics["precision"] = train_metrics["precision"]
-                client.fit_train_metrics["recall"] = train_metrics["recall"]
-                client.fit_train_metrics["f1_score"] = train_metrics["f1_score"]
-                client.fit_train_metrics["auc"] = train_metrics["auc"]
 
                 # Calculate validation metrics
-                val_pred_probs = client.model.predict(client.x_validation, verbose=0)
-                val_metrics = client.metrics_manager.calculate_metrics(
-                    client.y_validation, val_pred_probs
+                y_val_pred_proba = client.model.predict(client.x_validation, verbose=0)
+                client.fit_val_metrics = client.metrics_manager.calculate_metrics(
+                    client.y_validation, y_val_pred_proba
                 )
-
-                client.fit_val_metrics["acc"] = val_metrics["accuracy"]
                 client.fit_val_metrics["loss"] = np.mean(history.history.get("val_loss", [0]))
-                client.fit_val_metrics["precision"] = val_metrics["precision"]
-                client.fit_val_metrics["recall"] = val_metrics["recall"]
-                client.fit_val_metrics["f1_score"] = val_metrics["f1_score"]
-                client.fit_val_metrics["auc"] = val_metrics["auc"]
 
+                # Log training metrics dynamically
+                train_metrics_str = ", ".join(
+                    [f"{k.capitalize()}: {v:.4f}" for k, v in client.fit_train_metrics.items()]
+                )
+                val_metrics_str = ", ".join(
+                    [f"{k.capitalize()}: {v:.4f}" for k, v in client.fit_val_metrics.items()]
+                )
                 logger.info(
                     f"Client {client.cid}: Training completed - "
-                    + f"Train Acc: {client.fit_train_metrics['acc']:.4f}, "
-                    + f"Train Loss: {client.fit_train_metrics['loss']:.4f}, "
-                    + f"Val Acc: {client.fit_val_metrics['acc']:.4f}, "
-                    + f"Val Loss: {client.fit_val_metrics['loss']:.4f}"
+                    + f"Train [{train_metrics_str}], Val [{val_metrics_str}]"
                 )
             else:
                 logger.info(f"Client {client.cid}: Declined participation (qk={self.qk:.4f})")
@@ -211,52 +202,45 @@ class MaxFLClient(TrainingStrategy):
         else:
             logger.debug(f"Client {client.cid}: Using existing weights (not selected)")
 
+        # Evaluate the model
         eval_pred_probs = client.model.predict(client.x_test, verbose=0)
-        eval_metrics = client.metrics_manager.calculate_metrics(client.y_test, eval_pred_probs)
         eval_loss = client.model.evaluate(client.x_test, client.y_test, verbose=0)[0]
-
+        client.eval_test_metrics = client.metrics_manager.calculate_metrics(
+            client.y_test, eval_pred_probs
+        )  # noqa: E501
         client.eval_test_metrics["loss"] = float(eval_loss)
-        client.eval_test_metrics["acc"] = eval_metrics["accuracy"]
-        client.eval_test_metrics["precision"] = eval_metrics["precision"]
-        client.eval_test_metrics["recall"] = eval_metrics["recall"]
-        client.eval_test_metrics["f1_score"] = eval_metrics["f1_score"]
-        client.eval_test_metrics["auc"] = eval_metrics["auc"]
 
         # Check for invalid values
         import math
 
-        if math.isnan(client.eval_test_metrics["loss"]) or math.isinf(
-            client.eval_test_metrics["loss"]
+        if math.isnan(client.eval_test_metrics.get("loss", 0)) or math.isinf(
+            client.eval_test_metrics.get("loss", 0)
         ):
             logger.error(
                 f"Client {client.cid}: INVALID LOSS VALUE: {client.eval_test_metrics['loss']}"
             )
-        if math.isnan(client.eval_test_metrics["acc"]) or math.isinf(
-            client.eval_test_metrics["acc"]
+        if math.isnan(client.eval_test_metrics.get("accuracy", 0)) or math.isinf(
+            client.eval_test_metrics.get("accuracy", 0)
         ):
             logger.error(
-                f"Client {client.cid}: INVALID ACCURACY VALUE: {client.eval_test_metrics['acc']}"
+                f"Client {client.cid}: INVALID ACCURACY VALUE: "
+                + f"{client.eval_test_metrics.get('accuracy', 0)}"
             )
 
+        # Build eval_resp dynamically from eval_test_metrics
         eval_resp = {
             "cid": client.cid,
-            "acc": client.eval_test_metrics["acc"],
-            "loss": client.eval_test_metrics["loss"],
-            "precision": client.eval_test_metrics["precision"],
-            "recall": client.eval_test_metrics["recall"],
-            "f1_score": client.eval_test_metrics["f1_score"],
-            "auc": client.eval_test_metrics["auc"],
             "participating_state": client.get_participating_state(),
+            **client.eval_test_metrics,  # Include all metrics dynamically
         }
+
+        # Log evaluation metrics dynamically
+        eval_metrics_str = ", ".join(
+            [f"{k.capitalize()}: {v:.4f}" for k, v in client.eval_test_metrics.items()]
+        )
         logger.info(
             f"Client {client.cid}: Evaluation completed - "
-            + f"Acc: {client.eval_test_metrics['acc']:.4f}, "
-            + f"Loss: {client.eval_test_metrics['loss']:.4f}, "
-            + f"Precision: {client.eval_test_metrics['precision']:.4f}, "
-            + f"Recall: {client.eval_test_metrics['recall']:.4f}, "
-            + f"F1: {client.eval_test_metrics['f1_score']:.4f}, "
-            + f"AUC: {client.eval_test_metrics['auc']:.4f}, "
-            + f"Participating: {client.get_participating_state()}"
+            + f"[{eval_metrics_str}], Participating: {client.get_participating_state()}"
         )
 
         return client.eval_test_metrics["loss"], client.x_test.shape[0], eval_resp

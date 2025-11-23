@@ -18,7 +18,7 @@ class AccuracyMetric(Metric):
 
     def __init__(self, config: AccuracyMetricConfig) -> None:
         """Initialize the Accuracy metric."""
-        super().__init__(name=config.name)
+        super().__init__(name=config)
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None

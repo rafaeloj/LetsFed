@@ -54,31 +54,13 @@ class FLClient(fl.client.NumPyClient):
         self.model_total_params: int = 0
         self.model_mean_params: float = 0.0
 
-        # Metrics dictionaries for each phase
-        self.fit_train_metrics: dict[str, float] = {
-            "acc": 0.0,
-            "loss": 0.0,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1_score": 0.0,
-            "auc": 0.0,
-        }
-        self.fit_val_metrics: dict[str, float] = {
-            "acc": 0.0,
-            "loss": 0.0,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1_score": 0.0,
-            "auc": 0.0,
-        }
-        self.eval_test_metrics: dict[str, float] = {
-            "acc": 0.0,
-            "loss": 0.0,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1_score": 0.0,
-            "auc": 0.0,
-        }
+        # Initialize metrics dictionaries dynamically based on configured metrics
+        # Always include 'loss' as it comes from model.fit/evaluate
+        metric_names = ["loss"] + self.metrics_manager.get_metrics_names()
+
+        self.fit_train_metrics: dict[str, float] = dict.fromkeys(metric_names, 0.0)
+        self.fit_val_metrics: dict[str, float] = dict.fromkeys(metric_names, 0.0)
+        self.eval_test_metrics: dict[str, float] = dict.fromkeys(metric_names, 0.0)
 
         # extra metrics generated during training by training strategies
         self.data_to_log: dict = {}
@@ -217,7 +199,8 @@ class FLClient(fl.client.NumPyClient):
         Returns:
             Dictionary containing log data
         """
-        return {
+        # Build log data dynamically based on configured metrics
+        log_data = {
             "rounds": config["rounds"],
             "participating_state": self.participating_state,
             "selected": self.selected,
@@ -226,30 +209,28 @@ class FLClient(fl.client.NumPyClient):
             "model_size": self.model_size,
             "model_total_params": self.model_total_params,
             "model_mean_params": self.model_mean_params,
-            # Fit metrics - Training
-            "fit_train_acc": self.fit_train_metrics["acc"],
-            "fit_train_loss": self.fit_train_metrics["loss"],
-            "fit_train_precision": self.fit_train_metrics["precision"],
-            "fit_train_recall": self.fit_train_metrics["recall"],
-            "fit_train_f1_score": self.fit_train_metrics["f1_score"],
-            "fit_train_auc": self.fit_train_metrics["auc"],
-            # Fit metrics - Validation
-            "fit_val_acc": self.fit_val_metrics["acc"],
-            "fit_val_loss": self.fit_val_metrics["loss"],
-            "fit_val_precision": self.fit_val_metrics["precision"],
-            "fit_val_recall": self.fit_val_metrics["recall"],
-            "fit_val_f1_score": self.fit_val_metrics["f1_score"],
-            "fit_val_auc": self.fit_val_metrics["auc"],
-            # Evaluation metrics
-            "eval_test_acc": self.eval_test_metrics["acc"],
-            "eval_test_loss": self.eval_test_metrics["loss"],
-            "eval_test_precision": self.eval_test_metrics["precision"],
-            "eval_test_recall": self.eval_test_metrics["recall"],
-            "eval_test_f1_score": self.eval_test_metrics["f1_score"],
-            "eval_test_auc": self.eval_test_metrics["auc"],
-            # Configuration
-            "training_method": self.conf.client.training_strategy,
-            "aggregation_method": f"{self.conf.server.aggregation_method}",
-            "selection_method": self.conf.server.selection_method,
-            **self.data_to_log,
         }
+
+        # Add fit train metrics dynamically with prefix
+        for metric_name, value in self.fit_train_metrics.items():
+            log_data[f"fit_train_{metric_name}"] = value
+
+        # Add fit validation metrics dynamically with prefix
+        for metric_name, value in self.fit_val_metrics.items():
+            log_data[f"fit_val_{metric_name}"] = value
+
+        # Add evaluation test metrics dynamically with prefix
+        for metric_name, value in self.eval_test_metrics.items():
+            log_data[f"eval_test_{metric_name}"] = value
+
+        # Add configuration and extra data
+        log_data.update(
+            {
+                "training_method": self.conf.client.training_strategy,
+                "aggregation_method": f"{self.conf.server.aggregation_method}",
+                "selection_method": self.conf.server.selection_method,
+                **self.data_to_log,
+            }
+        )
+
+        return log_data

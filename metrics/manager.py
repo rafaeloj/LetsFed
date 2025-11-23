@@ -54,6 +54,15 @@ class MetricsManager:
         """
         self.metrics = [m for m in self.metrics if m.name != metric_name]
 
+    def get_metrics_names(self) -> list[str]:
+        """
+        Get the names of all metrics in the manager.
+
+        Returns:
+            List of metric names
+        """
+        return [m.name for m in self.metrics]
+
     def calculate_all(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None
     ) -> dict[str, float]:

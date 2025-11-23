@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+from .types.structs import MetricConfig
+
 
 class Metric(ABC):
     """
@@ -15,14 +17,14 @@ class Metric(ABC):
     the calculate() method.
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, config: MetricConfig) -> None:
         """
         Initialize the metric.
 
         Args:
-            name: The name of the metric (e.g., "accuracy", "precision")
+            config: The configuration for the metric.
         """
-        self.name = name
+        self.name = config.name
 
     @abstractmethod
     def calculate(
