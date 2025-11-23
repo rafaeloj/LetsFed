@@ -1,5 +1,6 @@
 from dataclasses import MISSING, dataclass
 
+from ...metrics.structs import MetricsConfig
 from .training.structs import TrainingStrategyConfig
 
 
@@ -9,3 +10,4 @@ class ClientConfig:
 
     epochs: int = MISSING
     training_strategy: TrainingStrategyConfig = MISSING
+    metrics: MetricsConfig | None = None

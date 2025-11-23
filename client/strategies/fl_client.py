@@ -8,6 +8,7 @@ from keras import Model
 
 from ...conf.structs import Environment
 from ...dataset_manager.dataset_manager import DSManager
+from ...metrics import MetricsManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
 from .training.base import TrainingStrategy
@@ -24,12 +25,19 @@ class FLClient(fl.client.NumPyClient):
     data loading, model management, state management, and training strategy.
     """
 
-    def __init__(self, cid: str, config: Environment, training_strategy: TrainingStrategy) -> None:
+    def __init__(
+        self,
+        cid: str,
+        config: Environment,
+        training_strategy: TrainingStrategy,
+        metrics_manager: MetricsManager,
+    ) -> None:
         # Initialize the federated client.
         logger.info(f"Initializing FLClient {cid}")
         self.cid: str = cid
         self.conf: Environment = config
         self.training_strategy: TrainingStrategy = training_strategy
+        self.metrics_manager: MetricsManager = metrics_manager
 
         # Load data and model
         self.model: Model
@@ -46,31 +54,31 @@ class FLClient(fl.client.NumPyClient):
         self.model_total_params: int = 0
         self.model_mean_params: float = 0.0
 
-        # Fit metrics (training phase)
-        self.fit_train_acc: float = 0.0
-        self.fit_train_loss: float = 0.0
-        self.fit_train_precision: float = 0.0
-        self.fit_train_recall: float = 0.0
-        self.fit_train_auc: float = 0.0
-
-        self.fit_val_acc: float = 0.0
-        self.fit_val_loss: float = 0.0
-        self.fit_val_precision: float = 0.0
-        self.fit_val_recall: float = 0.0
-        self.fit_val_auc: float = 0.0
-
-        self.fit_test_acc: float = 0.0
-        self.fit_test_loss: float = 0.0
-        self.fit_test_precision: float = 0.0
-        self.fit_test_recall: float = 0.0
-        self.fit_test_auc: float = 0.0
-
-        # Evaluation metrics (evaluation phase)
-        self.eval_acc: float = 0.0
-        self.eval_loss: float = 0.0
-        self.eval_precision: float = 0.0
-        self.eval_recall: float = 0.0
-        self.eval_auc: float = 0.0
+        # Metrics dictionaries for each phase
+        self.fit_train_metrics: dict[str, float] = {
+            "acc": 0.0,
+            "loss": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "auc": 0.0,
+        }
+        self.fit_val_metrics: dict[str, float] = {
+            "acc": 0.0,
+            "loss": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "auc": 0.0,
+        }
+        self.eval_test_metrics: dict[str, float] = {
+            "acc": 0.0,
+            "loss": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "auc": 0.0,
+        }
 
         # extra metrics generated during training by training strategies
         self.data_to_log: dict = {}
@@ -219,29 +227,26 @@ class FLClient(fl.client.NumPyClient):
             "model_total_params": self.model_total_params,
             "model_mean_params": self.model_mean_params,
             # Fit metrics - Training
-            "fit_train_acc": self.fit_train_acc,
-            "fit_train_loss": self.fit_train_loss,
-            "fit_train_precision": self.fit_train_precision,
-            "fit_train_recall": self.fit_train_recall,
-            "fit_train_auc": self.fit_train_auc,
+            "fit_train_acc": self.fit_train_metrics["acc"],
+            "fit_train_loss": self.fit_train_metrics["loss"],
+            "fit_train_precision": self.fit_train_metrics["precision"],
+            "fit_train_recall": self.fit_train_metrics["recall"],
+            "fit_train_f1_score": self.fit_train_metrics["f1_score"],
+            "fit_train_auc": self.fit_train_metrics["auc"],
             # Fit metrics - Validation
-            "fit_val_acc": self.fit_val_acc,
-            "fit_val_loss": self.fit_val_loss,
-            "fit_val_precision": self.fit_val_precision,
-            "fit_val_recall": self.fit_val_recall,
-            "fit_val_auc": self.fit_val_auc,
-            # Fit metrics - Test
-            "fit_test_acc": self.fit_test_acc,
-            "fit_test_loss": self.fit_test_loss,
-            "fit_test_precision": self.fit_test_precision,
-            "fit_test_recall": self.fit_test_recall,
-            "fit_test_auc": self.fit_test_auc,
+            "fit_val_acc": self.fit_val_metrics["acc"],
+            "fit_val_loss": self.fit_val_metrics["loss"],
+            "fit_val_precision": self.fit_val_metrics["precision"],
+            "fit_val_recall": self.fit_val_metrics["recall"],
+            "fit_val_f1_score": self.fit_val_metrics["f1_score"],
+            "fit_val_auc": self.fit_val_metrics["auc"],
             # Evaluation metrics
-            "eval_acc": self.eval_acc,
-            "eval_loss": self.eval_loss,
-            "eval_precision": self.eval_precision,
-            "eval_recall": self.eval_recall,
-            "eval_auc": self.eval_auc,
+            "eval_test_acc": self.eval_test_metrics["acc"],
+            "eval_test_loss": self.eval_test_metrics["loss"],
+            "eval_test_precision": self.eval_test_metrics["precision"],
+            "eval_test_recall": self.eval_test_metrics["recall"],
+            "eval_test_f1_score": self.eval_test_metrics["f1_score"],
+            "eval_test_auc": self.eval_test_metrics["auc"],
             # Configuration
             "training_method": self.conf.client.training_strategy,
             "aggregation_method": f"{self.conf.server.aggregation_method}",

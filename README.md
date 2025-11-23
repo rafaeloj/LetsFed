@@ -23,6 +23,7 @@
   - [Context Object Pattern (DriverContext)](#5-context-object-pattern-drivercontext)
   - [Federated Learning Flow](#federated-learning-flow)
 - [Available Strategies](#-available-strategies)
+- [Metrics System](#-metrics-system)
 - [Extending the Framework](#-extending-the-framework)
 - [Logging and Analysis](#-logging-and-analysis)
 - [Docker Configuration](#-docker-configuration)
@@ -145,7 +146,24 @@ LetsFed/
 ├── 🧠 model/                          # Model Management
 │   └── model_manager.py              # Model factory (CNN, DNN)
 │
-├── 🛠️  utils/                         # Utilities
+├── � metrics/                        # Metrics Calculation System
+│   ├── base.py                       # Abstract Metric base class
+│   ├── factory.py                    # MetricFactory for creating metrics
+│   ├── manager.py                    # MetricsManager for metric pipeline
+│   ├── structs.py                    # Metrics configuration dataclasses
+│   ├── types/                        # Metric implementations (Factory Pattern)
+│   │   ├── __init__.py               # Exports metric classes
+│   │   ├── structs.py                # Individual metric config dataclasses
+│   │   ├── accuracy.py               # Accuracy metric
+│   │   ├── precision.py              # Precision metric
+│   │   ├── recall.py                 # Recall metric
+│   │   ├── f1_score.py               # F1-Score metric
+│   │   ├── fbeta_score.py            # F-Beta Score metric
+│   │   └── auc.py                    # AUC-ROC metric
+│   ├── README.md                     # Metrics module documentation
+│   └── YAML_CONFIG_EXAMPLES.yaml     # Example configurations
+│
+├── �🛠️  utils/                         # Utilities
 │   ├── logger.py                     # Metrics logging system
 │   ├── docker_compose_manager.py     # Dynamic compose generator
 │   └── utils.py                      # Helper functions
@@ -649,6 +667,156 @@ client:
     # threshold: 1.0
 ```
 
+## 📈 Metrics System
+
+The framework includes a **robust and extensible metrics calculation system** following the **Factory Pattern** and **dependency injection** principles. All client training strategies use the `MetricsManager` for consistent metric calculation across training, validation, and evaluation phases.
+
+### Architecture
+
+```mermaid
+graph LR
+    subgraph "Metrics Module"
+        MF[MetricFactory]
+        MM[MetricsManager]
+        MC[MetricsConfig]
+
+        MF -->|creates| M1[AccuracyMetric]
+        MF -->|creates| M2[PrecisionMetric]
+        MF -->|creates| M3[RecallMetric]
+        MF -->|creates| M4[F1ScoreMetric]
+        MF -->|creates| M5[FBetaScoreMetric]
+        MF -->|creates| M6[AUCMetric]
+
+        MC -->|configures| MF
+        MM -->|uses| M1
+        MM -->|uses| M2
+        MM -->|uses| M3
+        MM -->|uses| M4
+        MM -->|uses| M5
+        MM -->|uses| M6
+    end
+
+    subgraph "Client Integration"
+        CB[ClientBuilder]
+        FC[FLClient]
+        TS[TrainingStrategy]
+
+        CB -->|creates| MM
+        CB -->|injects| FC
+        FC -->|provides| TS
+        TS -->|calculates metrics| MM
+    end
+
+    style "Metrics Module" fill:#e8f5e9
+    style "Client Integration" fill:#fff4e1
+```
+
+### Available Metrics
+
+| Metric | Description | Parameters | Requires Probabilities |
+|--------|-------------|------------|----------------------|
+| **Accuracy** | Correct predictions / Total predictions | - | No |
+| **Precision** | TP / (TP + FP) | `average`, `zero_division` | No |
+| **Recall** | TP / (TP + FN) | `average`, `zero_division` | No |
+| **F1-Score** | Harmonic mean of precision and recall | `average`, `zero_division` | No |
+| **F-Beta Score** | Weighted harmonic mean (configurable β) | `beta`, `average`, `zero_division` | No |
+| **AUC** | Area under ROC curve | `multi_class`, `average` | **Yes** |
+
+### Configuration
+
+Metrics can be configured via YAML or use defaults:
+
+#### Default Metrics (Auto-configured)
+
+If no metrics configuration is provided, the following defaults are used:
+
+```yaml
+# Automatically applied if client.metrics is not specified
+client:
+  metrics:  # Optional - uses defaults if omitted
+    - name: accuracy
+    - name: precision
+      average: macro
+      zero_division: 0
+    - name: recall
+      average: macro
+      zero_division: 0
+    - name: f1_score
+      average: macro
+      zero_division: 0
+    - name: auc
+      multi_class: ovr
+      average: macro
+```
+
+#### Custom Metrics Configuration
+
+**Example 1: Weighted averaging for imbalanced datasets**
+```yaml
+client:
+  metrics:
+    - name: precision
+      average: weighted  # Weight by class support
+      zero_division: 0
+    - name: recall
+      average: weighted
+      zero_division: 0
+    - name: f1_score
+      average: weighted
+      zero_division: 0
+    - name: auc
+      average: weighted
+```
+
+**Example 2: F2-Score (emphasizes recall)**
+```yaml
+client:
+  metrics:
+    - name: accuracy
+    - name: fbeta_score
+      beta: 2.0          # Recall weighted 2x more than precision
+      average: macro
+      zero_division: 0
+```
+
+**Example 3: Micro averaging (aggregate contributions)**
+```yaml
+client:
+  metrics:
+    - name: precision
+      average: micro
+    - name: recall
+      average: micro
+    - name: f1_score
+      average: micro
+```
+
+### Averaging Strategies
+
+For multi-class metrics (Precision, Recall, F1, F-Beta):
+
+| Strategy | Description | Use Case |
+|----------|-------------|----------|
+| **macro** | Unweighted mean (treats all classes equally) | Balanced datasets, all classes equally important |
+| **weighted** | Weighted by class support | Imbalanced datasets |
+| **micro** | Aggregate contributions (global calculation) | Overall performance across all samples |
+
+### Integration with Training Strategies
+
+All training strategies (`normal.py`, `letsfed.py`, `maxfl.py`, `fedper.py`, `qffl.py`) use the injected `MetricsManager`:
+
+
+### Key Features
+
+- ✅ **Consistent Calculation**: All strategies use the same metric pipeline
+- ✅ **Configurable via YAML**: Easy to customize without code changes
+- ✅ **Extensible**: Add new metrics by implementing the `Metric` base class
+- ✅ **Dependency Injection**: `MetricsManager` injected via `ClientBuilder`
+- ✅ **Type-Safe**: Full type hints with dataclass configurations
+- ✅ **Factory Pattern**: Metrics created via `MetricFactory`
+- ✅ **Error Handling**: Graceful handling of edge cases (zero division, missing data)
+
+
 
 ## 🔧 Extending the Framework
 
@@ -836,7 +1004,7 @@ graph TB
 
 **Key Principle**: You extend behavior by **adding new classes**, not by **modifying existing ones** (Open/Closed Principle).
 
-## 📈 Logging and Analysis
+## 📊 Logging and Analysis
 
 ### Automatic Metrics Collection
 

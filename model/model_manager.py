@@ -78,12 +78,7 @@ class ModelManager:
                 learning_rate=self.conf.client.training_strategy.learning_rate
             ),
             loss="sparse_categorical_crossentropy",
-            metrics=[
-                "accuracy",
-                keras.metrics.Precision(name="precision"),
-                keras.metrics.Recall(name="recall"),
-                keras.metrics.AUC(name="auc"),
-            ],
+            metrics=["accuracy"],
         )
         logger.info(f"DNN model built with {model.count_params()} parameters")
         return model
@@ -119,12 +114,7 @@ class ModelManager:
                 learning_rate=self.conf.client.training_strategy.learning_rate
             ),
             loss="sparse_categorical_crossentropy",
-            metrics=[
-                "accuracy",
-                keras.metrics.Precision(name="precision"),
-                keras.metrics.Recall(name="recall"),
-                keras.metrics.AUC(name="auc"),
-            ],
+            metrics=["accuracy"],
         )
         logger.info(f"CNN model built with {model.count_params()} parameters")
         return model

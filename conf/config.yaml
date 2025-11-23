@@ -39,6 +39,25 @@ client:
     learning_rate: 0.001  # Balanced learning rate
     # LetsFed specific parameters (only used when name is letsfed)
     # threshold: 1.0
+  metrics:
+    accuracy:
+      name: "accuracy"
+    precision:
+      name: "precision"
+      average: "macro"  # Options: 'macro', 'micro', 'weighted'
+      zero_division: 0  # Value to return when there is a zero division
+    recall:
+      name: "recall"
+      average: "macro"
+      zero_division: 0
+    f1_score:
+      name: "f1_score"
+      average: "weighted"  # Weighted by support (number of true instances for each label)
+      zero_division: 0
+    auc:
+      name: "auc"
+      multi_class: "ovr"  # Options: 'ovr' (one-vs-rest), 'ovo' (one-vs-one)
+      average: "macro"
 
 # Dataset Configuration
 dataset:
