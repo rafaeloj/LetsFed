@@ -3,8 +3,8 @@ flwr>=1.7.0
 flwr-datasets[vision]>=0.0.2
 
 # Deep Learning (CPU version for server)
-tensorflow-cpu>=2.15.0
-keras>=3.0.0
+tensorflow-cpu>=2.18.0
+keras>=3.7.0
 
 # Data Processing
 numpy>=1.24.0
