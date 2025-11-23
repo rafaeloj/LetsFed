@@ -522,26 +522,13 @@ class FLServer(Strategy):
                 + f"participating={participating_state}"
             )
 
-        # Calculate averages ONLY for clients that participated in this round
-        selected_indices = [int(cid) for cid in self.selected_clients]
+        # Calculate average for each metric dynamically
+        for metric_name, metric_array in self.clients_metrics.items():
+            avg_value = float(np.mean(metric_array))
+            self.clients_metrics_avg[metric_name] = avg_value
 
-        if selected_indices:
-            # Calculate average for each metric dynamically
-            for metric_name, metric_array in self.clients_metrics.items():
-                avg_value = float(np.mean([metric_array[i] for i in selected_indices]))
-                self.clients_metrics_avg[metric_name] = avg_value
-
-            logger.debug(f"Calculated averages from {len(selected_indices)} participating clients")
-
-            # Build dynamic average log message
-            avg_metrics_str = ", ".join(
-                [f"{name}: {value:.4f}" for name, value in self.clients_metrics_avg.items()]
-            )
-            logger.debug(f"Average metrics: {avg_metrics_str}")
-        else:
-            logger.warning("No participating clients found for averaging metrics!")
-            # Reset all averages to 0
-            for metric_name in self.clients_metrics_avg.keys():
-                self.clients_metrics_avg[metric_name] = 0.0
-            self.clients_acc_avg = 0.0
-            self.clients_loss_avg = 0.0
+        # Build dynamic average log message
+        avg_metrics_str = ", ".join(
+            [f"{name}: {value:.4f}" for name, value in self.clients_metrics_avg.items()]
+        )
+        logger.debug(f"Average metrics: {avg_metrics_str}")
