@@ -675,7 +675,7 @@ The framework includes a **robust and extensible metrics calculation system** fo
 
 ```mermaid
 graph LR
-    subgraph "Metrics Module"
+    subgraph MetricsModule["Metrics Module"]
         MF[MetricFactory]
         MM[MetricsManager]
         MC[MetricsConfig]
@@ -696,7 +696,7 @@ graph LR
         MM -->|uses| M6
     end
 
-    subgraph "Client Integration"
+    subgraph ClientIntegration["Client Integration"]
         CB[ClientBuilder]
         FC[FLClient]
         TS[TrainingStrategy]
@@ -707,8 +707,8 @@ graph LR
         TS -->|calculates metrics| MM
     end
 
-    style "Metrics Module" fill:#e8f5e9
-    style "Client Integration" fill:#fff4e1
+    style MetricsModule fill:#e8f5e9
+    style ClientIntegration fill:#fff4e1
 ```
 
 ### Available Metrics
