@@ -3,14 +3,7 @@ Factory for creating metric instances.
 """
 
 from .base import Metric
-from .structs import (
-    AccuracyMetricConfig,
-    AUCMetricConfig,
-    F1ScoreMetricConfig,
-    MetricConfig,
-    PrecisionMetricConfig,
-    RecallMetricConfig,
-)
+from .structs import MetricConfig
 from .types import (
     AccuracyMetric,
     AUCMetric,
@@ -18,6 +11,13 @@ from .types import (
     FBetaScoreMetric,
     PrecisionMetric,
     RecallMetric,
+)
+from .types.structs import (
+    AccuracyMetricConfig,
+    AUCMetricConfig,
+    F1ScoreMetricConfig,
+    PrecisionMetricConfig,
+    RecallMetricConfig,
 )
 
 
