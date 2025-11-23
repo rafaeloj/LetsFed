@@ -6,6 +6,7 @@ learning servers with their required strategies (aggregation and client selectio
 """
 
 from ...conf.structs import Environment
+from ...metrics import MetricsManager
 from ...utils.logger import Logger
 from .aggregate_method.factory import AggregationFactory
 from .client_selection_method.factory import ClientSelectionFactory
@@ -41,6 +42,14 @@ class ServerBuilder:
         aggregation_method = AggregationFactory.create(config.server.aggregation_method)
         selection_method = ClientSelectionFactory.create(config.server.selection_method)
 
+        # Instantiate MetricsManager with client's metrics configuration
+        # Server uses the same metrics as clients for consistency
+        metrics_manager = MetricsManager(config.client.metrics)
+        logger.debug(f"MetricsManager created with metrics: {metrics_manager.get_metrics_names()}")
+
         return FLServer(
-            conf=config, client_selection=selection_method, aggregate_method=aggregation_method
+            conf=config,
+            client_selection=selection_method,
+            aggregate_method=aggregation_method,
+            metrics_manager=metrics_manager,
         )

@@ -16,6 +16,7 @@ from flwr.server.strategy import Strategy
 
 from ...conf.structs import Environment
 from ...dataset_manager.dataset_manager import DSManager
+from ...metrics import MetricsManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
 from .aggregate_method.base import AggregationMethod
@@ -38,6 +39,7 @@ class FLServer(Strategy):
         client_selection: ClientSelectionMethod,
         aggregate_method: AggregationMethod,
         conf: Environment,
+        metrics_manager: MetricsManager,
     ) -> None:
         """
         Initialize federated server.
@@ -46,6 +48,7 @@ class FLServer(Strategy):
             config: Environment configuration
             client_selection: Client selection strategy
             aggregate_method: Model aggregation strategy
+            metrics_manager: Manager for calculating metrics
         """
         logger.info("Initializing FL Server")
         logger.info(f"Configuration: {conf.n_clients} clients, {conf.rounds} rounds")
@@ -59,15 +62,26 @@ class FLServer(Strategy):
         self.client_selection: ClientSelectionMethod = client_selection
         self.aggregate_method: AggregationMethod = aggregate_method
         self.conf: Environment = conf
+        self.metrics_manager: MetricsManager = metrics_manager
 
         self.list_of_clients: List[str] = [str(x) for x in range(conf.n_clients)]
         self.selected_clients: List[str] = []
         self.client_participating_state = np.ones(conf.n_clients, dtype=bool)
         self.current_round: int = 0
-        self.clients_acc_avg: float = 0.0
-        self.clients_loss_avg: float = 0.0
-        self.clients_acc = np.zeros(conf.n_clients)
-        self.clients_loss = np.zeros(conf.n_clients)
+
+        # Initialize metrics structures dynamically based on MetricsManager
+        metric_names = ["loss"] + self.metrics_manager.get_metrics_names()
+        logger.info(f"Server tracking metrics: {metric_names}")
+
+        # Create dictionary to store metrics for each client (indexed by client ID)
+        # Each metric has an array of size n_clients
+        self.clients_metrics: Dict[str, np.ndarray] = {
+            metric_name: np.zeros(conf.n_clients) for metric_name in metric_names
+        }
+
+        # Create dictionary to store average metrics across all clients
+        self.clients_metrics_avg: Dict[str, float] = dict.fromkeys(metric_names, 0.0)
+
         self.data_to_log = {}
 
         # CID Mapping: Bidirectional mapping between Flower UUIDs and numeric CIDs
@@ -411,10 +425,10 @@ class FLServer(Strategy):
         loss, config = self.aggregate_method.agg_eval(self, server_round, results, failures)
         self._collect_clients_data(results)
 
-        # Log round summary
+        # Log round summary with all metrics dynamically
         logger.info(f"Round {server_round} completed:")
-        logger.info(f"  Average Accuracy: {self.clients_acc_avg:.4f}")
-        logger.info(f"  Average Loss: {self.clients_loss_avg:.4f}")
+        for metric_name, avg_value in self.clients_metrics_avg.items():
+            logger.info(f"  Average {metric_name.capitalize()}: {avg_value:.4f}")
         logger.info(
             f"  Participating clients: {np.count_nonzero(self.client_participating_state)}/{len(self.client_participating_state)}"  # noqa: E501
         )  # noqa: E501
@@ -434,12 +448,11 @@ class FLServer(Strategy):
             server_round: Current server round.
 
         Returns:
-            Dictionary of log data.
+            Dictionary of log data including all configured metrics dynamically.
         """
-        return {
+        # Build base log data
+        log_data = {
             "rounds": server_round,
-            "acc": self.clients_acc_avg,
-            "loss": np.mean(self.clients_loss),
             "model_type": self.conf.model.type.lower(),
             "n_selected": len(self.selected_clients),
             "selection": f"[{';'.join(self.selected_clients)}]",
@@ -451,8 +464,16 @@ class FLServer(Strategy):
             "training_method": self.conf.client.training_strategy.name.lower(),
             "aggregation_method": f"{self.conf.server.aggregation_method.name.lower()}",
             "selection_method": self.conf.server.selection_method.name.lower(),
-            **self.data_to_log,
         }
+
+        # Add all configured metrics dynamically
+        for metric_name, avg_value in self.clients_metrics_avg.items():
+            log_data[metric_name] = avg_value
+
+        # Add any extra data from aggregation methods
+        log_data.update(self.data_to_log)
+
+        return log_data
 
     def _collect_clients_data(self, results: List[Tuple[ClientProxy, EvaluateRes]]) -> None:
         """
@@ -461,7 +482,7 @@ class FLServer(Strategy):
         This method:
         1. Extracts numeric CID from client metrics
         2. Updates UUID <-> CID mapping for future rounds
-        3. Stores client metrics in data structures indexed by numeric CID
+        3. Stores client metrics in data structures indexed by numeric CID (dynamically)
 
         Args:
             results: List of (ClientProxy, EvaluateRes) tuples from client evaluations.
@@ -471,38 +492,56 @@ class FLServer(Strategy):
         for proxy, eval_res in results:
             # Extract numeric CID from client metrics
             numeric_cid = str(int(eval_res.metrics["cid"]))
+            cid_idx = int(numeric_cid)
 
             # Update the bidirectional mapping
             self._update_cid_mapping(proxy, numeric_cid)
 
-            # Extract metrics
-            acc = eval_res.metrics["acc"]
+            # Extract participating state
             participating_state = eval_res.metrics["participating_state"]
-            loss = eval_res.loss
-
-            # Store in data structures indexed by numeric CID
-            cid_idx = int(numeric_cid)
-            self.clients_acc[cid_idx] = acc
-            self.clients_loss[cid_idx] = loss
             self.client_participating_state[cid_idx] = participating_state
 
+            # Collect all metrics dynamically from eval_res.metrics
+            # Build debug log message
+            debug_metrics = []
+
+            for metric_name in self.clients_metrics.keys():
+                # Try to get metric from eval_res.metrics
+                if metric_name in eval_res.metrics:
+                    metric_value = eval_res.metrics[metric_name]
+                    self.clients_metrics[metric_name][cid_idx] = metric_value
+                    debug_metrics.append(f"{metric_name}={metric_value:.4f}")
+
+            # Also store loss (comes from eval_res.loss, not metrics)
+            if "loss" in self.clients_metrics:
+                self.clients_metrics["loss"][cid_idx] = eval_res.loss
+                debug_metrics.append(f"loss={eval_res.loss:.4f}")
+
             logger.debug(
-                f"Client {numeric_cid}: acc={acc:.4f}, loss={loss:.4f}, "
+                f"Client {numeric_cid}: {', '.join(debug_metrics)}, "
                 + f"participating={participating_state}"
             )
 
-        # Calculate average ONLY for clients that participated in this round
+        # Calculate averages ONLY for clients that participated in this round
         selected_indices = [int(cid) for cid in self.selected_clients]
 
         if selected_indices:
-            self.clients_acc_avg = float(np.mean([self.clients_acc[i] for i in selected_indices]))
-            self.clients_loss_avg = float(np.mean([self.clients_loss[i] for i in selected_indices]))
+            # Calculate average for each metric dynamically
+            for metric_name, metric_array in self.clients_metrics.items():
+                avg_value = float(np.mean([metric_array[i] for i in selected_indices]))
+                self.clients_metrics_avg[metric_name] = avg_value
+
             logger.debug(f"Calculated averages from {len(selected_indices)} participating clients")
-            logger.debug(
-                f"Average accuracy: {self.clients_acc_avg:.4f}, "
-                + f"Average loss: {self.clients_loss_avg:.4f}"
+
+            # Build dynamic average log message
+            avg_metrics_str = ", ".join(
+                [f"{name}: {value:.4f}" for name, value in self.clients_metrics_avg.items()]
             )
+            logger.debug(f"Average metrics: {avg_metrics_str}")
         else:
             logger.warning("No participating clients found for averaging metrics!")
+            # Reset all averages to 0
+            for metric_name in self.clients_metrics_avg.keys():
+                self.clients_metrics_avg[metric_name] = 0.0
             self.clients_acc_avg = 0.0
             self.clients_loss_avg = 0.0
