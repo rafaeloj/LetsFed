@@ -2,13 +2,11 @@
 Manager for calculating multiple metrics at once.
 """
 
-from typing import Any
-
 import numpy as np
 
 from .base import Metric
 from .factory import MetricFactory
-from .structs import MetricsConfig
+from .structs import MetricConfig
 
 
 class MetricsManager:
@@ -19,12 +17,12 @@ class MetricsManager:
     on prediction results in a single call.
     """
 
-    def __init__(self, metrics_config: MetricsConfig | None = None) -> None:
+    def __init__(self, metrics_config: list[MetricConfig] | None = None) -> None:
         """
         Initialize the MetricsManager.
 
         Args:
-            metrics_config: Configuration for metrics (dict of MetricConfig).
+            metrics_config: Configuration for metrics (list of MetricConfig).
                           If None or empty, uses default metrics.
         """
         if metrics_config is None or len(metrics_config) == 0:
@@ -32,10 +30,8 @@ class MetricsManager:
             self.metrics = MetricFactory.create_default_metrics()
         else:
             # Create metric instances from configuration
-            # metrics_config is a dict[str, MetricConfig]
-            self.metrics = [
-                MetricFactory.create(metric_config) for metric_config in metrics_config.values()
-            ]
+            # metrics_config is a list[MetricConfig]
+            self.metrics = [MetricFactory.create(metric_config) for metric_config in metrics_config]
 
     def add_metric(self, metric: Metric) -> None:
         """
@@ -98,39 +94,6 @@ class MetricsManager:
                 results[metric.name] = 0.0
 
         return results
-
-    def calculate_from_model_output(
-        self,
-        y_true: np.ndarray,
-        model_output: Any,  # noqa: ANN401
-    ) -> dict[str, float]:
-        """
-        Calculate metrics from Keras model.evaluate() or model.predict() output.
-
-        Args:
-            y_true: True labels
-            model_output: Output from model.evaluate() (list) or model.predict() (array)
-
-        Returns:
-            Dictionary mapping metric names to their calculated values
-        """
-        # If model_output is a list (from evaluate), extract loss and metrics
-        if isinstance(model_output, (list, tuple)):
-            # Assuming: [loss, accuracy] or [loss, accuracy, ...]
-            # For now, we'll need predictions to calculate other metrics
-            # This is a simplified version
-            return {"loss": float(model_output[0]), "acc": float(model_output[1])}
-
-        # If model_output is predictions (probabilities)
-        elif isinstance(model_output, np.ndarray):
-            y_pred = (
-                np.argmax(model_output, axis=1) if len(model_output.shape) > 1 else model_output
-            )  # noqa: E501
-            y_pred_proba = model_output if len(model_output.shape) > 1 else None
-            return self.calculate_all(y_true, y_pred, y_pred_proba)
-
-        else:
-            raise ValueError(f"Unsupported model_output type: {type(model_output)}")
 
     def calculate_metrics(self, y_true: np.ndarray, y_pred_probs: np.ndarray) -> dict[str, float]:
         """

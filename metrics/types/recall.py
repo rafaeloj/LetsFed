@@ -2,6 +2,8 @@
 Recall metric implementation.
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import recall_score
 
@@ -28,6 +30,21 @@ class RecallMetric(Metric):
         super().__init__(name=config)
         self.average = config.average
         self.zero_division = config.zero_division
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> RecallMetricConfig:
+        """
+        Parse JSON parameters into RecallMetricConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            RecallMetricConfig instance.
+        """
+        return RecallMetricConfig(
+            average=params.get("average", "macro"), zero_division=params.get("zero_division", 0)
+        )
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None

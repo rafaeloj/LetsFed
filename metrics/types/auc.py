@@ -2,6 +2,8 @@
 AUC (Area Under the ROC Curve) metric implementation.
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
@@ -30,6 +32,22 @@ class AUCMetric(Metric):
         self.multi_class = config.multi_class
         self.average = config.average
         self.labels = config.labels
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> AUCMetricConfig:
+        """
+        Parse JSON parameters into AUCMetricConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            AUCMetricConfig instance.
+        """
+        return AUCMetricConfig(
+            multi_class=params.get("multi_class", "ovr"),
+            average=params.get("average", "macro"),
+        )
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None

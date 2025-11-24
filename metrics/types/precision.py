@@ -2,6 +2,8 @@
 Precision metric implementation.
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import precision_score
 
@@ -28,6 +30,21 @@ class PrecisionMetric(Metric):
         super().__init__(name=config)
         self.average = config.average
         self.zero_division = config.zero_division
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> PrecisionMetricConfig:
+        """
+        Parse JSON parameters into PrecisionMetricConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            PrecisionMetricConfig instance.
+        """
+        return PrecisionMetricConfig(
+            average=params.get("average", "macro"), zero_division=params.get("zero_division", 0)
+        )
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None

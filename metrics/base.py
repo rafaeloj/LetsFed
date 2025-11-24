@@ -3,6 +3,7 @@ Base class for all metrics in the federated learning system.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
 
@@ -25,6 +26,20 @@ class Metric(ABC):
             config: The configuration for the metric.
         """
         self.name = config.name
+
+    @staticmethod
+    @abstractmethod
+    def params_from_json(params: dict[str, Any]) -> Any:  # noqa: ANN401
+        """
+        Parse JSON parameters into the strategy-specific config.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            Strategy-specific configuration dataclass instance.
+        """
+        ...
 
     @abstractmethod
     def calculate(

@@ -27,29 +27,27 @@ client:
   training_strategy:
     name: normal  # Options: normal, letsfed, maxfl, fedper, qffl
     params:
-      learning_rate: 0.001  # Balanced learning rate
-
-
-  # Metrics configuration - dictionary of metrics to calculate
+      learning_rate: 0.001
+  # Metrics configuration - list of metrics to calculate
   metrics:
-    accuracy:
-      name: accuracy
-    precision:
-      name: precision
-      average: macro  # Options: 'macro', 'micro', 'weighted'
-      zero_division: 0  # Value to return when there is a zero division
-    recall:
-      name: recall
-      average: macro
-      zero_division: 0
-    f1_score:
-      name: f1_score
-      average: weighted  # Weighted by support (number of true instances for each label)
-      zero_division: 0
-    auc:
-      name: auc
-      multi_class: ovr  # Options: 'ovr' (one-vs-rest), 'ovo' (one-vs-one)
-      average: macro
+    - name: accuracy
+      params: {}
+    - name: precision
+      params:
+        average: macro  # Options: 'macro', 'micro', 'weighted'
+        zero_division: 0  # Value to return when there is a zero division
+    - name: recall
+      params:
+        average: macro
+        zero_division: 0
+    - name: f1_score
+      params:
+        average: weighted  # Weighted by support (number of true instances for each label)
+        zero_division: 0
+    - name: auc
+      params:
+        multi_class: ovr  # Options: 'ovr' (one-vs-rest), 'ovo' (one-vs-one)
+        average: macro
 
 # Dataset Configuration
 dataset:

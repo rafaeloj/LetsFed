@@ -2,6 +2,8 @@
 Factory for creating metric instances.
 """
 
+from typing import Type
+
 from .base import Metric
 from .structs import MetricConfig
 from .types import (
@@ -28,8 +30,17 @@ class MetricFactory:
     Provides a centralized way to create metrics by name with default or custom configurations.
     """
 
-    @staticmethod
-    def create(metric_config: MetricConfig) -> Metric:
+    _registry: dict[str, Type[Metric]] = {
+        "accuracy": AccuracyMetric,
+        "precision": PrecisionMetric,
+        "recall": RecallMetric,
+        "f1_score": F1ScoreMetric,
+        "fbeta_score": FBetaScoreMetric,
+        "auc": AUCMetric,
+    }
+
+    @classmethod
+    def create(cls, metric_config: MetricConfig) -> Metric:
         """
         Create a metric instance from a MetricConfig.
 
@@ -47,23 +58,16 @@ class MetricFactory:
             >>> config = PrecisionMetricConfig(average='weighted')
             >>> precision = MetricFactory.create_from_config(config)
         """
-        metric_map = {
-            "accuracy": AccuracyMetric,
-            "precision": PrecisionMetric,
-            "recall": RecallMetric,
-            "f1_score": F1ScoreMetric,
-            "fbeta_score": FBetaScoreMetric,
-            "auc": AUCMetric,
-        }
-
-        metric_class = metric_map.get(metric_config.name.lower())
+        metric_class = cls._registry.get(metric_config.name.lower())
         if metric_class is None:
             raise ValueError(
                 f"Unknown metric: {metric_config.name}. "
-                + f"Available metrics: {', '.join(metric_map.keys())}"
+                + f"Available metrics: {', '.join(cls._registry.keys())}"
             )
 
-        return metric_class(metric_config)
+        metric_class_config = metric_class.params_from_json(metric_config.params)
+
+        return metric_class(metric_class_config)
 
     @staticmethod
     def create_default_metrics() -> list[Metric]:

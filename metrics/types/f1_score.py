@@ -2,6 +2,8 @@
 F1 Score metric implementation.
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import f1_score
 
@@ -29,6 +31,21 @@ class F1ScoreMetric(Metric):
         super().__init__(name=config)
         self.average = config.average
         self.zero_division = config.zero_division
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> F1ScoreMetricConfig:
+        """
+        Parse JSON parameters into F1ScoreMetricConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            F1ScoreMetricConfig instance.
+        """
+        return F1ScoreMetricConfig(
+            average=params.get("average", "macro"), zero_division=params.get("zero_division", 0)
+        )
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None

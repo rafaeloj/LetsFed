@@ -15,6 +15,4 @@ class MetricConfig:
     """
 
     name: str
-    """Name of the metric (e.g., 'accuracy', 'precision', 'f1_score')"""
     params: dict[str, Any] = field(default_factory=dict)
-    """Additional parameters for the metric (if any)"""

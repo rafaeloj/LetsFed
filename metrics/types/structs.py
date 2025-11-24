@@ -1,17 +1,15 @@
 from dataclasses import dataclass
 
-from ..structs import MetricConfig
-
 
 @dataclass
-class AccuracyMetricConfig(MetricConfig):
+class AccuracyMetricConfig:
     """Configuration for Accuracy metric."""
 
     name: str = "accuracy"
 
 
 @dataclass
-class PrecisionMetricConfig(MetricConfig):
+class PrecisionMetricConfig:
     """Configuration for Precision metric."""
 
     name: str = "precision"
@@ -22,7 +20,7 @@ class PrecisionMetricConfig(MetricConfig):
 
 
 @dataclass
-class RecallMetricConfig(MetricConfig):
+class RecallMetricConfig:
     """Configuration for Recall metric."""
 
     name: str = "recall"
@@ -33,7 +31,7 @@ class RecallMetricConfig(MetricConfig):
 
 
 @dataclass
-class F1ScoreMetricConfig(MetricConfig):
+class F1ScoreMetricConfig:
     """Configuration for F1 Score metric."""
 
     name: str = "f1_score"
@@ -44,7 +42,7 @@ class F1ScoreMetricConfig(MetricConfig):
 
 
 @dataclass
-class FBetaScoreMetricConfig(MetricConfig):
+class FBetaScoreMetricConfig:
     """Configuration for F-Beta Score metric."""
 
     name: str = "fbeta_score"
@@ -57,7 +55,7 @@ class FBetaScoreMetricConfig(MetricConfig):
 
 
 @dataclass
-class AUCMetricConfig(MetricConfig):
+class AUCMetricConfig:
     """Configuration for AUC metric."""
 
     name: str = "auc"

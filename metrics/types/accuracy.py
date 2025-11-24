@@ -2,6 +2,8 @@
 Accuracy metric implementation.
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import accuracy_score
 
@@ -19,6 +21,19 @@ class AccuracyMetric(Metric):
     def __init__(self, config: AccuracyMetricConfig) -> None:
         """Initialize the Accuracy metric."""
         super().__init__(name=config)
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> AccuracyMetricConfig:
+        """
+        Parse JSON parameters into AccuracyMetricConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            AccuracyMetricConfig instance.
+        """
+        return AccuracyMetricConfig()
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None

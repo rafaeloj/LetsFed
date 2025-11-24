@@ -2,6 +2,8 @@
 F-Beta Score metric implementation.
 """
 
+from typing import Any
+
 import numpy as np
 from sklearn.metrics import fbeta_score
 
@@ -36,6 +38,23 @@ class FBetaScoreMetric(Metric):
         self.beta = config.beta
         self.average = config.average
         self.zero_division = config.zero_division
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> FBetaScoreMetricConfig:
+        """
+        Parse JSON parameters into FBetaScoreMetricConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            FBetaScoreMetricConfig instance.
+        """
+        return FBetaScoreMetricConfig(
+            beta=params.get("beta", 1.0),
+            average=params.get("average", "macro"),
+            zero_division=params.get("zero_division", 0),
+        )
 
     def calculate(
         self, y_true: np.ndarray, y_pred: np.ndarray, y_pred_proba: np.ndarray | None = None
