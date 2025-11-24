@@ -23,7 +23,6 @@ class SelectionMethodConfig:
 class RandomSelectionMethodConfig:
     """Random selection method configuration."""
 
-    name: str = "random"
     perc_of_clients: float = 0.3
 
 
@@ -31,7 +30,6 @@ class RandomSelectionMethodConfig:
 class DeevSelectionMethodConfig:
     """DEEV selection method configuration."""
 
-    name: str = "deev"
     decay: float = 0.95
 
 
@@ -39,7 +37,6 @@ class DeevSelectionMethodConfig:
 class PoCSelectionMethodConfig:
     """PoC selection method configuration."""
 
-    name: str = "poc"
     perc_of_clients: float = 0.3
 
 
@@ -47,7 +44,6 @@ class PoCSelectionMethodConfig:
 class RoundRobinSelectionMethodConfig:
     """Round Robin selection method configuration."""
 
-    name: str = "round_robin"
     perc_of_clients: float = 0.3
     n_clients: int = 10
 
@@ -56,6 +52,5 @@ class RoundRobinSelectionMethodConfig:
 class LetsFedSelectionMethodConfig:
     """LetsFed selection method configuration."""
 
-    name: str = "letsfed"
     participating_method: SelectionMethodConfig
     non_participating_method: SelectionMethodConfig

@@ -245,9 +245,12 @@ class FLServer(Strategy):
         num_available = client_manager.num_available()
         logger.debug(f"Number of available clients: {num_available}")
 
+        # Calculate minimum required clients based on init_clients ratio
+        min_clients_required = max(1, int(self.conf.n_clients * self.conf.init_clients))
+
         all_available_clients = client_manager.sample(
             num_clients=num_available,  # Sample all available clients
-            min_num_clients=1,  # Accept at least 1 client (flexible)
+            min_num_clients=min_clients_required,  # Wait for minimum required clients
         )
         logger.debug(f"Sampled clients: {len(all_available_clients)}")
 

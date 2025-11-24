@@ -5,74 +5,20 @@ This module provides utilities to load and validate configuration files.
 """
 
 from pathlib import Path
-from typing import Type, Union
+from typing import Union
 
 from omegaconf import OmegaConf
 
-from ..client.strategies.training.structs import (
-    FedPerTrainingStrategyConfig,
-    LetsFedTrainingStrategyConfig,
-    MaxFLTrainingStrategyConfig,
-    NormalTrainingStrategyConfig,
-    QFFLTrainingStrategyConfig,
-)
-from ..server.strategies.aggregate_method.structs import (
-    FedAvgAggregationMethodConfig,
-    MaxFLAggregationMethodConfig,
-    QFFLAggregationMethodConfig,
-)
-from ..server.strategies.client_selection_method.structs import (
-    DeevSelectionMethodConfig,
-    LetsFedSelectionMethodConfig,
-    PoCSelectionMethodConfig,
-    RandomSelectionMethodConfig,
-    RoundRobinSelectionMethodConfig,
-)
 from .structs import Environment
-
-# Register all structured configs
-OmegaConf.register_new_resolver("aggregation_factory", lambda name: _get_aggregation_class(name))
-OmegaConf.register_new_resolver("selection_factory", lambda name: _get_selection_class(name))
-OmegaConf.register_new_resolver("training_factory", lambda name: _get_training_class(name))
-
-
-def _get_aggregation_class(name: str) -> Type:
-    """Get aggregation method class by name."""
-    mapping = {
-        "fedavg": FedAvgAggregationMethodConfig,
-        "maxfl": MaxFLAggregationMethodConfig,
-        "qffl": QFFLAggregationMethodConfig,
-    }
-    return mapping.get(name, FedAvgAggregationMethodConfig)
-
-
-def _get_selection_class(name: str) -> Type:
-    """Get selection method class by name."""
-    mapping = {
-        "random": RandomSelectionMethodConfig,
-        "deev": DeevSelectionMethodConfig,
-        "poc": PoCSelectionMethodConfig,
-        "round_robin": RoundRobinSelectionMethodConfig,
-        "letsfed": LetsFedSelectionMethodConfig,
-    }
-    return mapping.get(name, RandomSelectionMethodConfig)
-
-
-def _get_training_class(name: str) -> Type:
-    """Get training strategy class by name."""
-    mapping = {
-        "normal": NormalTrainingStrategyConfig,
-        "letsfed": LetsFedTrainingStrategyConfig,
-        "maxfl": MaxFLTrainingStrategyConfig,
-        "fedper": FedPerTrainingStrategyConfig,
-        "qffl": QFFLTrainingStrategyConfig,
-    }
-    return mapping.get(name, NormalTrainingStrategyConfig)
 
 
 def load_config(config_path: Union[str, Path]) -> Environment:
     """
     Load configuration from YAML file and validate it.
+
+    The factories (TrainingStrategyFactory, AggregationFactory, ClientSelectionFactory,
+    MetricFactory) will handle the conversion from generic configs to specific configs
+    using params_from_json internal method.
 
     Args:
         config_path: Path to the configuration YAML file
@@ -92,36 +38,20 @@ def load_config(config_path: Union[str, Path]) -> Environment:
     # Load YAML
     yaml_config = OmegaConf.load(config_path)
 
-    # Convert structured configs based on 'name' fields
-    if "server" in yaml_config and "aggregation_method" in yaml_config.server:
-        agg_name = yaml_config.server.aggregation_method.get("name", "fedavg")
-        agg_class = _get_aggregation_class(agg_name)
-        yaml_config.server.aggregation_method = OmegaConf.merge(
-            OmegaConf.structured(agg_class), yaml_config.server.aggregation_method
-        )
+    # Create structured config using Environment as schema
+    structured_config = OmegaConf.structured(Environment)
 
-    if "server" in yaml_config and "selection_method" in yaml_config.server:
-        sel_name = yaml_config.server.selection_method.get("name", "random")
-        sel_class = _get_selection_class(sel_name)
-        yaml_config.server.selection_method = OmegaConf.merge(
-            OmegaConf.structured(sel_class), yaml_config.server.selection_method
-        )
+    # Merge YAML into structured config
+    # This preserves type safety while allowing flexible YAML structure
+    config = OmegaConf.merge(structured_config, yaml_config)
 
-    if "client" in yaml_config and "training_strategy" in yaml_config.client:
-        train_name = yaml_config.client.training_strategy.get("name", "normal")
-        train_class = _get_training_class(train_name)
-        yaml_config.client.training_strategy = OmegaConf.merge(
-            OmegaConf.structured(train_class), yaml_config.client.training_strategy
-        )
-
-    # Create structured config and merge
-    config = OmegaConf.structured(Environment)
-    config = OmegaConf.merge(config, yaml_config)
+    # Convert to Python object
+    config_obj = OmegaConf.to_object(config)
 
     # Validate
-    _validate_config(config)
+    _validate_config(config_obj)
 
-    return OmegaConf.to_object(config)
+    return config_obj
 
 
 def _validate_config(config: Environment) -> None:
@@ -143,14 +73,15 @@ def _validate_config(config: Environment) -> None:
     if not 0 < config.init_clients <= 1:
         raise ValueError("init_clients must be between 0 and 1")
 
-    # Validate server config
-    if hasattr(config.server.selection_method, "perc_of_clients"):
-        if not 0 < config.server.selection_method.perc_of_clients <= 1:
-            raise ValueError("selection_method.perc_of_clients must be between 0 and 1")
-
     # Validate client config
     if config.client.epochs < 1:
         raise ValueError("client epochs must be at least 1")
+
+    if config.client.learning_rate <= 0:
+        raise ValueError("client learning_rate must be greater than 0")
+
+    # Note: We don't validate strategy-specific parameters here anymore.
+    # The factories will handle validation via params_from_json methods.
 
 
 def save_config(config: Environment, config_path: Union[str, Path]) -> None:

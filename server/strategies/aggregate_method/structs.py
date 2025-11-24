@@ -23,14 +23,13 @@ class AggregationMethodConfig:
 class FedAvgAggregationMethodConfig:
     """FedAvg aggregation method configuration - no extra parameters."""
 
-    name: str = "fedavg"
+    pass
 
 
 @dataclass
 class MaxFLAggregationMethodConfig:
     """MaxFL aggregation method configuration."""
 
-    name: str = "maxfl"
     epsilon: float = 10.0
     learning_rate: float = 0.01
 
@@ -39,6 +38,5 @@ class MaxFLAggregationMethodConfig:
 class QFFLAggregationMethodConfig:
     """QFFL aggregation method configuration."""
 
-    name: str = "qffl"
     rho: float = 0.1
     learning_rate: float = 0.01

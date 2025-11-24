@@ -7,14 +7,14 @@ management to Docker Compose CLI instead of generating YAML files.
 """
 
 import subprocess
-from logging import getLogger
 from pathlib import Path
 from random import sample
 from typing import List, Optional
 
 from ..conf.structs import Environment
+from .logger import Logger
 
-logger = getLogger(__name__)
+logger = Logger(__name__)
 
 
 class DockerComposeManager:
@@ -171,16 +171,46 @@ class DockerComposeManager:
 
         # Start clients using docker compose run with different CIDs
         for cid in client_ids:
+            container_name = f"fl_client-{cid}"
             env = {
                 "CID": str(cid),
             }
 
             # Use 'run' instead of 'up' to create multiple instances with same service
             # --detach runs in background
-            # The container name will be set by container_name in docker-compose.yml using ${CID}
-            self._run_compose_command(["up", "--detach", "client"], env=env)
+            # --name sets container name explicitly
+            # (docker compose run ignores container_name in yml)
+            result = self._run_compose_command(
+                ["run", "--detach", "--name", container_name, "client"],
+                env=env,
+                capture_output=True,
+            )
+
+            # The container ID is returned in stdout
+            if result.returncode == 0:
+                container_id = result.stdout.strip()[:12]  # Short container ID
+                container_name = f"fl_client-{cid}"
+                msg = f"  ✓ Client {cid} started (container: {container_name}, ID: {container_id})"
+                logger.info(msg)
+            else:
+                logger.error(f"  ✗ Failed to start client {cid}")
+                if result.stderr:
+                    logger.error(f"     Error: {result.stderr}")
 
         logger.info("Clients started successfully")
+
+        # Verify containers are actually running
+        logger.debug("Verifying client containers...")
+        actual_clients = self.running_clients
+        logger.info(f"Client containers found: {len(actual_clients)}/{len(client_ids)}")
+        if len(actual_clients) < len(client_ids):
+            warning_msg = "".join(
+                [
+                    f"Warning: Expected {len(client_ids)} clients, ",
+                    f"but only {len(actual_clients)} containers found",
+                ]
+            )
+            logger.warning(warning_msg)
 
     def start_all(self) -> None:
         """Start both server and all participating clients."""
@@ -233,7 +263,9 @@ class DockerComposeManager:
     def stop_all(self) -> None:
         """Stop all services (server and clients)."""
         logger.info("Stopping all FL services...")
-        self._run_compose_command(["down"])
+
+        self._run_compose_command(["down", "--remove-orphans"])
+
         logger.info("All FL services stopped")
 
     def restart_server(self) -> None:
@@ -288,10 +320,42 @@ class DockerComposeManager:
         Get status of all services.
 
         Returns:
-            Status output from docker compose ps
+            Status output from docker compose ps and client containers
         """
+        # Get docker-compose managed services (server)
         result = self._run_compose_command(["ps"], capture_output=True)
-        return result.stdout
+        status_lines = ["=== Docker Compose Services ===", result.stdout]
+
+        # Get client containers (started with docker compose run)
+        # These are not tracked by 'docker compose ps'
+        clients = self.running_clients
+        if clients:
+            status_lines.append("\n=== Client Containers ===")
+            for client_name in clients:
+                # Get container status with more details
+                # nosec B603, B607: Command is constructed safely
+                inspect_result = subprocess.run(  # noqa: S603, S607
+                    [  # noqa: S607
+                        "docker",
+                        "ps",
+                        "--filter",
+                        f"name={client_name}",
+                        "--format",
+                        "{{.Names}}\t{{.Status}}",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if inspect_result.returncode == 0 and inspect_result.stdout.strip():
+                    status_lines.append(f"  {inspect_result.stdout.strip()}")
+                else:
+                    status_lines.append(f"  {client_name}: unknown")
+        else:
+            status_lines.append("\n=== Client Containers ===")
+            status_lines.append("No client containers found")
+
+        return "\n".join(status_lines)
 
     @property
     def is_server_running(self) -> bool:

@@ -166,29 +166,52 @@ class DSManager:
             p = path.lower()
 
         logger.debug(f"Dataset base path: {p}")
-        test_folder = os.path.exists(f"{p}/test/{partition_id}")
-        train_folder = os.path.exists(f"{p}/train/{partition_id}")
-        validation_folder = os.path.exists(f"{p}/validation/{partition_id}")
+        logger.debug(f"Current working directory: {os.getcwd()}")
+        logger.debug(f"Absolute path: {os.path.abspath(p)}")
+
+        test_path = f"{p}/test/{partition_id}"
+        train_path = f"{p}/train/{partition_id}"
+        validation_path = f"{p}/validation/{partition_id}"
+
+        test_folder = os.path.exists(test_path)
+        train_folder = os.path.exists(train_path)
+        validation_folder = os.path.exists(validation_path)
+
+        logger.debug(f"Test folder exists: {test_folder} at {test_path}")
+        logger.debug(f"Train folder exists: {train_folder} at {train_path}")
+        logger.debug(f"Validation folder exists: {validation_folder} at {validation_path}")
 
         if test_folder:
             logger.debug(f"Loading test data for partition {partition_id}")
-            test = load_from_disk(f"{p}/test/{partition_id}")
+            test = load_from_disk(test_path)
             self.test = test
             self.test_partitioner.dataset = test
 
         if train_folder:
             logger.debug(f"Loading train data for partition {partition_id}")
-            train = load_from_disk(f"{p}/train/{partition_id}")
+            train = load_from_disk(train_path)
             self.train = train
             self.train_partitioner.dataset = train
 
         if validation_folder:
             logger.debug(f"Loading validation data for partition {partition_id}")
-            validation = load_from_disk(f"{p}/validation/{partition_id}")
+            validation = load_from_disk(validation_path)
 
         if not train_folder or not test_folder or not validation_folder:
-            logger.error(f"Failed to load dataset for partition {partition_id}")
-            raise ValueError(f"Error into load dataset of cid: {partition_id}")
+            missing = []
+            if not train_folder:
+                missing.append(f"train: {train_path}")
+            if not test_folder:
+                missing.append(f"test: {test_path}")
+            if not validation_folder:
+                missing.append(f"validation: {validation_path}")
+            missing_str = ", ".join(missing)
+            logger.error(
+                f"Failed to load dataset for partition {partition_id}. Missing: {missing_str}"
+            )
+            raise ValueError(
+                f"Error loading dataset for cid: {partition_id}. Missing folders: {missing_str}"
+            )
 
         logger.info(f"Successfully loaded local dataset for partition {partition_id}")
         return train, validation, test

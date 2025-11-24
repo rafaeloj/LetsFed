@@ -20,7 +20,7 @@ class AccuracyMetric(Metric):
 
     def __init__(self, config: AccuracyMetricConfig) -> None:
         """Initialize the Accuracy metric."""
-        super().__init__(name=config)
+        super().__init__(config)
 
     @staticmethod
     def params_from_json(params: dict[str, Any]) -> AccuracyMetricConfig:

@@ -28,10 +28,9 @@ class AUCMetric(Metric):
         Args:
             config: Configuration for the AUC metric
         """
-        super().__init__(name=config)
+        super().__init__(config)
         self.multi_class = config.multi_class
         self.average = config.average
-        self.labels = config.labels
 
     @staticmethod
     def params_from_json(params: dict[str, Any]) -> AUCMetricConfig:

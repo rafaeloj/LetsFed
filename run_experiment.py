@@ -6,13 +6,13 @@ This script shows how to orchestrate federated learning experiments using
 Docker Compose with proper separation of concerns.
 """
 
-from logging import getLogger
 from pathlib import Path
 
 from .conf.loader import load_config
 from .utils.docker_compose_manager import DockerComposeManager
+from .utils.logger import Logger
 
-logger = getLogger(__name__)
+logger = Logger(__name__)
 
 
 def main() -> None:
@@ -41,12 +41,6 @@ def main() -> None:
         # Check status
         logger.info("\nCurrent status:")
         logger.info(manager.get_status())
-
-        # Wait for user input to continue
-        input("\nPress Enter to view server logs (Ctrl+C to exit)...")
-
-        # Show server logs
-        manager.get_logs(service="server", tail=50)
 
         # Wait for user input to stop
         input("\nPress Enter to stop all services...")

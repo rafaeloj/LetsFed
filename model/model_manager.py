@@ -74,9 +74,7 @@ class ModelManager:
             ]
         )
         model.compile(
-            optimizer=keras.optimizers.Adam(
-                learning_rate=self.conf.client.training_strategy.learning_rate
-            ),
+            optimizer=keras.optimizers.Adam(learning_rate=self.conf.client.learning_rate),
             loss="sparse_categorical_crossentropy",
             metrics=["accuracy"],
         )
@@ -110,9 +108,7 @@ class ModelManager:
             ]
         )
         model.compile(
-            optimizer=keras.optimizers.Adam(
-                learning_rate=self.conf.client.training_strategy.learning_rate
-            ),
+            optimizer=keras.optimizers.Adam(learning_rate=self.conf.client.learning_rate),
             loss="sparse_categorical_crossentropy",
             metrics=["accuracy"],
         )

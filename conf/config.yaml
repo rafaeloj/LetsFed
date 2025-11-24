@@ -1,6 +1,6 @@
 # General Configuration
-rounds: 20
-n_clients: 1
+rounds: 10
+n_clients: 5
 init_clients: 1.0
 gpu: false
 log_path: logs
@@ -24,10 +24,10 @@ server:
 # Client Configuration
 client:
   epochs: 10
+  learning_rate: 0.001  # Global learning rate used by ModelManager
   training_strategy:
     name: normal  # Options: normal, letsfed, maxfl, fedper, qffl
-    params:
-      learning_rate: 0.001
+    params: {}
   # Metrics configuration - list of metrics to calculate
   metrics:
     - name: accuracy
