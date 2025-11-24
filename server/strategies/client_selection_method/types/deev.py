@@ -1,5 +1,5 @@
 from math import ceil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
@@ -29,6 +29,19 @@ class DEEV(ClientSelectionMethod):
             config: The selection method configuration.
         """
         super().__init__(config)
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> DeevSelectionMethodConfig:
+        """
+        Parse JSON parameters into DeevSelectionMethodConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            DeevSelectionMethodConfig instance.
+        """
+        return DeevSelectionMethodConfig(decay=params.get("decay", 0.95))
 
     def select(
         self,

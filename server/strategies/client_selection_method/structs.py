@@ -3,48 +3,59 @@
 # ============================================================================
 
 
-from dataclasses import MISSING, dataclass
+from dataclasses import MISSING, dataclass, field
+from typing import Any
 
 
 @dataclass
 class SelectionMethodConfig:
-    """Base class for selection methods."""
+    """
+    Base configuration for selection methods.
+
+    Uses a generic params dict to allow different parameters per strategy.
+    """
 
     name: str = MISSING
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
-class RandomSelectionMethodConfig(SelectionMethodConfig):
+class RandomSelectionMethodConfig:
     """Random selection method configuration."""
 
+    name: str = "random"
     perc_of_clients: float = 0.3
 
 
 @dataclass
-class DeevSelectionMethodConfig(SelectionMethodConfig):
+class DeevSelectionMethodConfig:
     """DEEV selection method configuration."""
 
+    name: str = "deev"
     decay: float = 0.95
 
 
 @dataclass
-class PoCSelectionMethodConfig(SelectionMethodConfig):
+class PoCSelectionMethodConfig:
     """PoC selection method configuration."""
 
+    name: str = "poc"
     perc_of_clients: float = 0.3
 
 
 @dataclass
-class RoundRobinSelectionMethodConfig(SelectionMethodConfig):
+class RoundRobinSelectionMethodConfig:
     """Round Robin selection method configuration."""
 
+    name: str = "round_robin"
     perc_of_clients: float = 0.3
     n_clients: int = 10
 
 
 @dataclass
-class LetsFedSelectionMethodConfig(SelectionMethodConfig):
+class LetsFedSelectionMethodConfig:
     """LetsFed selection method configuration."""
 
-    participating_selection_method: SelectionMethodConfig = MISSING
-    non_participating_selection_method: SelectionMethodConfig = MISSING
+    name: str = "letsfed"
+    participating_method: SelectionMethodConfig
+    non_participating_method: SelectionMethodConfig

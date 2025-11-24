@@ -173,6 +173,7 @@ LetsFed/
 ├── 📋 requirements-server.txt         # Server dependencies
 ├── 🐳 docker-compose.yml              # Container orchestration
 ├── 🔨 build.sh                        # Build script
+├── 🧹 cleanup.sh                      # Cleanup Docker containers/networks
 └── 🧪 test/                           # Testing and analysis
     └── teste.ipynb                   # Results analysis notebook
 ```
@@ -734,17 +735,22 @@ If no metrics configuration is provided, the following defaults are used:
 # Automatically applied if client.metrics is not specified
 client:
   metrics:  # Optional - uses defaults if omitted
-    - name: accuracy
-    - name: precision
+    accuracy:
+      name: accuracy
+    precision:
+      name: precision
       average: macro
       zero_division: 0
-    - name: recall
+    recall:
+      name: recall
       average: macro
       zero_division: 0
-    - name: f1_score
+    f1_score:
+      name: f1_score
       average: macro
       zero_division: 0
-    - name: auc
+    auc:
+      name: auc
       multi_class: ovr
       average: macro
 ```
@@ -755,16 +761,20 @@ client:
 ```yaml
 client:
   metrics:
-    - name: precision
+    precision:
+      name: precision
       average: weighted  # Weight by class support
       zero_division: 0
-    - name: recall
+    recall:
+      name: recall
       average: weighted
       zero_division: 0
-    - name: f1_score
+    f1_score:
+      name: f1_score
       average: weighted
       zero_division: 0
-    - name: auc
+    auc:
+      name: auc
       average: weighted
 ```
 
@@ -772,8 +782,10 @@ client:
 ```yaml
 client:
   metrics:
-    - name: accuracy
-    - name: fbeta_score
+    accuracy:
+      name: accuracy
+    fbeta_score:
+      name: fbeta_score
       beta: 2.0          # Recall weighted 2x more than precision
       average: macro
       zero_division: 0
@@ -783,9 +795,14 @@ client:
 ```yaml
 client:
   metrics:
-    - name: precision
+    precision:
+      name: precision
       average: micro
-    - name: recall
+    recall:
+      name: recall
+      average: micro
+    f1_score:
+      name: f1_score
       average: micro
     - name: f1_score
       average: micro
@@ -1088,10 +1105,36 @@ The framework uses `run_experiments.py` for experiment orchestration with update
 # Run experiment with orchestration script
 python run_experiments.py
 
-# Or use docker-compose manager directly
-python utils/docker_compose_manager.py --n-clients 50
-docker-compose up
+# Or use docker-compose manager directly to run
+docker compose up server
+docker compose up client
 ```
+
+### Cleanup
+
+Stop and remove all containers, networks, and orphaned containers:
+
+```bash
+# Basic cleanup (keeps volumes)
+./cleanup.sh
+
+# Full cleanup (also removes volumes)
+./cleanup.sh --volumes
+
+# Or use docker compose directly
+docker compose down --remove-orphans
+
+# With volumes
+docker compose down --remove-orphans --volumes
+```
+
+The `cleanup.sh` script provides:
+- ✅ Stops all running containers
+- ✅ Removes containers and networks
+- ✅ Removes orphaned containers
+- ✅ Optional volume removal (`--volumes` flag)
+- ✅ Colored output with status messages
+- ✅ Warnings about remaining containers
 
 ## ⚙️ Configuration Reference
 

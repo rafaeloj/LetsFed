@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from flwr.common import (
@@ -36,9 +36,25 @@ class LetsFedClient(TrainingStrategy):
         self.add_drivers(self._get_drivers())
         logger.info("LetsFedClient training strategy initialized with drivers")
 
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> LetsFedTrainingStrategyConfig:
+        """
+        Parse JSON parameters into LetsFedTrainingStrategyConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            LetsFedTrainingStrategyConfig instance.
+        """
+        return LetsFedTrainingStrategyConfig(
+            learning_rate=params.get("learning_rate", 0.01),
+            threshold_accuracy=params.get("threshold_accuracy", 1.0),
+        )
+
     def _get_drivers(self) -> list[Driver]:
         """
-        Get the list of drivers for the MaxFL client.
+        Get the list of drivers for the LetsFed client.
 
         Returns:
             list[Driver]: List of driver instances.

@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
-from ..structs import LetsFedSelectionMethodConfig
+from ..structs import LetsFedSelectionMethodConfig, SelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
@@ -33,16 +33,40 @@ class LetsFedSelection(ClientSelectionMethod):
         from ..factory import ClientSelectionFactory
 
         self.participating_selection_method = ClientSelectionFactory.create(
-            config.participating_selection_method
+            config.participating_method
         )
         self.non_participating_selection_method = ClientSelectionFactory.create(
-            config.non_participating_selection_method
+            config.non_participating_method
         )
 
         logger.info(
             "LetsFedSelection initialized - "
-            + f"Participating: {config.participating_selection_method.__class__.__name__}, "
-            + f"Non-participating: {config.non_participating_selection_method.__class__.__name__}"
+            + f"Participating: {config.participating_method}, "
+            + f"Non-participating: {config.non_participating_method}"
+        )
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> LetsFedSelectionMethodConfig:
+        """
+        Parse JSON parameters into LetsFedSelectionMethodConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            LetsFedSelectionMethodConfig instance.
+        """
+        participating_method = SelectionMethodConfig(
+            name=params.get("participating_method", "name"),
+            params=params.get("participating_params", "params"),
+        )
+        non_participating_method = SelectionMethodConfig(
+            name=params.get("non_participating_method", "name"),
+            params=params.get("non_participating_params", "params"),
+        )
+        return LetsFedSelectionMethodConfig(
+            participating_method=participating_method,
+            non_participating_method=non_participating_method,
         )
 
     def _select_participating_clients(

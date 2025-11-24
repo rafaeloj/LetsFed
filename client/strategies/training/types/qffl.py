@@ -1,5 +1,5 @@
 import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from flwr.common import (
@@ -33,6 +33,21 @@ class QFFLClient(TrainingStrategy):
         """
         super().__init__(config)
         logger.info("QFFLClient training strategy initialized")
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> QFFLTrainingStrategyConfig:
+        """
+        Parse JSON parameters into QFFLTrainingStrategyConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            QFFLTrainingStrategyConfig instance.
+        """
+        return QFFLTrainingStrategyConfig(
+            learning_rate=params.get("learning_rate", 0.01), eta=params.get("eta", 1.0)
+        )
 
     def fit(
         self, client: "FLClient", parameters: NDArrays, config: Config

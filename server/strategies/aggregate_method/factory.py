@@ -34,7 +34,7 @@ class AggregationFactory:
         Create an aggregation method based on configuration.
 
         Args:
-            config: AggregationMethod configuration
+            config: AggregationMethod configuration with name and params
 
         Returns:
             Instance of appropriate AggregateMethod subclass
@@ -52,7 +52,11 @@ class AggregationFactory:
             )
 
         agg_class = cls._registry[method]
-        return agg_class(config)
+
+        # Use params_from_json to create strategy-specific config
+        specific_config = agg_class.params_from_json(config.params)
+
+        return agg_class(specific_config)
 
     @classmethod
     def register(cls, name: str, agg_class: Type[AggregationMethod]) -> None:

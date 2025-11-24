@@ -58,7 +58,8 @@ class TrainingStrategyFactory:
             )
 
         strategy_class = cls._registry[method]
-        return strategy_class(config)
+        strategy_class_config = strategy_class.params_from_json(config.params)
+        return strategy_class(strategy_class_config)
 
     @classmethod
     def register(cls, name: str, strategy_class: Type[TrainingStrategy]) -> None:

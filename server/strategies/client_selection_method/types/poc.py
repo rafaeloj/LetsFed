@@ -1,5 +1,5 @@
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
@@ -26,6 +26,19 @@ class POC(ClientSelectionMethod):
             config: The selection method configuration.
         """
         super().__init__(config)
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> PoCSelectionMethodConfig:
+        """
+        Parse JSON parameters into PoCSelectionMethodConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            PoCSelectionMethodConfig instance.
+        """
+        return PoCSelectionMethodConfig(perc_of_clients=params.get("perc_of_clients", 0.3))
 
     def select(
         self,

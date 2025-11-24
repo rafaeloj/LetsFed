@@ -27,6 +27,7 @@ COPY conf/ app/conf/
 COPY dataset_manager/ app/dataset_manager/
 COPY model/ app/model/
 COPY utils/ app/utils/
+COPY metrics/ app/metrics/
 COPY __init__.py app/
 
 # Set Python path

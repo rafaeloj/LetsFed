@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from flwr.common import (
     Config,
@@ -29,6 +29,20 @@ class TrainingStrategy(ABC):
         """
         self.config = config
         self.drivers: list[Driver] = []
+
+    @staticmethod
+    @abstractmethod
+    def params_from_json(params: dict[str, Any]) -> Any:  # noqa: ANN401
+        """
+        Parse JSON parameters into the strategy-specific config.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            Strategy-specific configuration dataclass instance.
+        """
+        ...
 
     def add_drivers(self, drivers: list[Driver]) -> None:
         """

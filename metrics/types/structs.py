@@ -1,16 +1,6 @@
 from dataclasses import dataclass
 
-
-@dataclass
-class MetricConfig:
-    """
-    Base configuration for metrics.
-
-    All metric configurations should inherit from this class.
-    """
-
-    name: str
-    """Name of the metric (e.g., 'accuracy', 'precision', 'f1_score')"""
+from ..structs import MetricConfig
 
 
 @dataclass

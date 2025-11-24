@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from .types.structs import MetricConfig
+from .structs import MetricConfig
 
 
 class Metric(ABC):

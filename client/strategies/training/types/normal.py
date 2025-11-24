@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from flwr.common import Config, NDArrays, Scalar
@@ -28,6 +28,19 @@ class NormalClient(TrainingStrategy):
         """
         super().__init__(config)
         logger.info("NormalClient training strategy initialized")
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> NormalTrainingStrategyConfig:
+        """
+        Parse JSON parameters into NormalTrainingStrategyConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            NormalTrainingStrategyConfig instance.
+        """
+        return NormalTrainingStrategyConfig(learning_rate=params.get("learning_rate", 0.01))
 
     def fit(
         self, client: "FLClient", parameters: NDArrays, config: Config

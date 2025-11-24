@@ -1,11 +1,11 @@
 import math
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
-from ..structs import SelectionMethodConfig
+from ..structs import RoundRobinSelectionMethodConfig
 
 if TYPE_CHECKING:
     from ...fl_server import FLServer
@@ -24,7 +24,7 @@ class RoundRobinSelection(ClientSelectionMethod):
     This strategy requires the server to maintain a count of selections for each client.
     """
 
-    def __init__(self, config: SelectionMethodConfig) -> None:
+    def __init__(self, config: RoundRobinSelectionMethodConfig) -> None:
         """
         Method to initialize parameters of specific solution
 
@@ -35,12 +35,28 @@ class RoundRobinSelection(ClientSelectionMethod):
         self.how_many_time_selected = np.zeros(config.n_clients)
         logger.info(f"RoundRobinSelection initialized for {config.n_clients} clients")
 
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> RoundRobinSelectionMethodConfig:
+        """
+        Parse JSON parameters into RoundRobinSelectionMethodConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            RoundRobinSelectionMethodConfig instance.
+        """
+        return RoundRobinSelectionMethodConfig(
+            perc_of_clients=params.get("perc_of_clients", 0.3),
+            n_clients=params.get("n_clients", 10),
+        )
+
     def select(
         self,
         server: "FLServer",
         server_round: int,
-        list_of_clients: List[str],
-    ) -> List[str]:
+        list_of_clients: list[str],
+    ) -> list[str]:
         """
         Select clients based on Round Robin strategy.
 

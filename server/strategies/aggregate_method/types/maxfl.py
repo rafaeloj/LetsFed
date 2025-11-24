@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from flwr.common import (
     EvaluateRes,
@@ -37,8 +37,23 @@ class MaxFL(AggregationMethod):
         super().__init__(config)
         logger.info(
             "MaxFL aggregation initialized - "
-            + f"lr={config.learning_rate}, epsilon={config.epsilon}, "
-            + f"pre_training_epochs={config.pre_training_epochs}"
+            + f"lr={config.learning_rate}, epsilon={config.epsilon}"
+        )
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> MaxFLAggregationMethodConfig:
+        """
+        Parse JSON parameters into MaxFLAggregationMethodConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            MaxFLAggregationMethodConfig instance.
+        """
+        return MaxFLAggregationMethodConfig(
+            epsilon=params.get("epsilon", 10.0),
+            learning_rate=params.get("learning_rate", 0.01),
         )
 
     def _get_learning_rate(self, q_models_value: list[float]) -> float:

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from flwr.common import (
@@ -36,6 +36,23 @@ class MaxFLClient(TrainingStrategy):
         self.qk = 1
         self.add_drivers(self._get_drivers())
         logger.info(f"MaxFLClient initialized with qk_threshold={config.maxfl_qk_threshold}")
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> MaxFLTrainingStrategyConfig:
+        """
+        Parse JSON parameters into MaxFLTrainingStrategyConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            MaxFLTrainingStrategyConfig instance.
+        """
+        return MaxFLTrainingStrategyConfig(
+            learning_rate=params.get("learning_rate", 0.01),
+            maxfl_qk_threshold=params.get("maxfl_qk_threshold", 0.5),
+            pre_training_epochs=params.get("pre_training_epochs", 10),
+        )
 
     def _get_drivers(self) -> list[Driver]:
         """

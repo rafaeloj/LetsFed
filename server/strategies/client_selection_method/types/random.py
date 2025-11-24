@@ -1,6 +1,6 @@
 import math
 import random
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any
 
 from .....utils.logger import Logger
 from ..base import ClientSelectionMethod
@@ -27,12 +27,25 @@ class RandomSelection(ClientSelectionMethod):
         """
         super().__init__(config)
 
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> RandomSelectionMethodConfig:
+        """
+        Parse JSON parameters into RandomSelectionMethodConfig.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            RandomSelectionMethodConfig instance.
+        """
+        return RandomSelectionMethodConfig(perc_of_clients=params.get("perc_of_clients", 0.3))
+
     def select(
         self,
         server: "FLServer",
         server_round: int,
-        list_of_clients: List[str],
-    ) -> List[str]:
+        list_of_clients: list[str],
+    ) -> list[str]:
         """
         Select clients based on Random strategy.
 

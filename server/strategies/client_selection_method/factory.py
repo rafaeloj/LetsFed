@@ -41,7 +41,7 @@ class ClientSelectionFactory:
         Create a client selection method based on configuration.
 
         Args:
-            config: SelectionMethodConfig configuration
+            config: SelectionMethodConfig configuration with name and params
 
         Returns:
             Instance of appropriate ClientSelectionMethod subclass
@@ -59,7 +59,11 @@ class ClientSelectionFactory:
             )
 
         selection_class = cls._registry[method]
-        return selection_class(config)
+
+        # Use params_from_json to create strategy-specific config
+        specific_config = selection_class.params_from_json(config.params)
+
+        return selection_class(specific_config)
 
     @classmethod
     def register(cls, name: str, selection_class: Type[ClientSelectionMethod]) -> None:

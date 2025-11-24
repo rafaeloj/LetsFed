@@ -24,16 +24,17 @@ class MetricsManager:
         Initialize the MetricsManager.
 
         Args:
-            metrics_config: Configuration for metrics. If None, uses default metrics.
+            metrics_config: Configuration for metrics (dict of MetricConfig).
+                          If None or empty, uses default metrics.
         """
-        if metrics_config is None or metrics_config.is_empty():
+        if metrics_config is None or len(metrics_config) == 0:
             # Use default metrics configuration
             self.metrics = MetricFactory.create_default_metrics()
         else:
             # Create metric instances from configuration
+            # metrics_config is a dict[str, MetricConfig]
             self.metrics = [
-                MetricFactory.create(metric_config)
-                for metric_config in metrics_config.metrics.values()
+                MetricFactory.create(metric_config) for metric_config in metrics_config.values()
             ]
 
     def add_metric(self, metric: Metric) -> None:

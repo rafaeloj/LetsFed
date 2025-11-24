@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .structs import SelectionMethodConfig
 
@@ -20,6 +20,20 @@ class ClientSelectionMethod(ABC):
             config: The selection method configuration.
         """
         self.config = config
+
+    @staticmethod
+    @abstractmethod
+    def params_from_json(params: dict[str, Any]) -> Any:  # noqa: ANN401
+        """
+        Parse JSON parameters into the strategy-specific config.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            Strategy-specific configuration dataclass instance.
+        """
+        ...
 
     @abstractmethod
     def select(

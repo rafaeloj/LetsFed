@@ -3,32 +3,18 @@ Configuration structures for metrics.
 """
 
 from dataclasses import dataclass, field
-
-from .types.structs import MetricConfig
+from typing import Any
 
 
 @dataclass
-class MetricsConfig:
+class MetricConfig:
     """
-    Configuration for all metrics used in the federated learning client.
+    Base configuration for a single metric.
 
-    This is a dictionary-like structure where each key is a metric name
-    and each value is a MetricConfig instance.
+    All metric configurations should use this class or extend it.
     """
 
-    metrics: dict[str, MetricConfig] = field(default_factory=dict)
-    """Dictionary mapping metric names to their configurations"""
-
-    def __post_init__(self) -> None:
-        """Validate and convert metrics dictionary."""
-        if self.metrics is None:
-            self.metrics = {}
-
-    def is_empty(self) -> bool:
-        """
-        Check if no metrics are configured.
-
-        Returns:
-            True if no metrics are configured, False otherwise
-        """
-        return len(self.metrics) == 0
+    name: str
+    """Name of the metric (e.g., 'accuracy', 'precision', 'f1_score')"""
+    params: dict[str, Any] = field(default_factory=dict)
+    """Additional parameters for the metric (if any)"""

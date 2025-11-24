@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from flwr.common import EvaluateRes, FitRes, Parameters, Scalar
 from flwr.server.client_proxy import ClientProxy
@@ -23,6 +23,20 @@ class AggregationMethod(ABC):
             config: The aggregation method configuration.
         """
         self.config = config
+
+    @staticmethod
+    @abstractmethod
+    def params_from_json(params: dict[str, Any]) -> Any:  # noqa: ANN401
+        """
+        Parse JSON parameters into the strategy-specific config.
+
+        Args:
+            params: Dictionary of parameters from YAML configuration.
+
+        Returns:
+            Strategy-specific configuration dataclass instance.
+        """
+        ...
 
     @abstractmethod
     def agg_fit(

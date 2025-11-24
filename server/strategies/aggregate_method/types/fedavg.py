@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from flwr.common import (
     EvaluateRes,
@@ -35,6 +35,20 @@ class FedAVG(AggregationMethod):
             config: The aggregation method configuration.
         """
         super().__init__(config)
+
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> FedAvgAggregationMethodConfig:
+        """
+        Create config from dictionary (from YAML).
+
+        Args:
+            params: Dictionary of parameters from YAML
+
+        Returns:
+            FedAvgAggregationMethodConfig instance
+        """
+        # FedAvg has no extra parameters
+        return FedAvgAggregationMethodConfig()
 
     def agg_fit(
         self,
