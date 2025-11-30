@@ -23,6 +23,9 @@
   - [Context Object Pattern (DriverContext)](#5-context-object-pattern-drivercontext)
   - [Federated Learning Flow](#federated-learning-flow)
 - [Available Strategies](#-available-strategies)
+  - [Server-Side Strategies](#server-side-strategies)
+  - [Client-Side Strategies](#client-side-strategies)
+  - [Parameters Sharing Strategies](#parameters-sharing-strategies)
 - [Metrics System](#-metrics-system)
 - [Extending the Framework](#-extending-the-framework)
 - [Logging and Analysis](#-logging-and-analysis)
@@ -73,12 +76,14 @@ A modular and extensible **Federated Learning research framework** built on [Flo
   - **Aggregation**: FedAvg, MaxFL (with optional server-side model)
   - **Client Selection**: Random, DEEV, PoC, Round Robin, LetsFed
   - **Training**: Normal, LetsFed, MaxFL, FedPer, QFFL
+  - **Parameters Sharing**: Normal (all parameters), LayerWise (first K layers)
 - **🐳 Containerized Deployment**: Orchestrated via `run_experiments.py` and `docker_compose_manager.py`
 - **⚙️ Modular Configuration**: Each module has its own `structs.py` with dataclass configs
   - Factories receive module-specific config dataclasses
 - **📊 Comprehensive Logging**: Automatic metrics tracking for analysis
 - **🎯 Type Safety**: Full type hints throughout the codebase
 - **🧪 Testable Design**: DriverContext pattern enables easy unit testing without complex mocks
+- **🔒 Flexible Personalization**: LayerWise strategy enables model personalization while reducing communication
 
 ## 📁 Project Structure
 
@@ -96,16 +101,23 @@ LetsFed/
 │   │   │   └── types/
 │   │   │       ├── fedavg.py         # FedAvg aggregation
 │   │   │       └── maxfl.py          # MaxFL aggregation (server has own model)
-│   │   └── client_selection_method/  # Selection strategies (Factory Pattern)
-│   │       ├── base.py               # Base selection interface
-│   │       ├── factory.py            # ClientSelectionFactory
-│   │       ├── structs.py            # Selection config dataclasses
+│   │   ├── client_selection_method/  # Selection strategies (Factory Pattern)
+│   │   │   ├── base.py               # Base selection interface
+│   │   │   ├── factory.py            # ClientSelectionFactory
+│   │   │   ├── structs.py            # Selection config dataclasses
+│   │   │   └── types/
+│   │   │       ├── random.py         # Random selection
+│   │   │       ├── deev.py           # DEEV selection
+│   │   │       ├── poc.py            # Power of Choice
+│   │   │       ├── round_robin.py    # Round Robin
+│   │   │       └── letsfed.py        # LetsFed selection
+│   │   └── parameters_strategy/      # Parameters sharing strategies (Factory Pattern)
+│   │       ├── base.py               # Base parameters strategy interface
+│   │       ├── factory.py            # ParametersStrategyFactory
+│   │       ├── structs.py            # Parameters strategy config dataclasses
 │   │       └── types/
-│   │           ├── random.py         # Random selection
-│   │           ├── deev.py           # DEEV selection
-│   │           ├── poc.py            # Power of Choice
-│   │           ├── round_robin.py    # Round Robin
-│   │           └── letsfed.py        # LetsFed selection
+│   │           ├── normal.py         # Normal strategy (shares all parameters)
+│   │           └── layerwise.py      # LayerWise strategy (shares first K layers)
 │   ├── strategies_manager.py         # Server entrypoint
 │   ├── Dockerfile                    # Server container (CPU)
 │   └── Dockerfile.gpu                # Server container (GPU)
@@ -125,6 +137,13 @@ LetsFed/
 │   │   │       ├── maxfl.py          # MaxFL training
 │   │   │       ├── fedper.py         # FedPer training
 │   │   │       └── qffl.py           # QFFL training
+│   │   ├── parameters_strategy/      # Parameters sharing strategies (Factory Pattern)
+│   │   │   ├── base.py               # Base parameters strategy interface
+│   │   │   ├── factory.py            # ParametersStrategyFactory
+│   │   │   ├── structs.py            # Parameters strategy config dataclasses
+│   │   │   └── types/
+│   │   │       ├── normal.py         # Normal strategy (shares all parameters)
+│   │   │       └── layerwise.py      # LayerWise strategy (shares first K layers)
 │   │   └── drivers/                  # Modular behaviors (Chain of Responsibility + Context Object)
 │   │       ├── driver.py             # Base driver interface (run receives DriverContext)
 │   │       ├── context.py            # DriverContext for explicit side effects
@@ -190,14 +209,51 @@ graph TB
         AF[AggregationFactory]
         CSF[ClientSelectionFactory]
         TSF[TrainingStrategyFactory]
+        PSF_S[ParametersStrategyFactory Server]
+        PSF_C[ParametersStrategyFactory Client]
         AF -->|creates| AGG[FedAvg/MaxFL]
         CSF -->|creates| SEL[Random/LetsFed/PoC]
         TSF -->|creates| TRN[Normal/LetsFed/MaxFL]
+        PSF_S -->|creates| PS_S[Normal/LayerWise Server]
+        PSF_C -->|creates| PS_C[Normal/LayerWise Client]
     end
 
     subgraph "Builder Pattern"
         SB[ServerBuilder]
         CB[ClientBuilder]
+        SB -->|uses| AF
+        SB -->|uses| CSF
+        SB -->|uses| PSF_S
+        CB -->|uses| TSF
+        CB -->|uses| PSF_C
+    end
+
+    subgraph "Strategy Pattern + Dependency Injection"
+        FLS[FLServer]
+        FLC[FLClient]
+        SB -->|builds| FLS
+        CB -->|builds| FLC
+        FLS -->|delegates to| AGG
+        FLS -->|delegates to| SEL
+        FLS -->|delegates to| PS_S
+        FLC -->|delegates to| TRN
+        FLC -->|delegates to| PS_C
+    end
+
+    subgraph "Chain of Responsibility + Context Object"
+        TRN -->|configures| DRV[Drivers]
+        DRV -->|pipeline| D1[AccuracyDriver]
+        DRV -->|pipeline| D2[CuriosityDriver]
+        DRV -->|pipeline| D3[MaxFLQkDriver]
+        DRV -->|uses| CTX[DriverContext]
+        CTX -->|explicit modifications| FLC
+    end
+
+    style Factory Pattern fill:#e1f5ff
+    style Builder Pattern fill:#fff4e1
+    style Strategy Pattern + Dependency Injection fill:#e8f5e9
+    style Chain of Responsibility + Context Object fill:#f3e5f5
+```
         SB -->|uses| AF
         SB -->|uses| CSF
         CB -->|uses| TSF
@@ -244,12 +300,14 @@ classDiagram
     class FLServer {
         +ClientSelectionMethod selection
         +AggregateMethod aggregation
+        +ParametersStrategy parameters_strategy
         +configure_fit()
         +aggregate_fit()
     }
 
     class FLClient {
         +TrainingStrategy training_strategy
+        +ParametersStrategy parameters_strategy
         +List~Driver~ drivers
         +fit()
         +evaluate()
@@ -271,9 +329,17 @@ classDiagram
         +evaluate()*
     }
 
+    class ParametersStrategy {
+        <<interface>>
+        +get_parameters()*
+        +set_parameters()*
+    }
+
     FLServer --> ClientSelectionMethod
     FLServer --> AggregateMethod
+    FLServer --> ParametersStrategy
     FLClient --> TrainingStrategy
+    FLClient --> ParametersStrategy
 
     ClientSelectionMethod <|-- Random
     ClientSelectionMethod <|-- LetsFed
@@ -285,6 +351,9 @@ classDiagram
     TrainingStrategy <|-- Normal
     TrainingStrategy <|-- LetsFedTraining
     TrainingStrategy <|-- MaxFLTraining
+
+    ParametersStrategy <|-- NormalParams
+    ParametersStrategy <|-- LayerWise
 ```
 
 **Key Points:**
@@ -314,6 +383,7 @@ graph LR
         AF[AggregationFactory]
         CSF[ClientSelectionFactory]
         TSF[TrainingStrategyFactory]
+        PSF[ParametersStrategyFactory]
     end
 
     subgraph Config
@@ -326,14 +396,17 @@ graph LR
         RN[Random]
         LF[LetsFed]
         PC[PoC]
-        NR[Normal]
+        NR[Normal Training]
         LT[LetsFedTraining]
         MT[MaxFLTraining]
+        NP[Normal Params]
+        LW[LayerWise]
     end
 
     C -->|aggregation: fedavg| AF
     C -->|selection: letsfed| CSF
     C -->|training: letsfed| TSF
+    C -->|parameters: normal| PSF
 
     AF -.->|creates| FA
     AF -.->|creates| MX
@@ -343,6 +416,8 @@ graph LR
     TSF -.->|creates| NR
     TSF -.->|creates| LT
     TSF -.->|creates| MT
+    PSF -.->|creates| NP
+    PSF -.->|creates| LW
 ```
 
 ### 3. Builder/Injection Pattern
@@ -666,6 +741,189 @@ client:
     name: letsfed             # Options: normal, letsfed, maxfl, fedper, qffl
     # LetsFed parameters (if name=letsfed)
     # threshold: 1.0
+```
+
+### Parameters Sharing Strategies
+
+The framework includes a **modular parameters strategy system** that controls **how model parameters are shared** between server and clients. This enables different approaches for model personalization, communication efficiency, and privacy.
+
+#### Server-Side Parameters Strategy
+
+Controls which parameters are sent to clients and how aggregated parameters are applied to the global model.
+
+```mermaid
+graph TB
+    subgraph "Server Parameters Strategy Flow"
+        GP[Global Parameters]
+        PS[Parameters Strategy]
+
+        GP -->|get_parameters| PS
+        PS -->|Filtered Parameters| C[Clients]
+        C -->|Training| TR[Trained Parameters]
+        TR -->|Aggregation| AGG[Aggregated Parameters]
+        AGG -->|set_parameters| PS
+        PS -->|Update| GM[Global Model]
+    end
+
+    style PS fill:#e1f5ff
+    style GM fill:#e8f5e9
+```
+
+**Interface Methods:**
+
+| Method | Purpose | When Called |
+|--------|---------|-------------|
+| `get_parameters(server, parameters)` | Select which parameters to send to clients | Before `configure_fit()` |
+| `set_parameters(server, parameters)` | Apply aggregated parameters to global model | After aggregation in `aggregate_fit()` |
+
+**Available Strategies:**
+
+| Strategy | Description | Parameters Sent | Use Case |
+|----------|-------------|-----------------|----------|
+| **Normal** | Shares all model parameters | All layers (100%) | Traditional FL, full synchronization |
+| **LayerWise** | Shares only first K layers | First K layers only | Model personalization, reduced communication |
+
+**Configuration:**
+```yaml
+server:
+  parameters_strategy:
+    name: normal              # Options: normal, layerwise
+    params: {}
+
+  # LayerWise example:
+  # parameters_strategy:
+  #   name: layerwise
+  #   params:
+  #     num_shared_layers: 5  # Share only first 5 layers
+```
+
+#### Client-Side Parameters Strategy
+
+Controls which parameters are received from the server and sent back after training.
+
+```mermaid
+graph TB
+    subgraph "Client Parameters Strategy Flow"
+        SP[Server Parameters]
+        CPS[Parameters Strategy]
+
+        SP -->|set_parameters| CPS
+        CPS -->|Update Model| LM[Local Model]
+        LM -->|Training| TM[Trained Model]
+        TM -->|get_parameters| CPS
+        CPS -->|Filtered Parameters| S[Server]
+    end
+
+    style CPS fill:#fff4e1
+    style LM fill:#f3e5f5
+```
+
+**Interface Methods:**
+
+| Method | Purpose | When Called |
+|--------|---------|-------------|
+| `get_parameters(client)` | Select which parameters to send to server | In `fit()` method after training |
+| `set_parameters(client, parameters)` | Apply received parameters to local model | Before training in `fit()` |
+
+**Available Strategies:**
+
+| Strategy | Description | Behavior |
+|----------|-------------|----------|
+| **Normal** | Updates entire model | Receives all parameters, sends all parameters |
+| **LayerWise** | Updates only first K layers | Receives K layers, keeps rest unchanged, sends K layers |
+
+**Configuration:**
+```yaml
+client:
+  parameters_strategy:
+    name: normal              # Options: normal, layerwise
+    params: {}
+
+  # LayerWise example:
+  # parameters_strategy:
+  #   name: layerwise
+  #   params:
+  #     num_shared_layers: 5  # Must match server configuration
+```
+
+#### Complete Flow: LayerWise Strategy
+
+```mermaid
+sequenceDiagram
+    participant Server
+    participant ServerPS as Server Parameters Strategy
+    participant ClientPS as Client Parameters Strategy
+    participant Client
+    participant Model
+
+    Note over Server: Round N - Model has 10 layers
+
+    Server->>ServerPS: get_parameters(global_params[0-9])
+    ServerPS-->>Server: shared_params[0-4] (first 5 layers)
+    Server->>Client: FitIns(shared_params[0-4])
+
+    Client->>ClientPS: set_parameters(shared_params[0-4])
+    ClientPS->>Model: get_weights() (current 10 layers)
+    ClientPS->>Model: set_weights([shared[0-4], local[5-9]])
+    Note over ClientPS,Model: Only first 5 layers updated
+
+    Client->>Client: Train model
+    Note over Client: All 10 layers trained,<br/>but only first 5 were updated
+
+    Client->>ClientPS: get_parameters()
+    ClientPS->>Model: get_weights()[0-4]
+    ClientPS-->>Client: trained_shared[0-4]
+    Client->>Server: FitRes(trained_shared[0-4])
+
+    Server->>Server: Aggregate shared_params[0-4]
+    Server->>ServerPS: set_parameters(aggregated[0-4])
+    ServerPS->>ServerPS: get current model weights[0-9]
+    ServerPS->>ServerPS: new_weights = [aggregated[0-4], current[5-9]]
+    Note over ServerPS: First 5 layers aggregated,<br/>last 5 layers unchanged
+    ServerPS->>Server: Update global model
+
+    Note over Server: Round N+1 ready
+```
+
+#### Benefits of LayerWise Strategy
+
+| Benefit | Description |
+|---------|-------------|
+| **🔽 Reduced Communication** | Only K/N parameters transmitted (e.g., 50% for K=5, N=10) |
+| **🎯 Model Personalization** | Last layers adapt to local client data |
+| **🔒 Privacy Enhancement** | Personal layers never leave client |
+| **⚡ Faster Convergence** | Shared layers learn global patterns, personal layers specialize |
+| **💾 Bandwidth Efficiency** | Critical for resource-constrained environments |
+
+#### Implementation Example
+
+**LayerWise Server Strategy:**
+```python
+class LayerWiseParametersStrategy(ParametersStrategy):
+    def get_parameters(self, server: "FLServer", parameters: NDArrays) -> NDArrays:
+        """Send only first K layers to clients."""
+        return parameters[:self.num_shared_layers]
+
+    def set_parameters(self, server: "FLServer", parameters: NDArrays) -> None:
+        """Update only first K layers in global model."""
+        current_weights = server.model.get_weights()
+        new_weights = list(parameters) + current_weights[len(parameters):]
+        server.model.set_weights(new_weights)
+```
+
+**LayerWise Client Strategy:**
+```python
+class LayerWiseParametersStrategy(ParametersStrategy):
+    def get_parameters(self, client: "FLClient") -> NDArrays:
+        """Send only first K layers to server."""
+        all_params = client.model.get_weights()
+        return all_params[:self.num_shared_layers]
+
+    def set_parameters(self, client: "FLClient", parameters: NDArrays) -> None:
+        """Update only first K layers in local model."""
+        current_params = client.model.get_weights()
+        new_params = list(parameters) + current_params[len(parameters):]
+        client.model.set_weights(new_params)
 ```
 
 ## 📈 Metrics System
