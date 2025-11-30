@@ -11,6 +11,7 @@ from ...dataset_manager.dataset_manager import DSManager
 from ...metrics import MetricsManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
+from .parameters_strategy.base import ParametersStrategy
 from .training.base import TrainingStrategy
 
 logger = Logger(__name__)
@@ -30,6 +31,7 @@ class FLClient(fl.client.NumPyClient):
         cid: str,
         config: Environment,
         training_strategy: TrainingStrategy,
+        parameters_strategy: ParametersStrategy,
         metrics_manager: MetricsManager,
     ) -> None:
         # Initialize the federated client.
@@ -37,6 +39,7 @@ class FLClient(fl.client.NumPyClient):
         self.cid: str = cid
         self.conf: Environment = config
         self.training_strategy: TrainingStrategy = training_strategy
+        self.parameters_strategy: ParametersStrategy = parameters_strategy
         self.metrics_manager: MetricsManager = metrics_manager
 
         # Load data and model
@@ -130,24 +133,29 @@ class FLClient(fl.client.NumPyClient):
 
     def get_parameters(self, config: Config) -> NDArrays:
         """
-        Get the model parameters.
+        Get the model parameters to send to server.
+
+        Uses parameters strategy to determine which parameters to send.
 
         Args:
             config: Configuration dictionary
 
         Returns:
-            Model parameters as NDArrays
+            Model parameters as NDArrays (may be partial based on strategy)
         """
-        return self.model.get_weights()
+
+        return self.parameters_strategy.get_parameters(self)
 
     def set_parameters(self, parameters: NDArrays) -> None:
         """
-        Set the model parameters.
+        Set the model parameters received from server.
+
+        Uses parameters strategy to merge received parameters with local parameters.
 
         Args:
-            parameters: Model parameters as NDArrays
+            parameters: Model parameters as NDArrays (may be partial based on strategy)
         """
-        self.model.set_weights(parameters)
+        self.parameters_strategy.set_parameters(self, parameters)
 
     def fit(self, parameters: NDArrays, config: Config) -> tuple[NDArrays, int, dict[str, Scalar]]:
         """

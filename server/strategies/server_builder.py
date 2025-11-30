@@ -11,6 +11,7 @@ from ...utils.logger import Logger
 from .aggregate_method.factory import AggregationFactory
 from .client_selection_method.factory import ClientSelectionFactory
 from .fl_server import FLServer
+from .parameters_strategy.factory import ParametersStrategyFactory
 
 logger = Logger(__name__)
 
@@ -41,6 +42,7 @@ class ServerBuilder:
         logger.info("Building FLServer with specified strategies")
         aggregation_method = AggregationFactory.create(config.server.aggregation_method)
         selection_method = ClientSelectionFactory.create(config.server.selection_method)
+        parameters_strategy = ParametersStrategyFactory.create(config.server.parameters_strategy)
 
         # Instantiate MetricsManager with client's metrics configuration
         # Server uses the same metrics as clients for consistency
@@ -51,5 +53,6 @@ class ServerBuilder:
             conf=config,
             client_selection=selection_method,
             aggregate_method=aggregation_method,
+            parameters_strategy=parameters_strategy,
             metrics_manager=metrics_manager,
         )

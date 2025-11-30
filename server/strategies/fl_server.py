@@ -9,6 +9,8 @@ from flwr.common import (
     FitRes,
     Parameters,
     Scalar,
+    ndarrays_to_parameters,
+    parameters_to_ndarrays,
 )
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
@@ -21,6 +23,7 @@ from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
 from .aggregate_method.base import AggregationMethod
 from .client_selection_method.base import ClientSelectionMethod
+from .parameters_strategy.base import ParametersStrategy
 
 logger = Logger(__name__)
 
@@ -38,6 +41,7 @@ class FLServer(Strategy):
         self,
         client_selection: ClientSelectionMethod,
         aggregate_method: AggregationMethod,
+        parameters_strategy: ParametersStrategy,
         conf: Environment,
         metrics_manager: MetricsManager,
     ) -> None:
@@ -45,15 +49,17 @@ class FLServer(Strategy):
         Initialize federated server.
 
         Args:
-            config: Environment configuration
             client_selection: Client selection strategy
             aggregate_method: Model aggregation strategy
+            parameters_strategy: Parameters sharing strategy
+            conf: Environment configuration
             metrics_manager: Manager for calculating metrics
         """
         logger.info("Initializing FL Server")
         logger.info(f"Configuration: {conf.n_clients} clients, {conf.rounds} rounds")
         logger.info(f"Aggregation: {conf.server.aggregation_method.name}")
         logger.info(f"Selection: {conf.server.selection_method.name}")
+        logger.info(f"Parameters strategy: {conf.server.parameters_strategy.name}")
         logger.info(f"Training strategy: {conf.client.training_strategy.name}")
 
         super().__init__()
@@ -61,6 +67,7 @@ class FLServer(Strategy):
         # Initialize server parameters
         self.client_selection: ClientSelectionMethod = client_selection
         self.aggregate_method: AggregationMethod = aggregate_method
+        self.parameters_strategy: ParametersStrategy = parameters_strategy
         self.conf: Environment = conf
         self.metrics_manager: MetricsManager = metrics_manager
 
@@ -238,19 +245,19 @@ class FLServer(Strategy):
         logger.info(f"Round {server_round}/{self.conf.rounds} - Configuring training")
         logger.info("=" * 60)
 
+        # Store current round
         self.current_round = server_round
 
         # Step 1: Get ALL available clients from ClientManager
         # Use num_available() to get actual number of connected clients
+        # We need this to ensure we don't sample more clients than are available, and to
+        # be abble to map the client CI to ClientProxy objects
         num_available = client_manager.num_available()
         logger.debug(f"Number of available clients: {num_available}")
 
-        # Calculate minimum required clients based on init_clients ratio
-        min_clients_required = max(1, int(self.conf.n_clients * self.conf.init_clients))
-
         all_available_clients = client_manager.sample(
-            num_clients=num_available,  # Sample all available clients
-            min_num_clients=min_clients_required,  # Wait for minimum required clients
+            num_clients=num_available,  # Max available clients (in flower gRPC environment)
+            min_num_clients=int(self.conf.n_clients * self.conf.init_clients),
         )
         logger.debug(f"Sampled clients: {len(all_available_clients)}")
 
@@ -285,7 +292,6 @@ class FLServer(Strategy):
         # Step 4: Map selected numeric CIDs back to ClientProxy objects
         # Build a UUID->Proxy mapping for quick lookup
         uuid_to_proxy = {str(proxy.cid): proxy for proxy in all_available_clients}
-
         selected_proxies = []
         for numeric_cid in selected_numeric_cids:
             uuid = self._get_proxy_uuid(numeric_cid)
@@ -296,12 +302,19 @@ class FLServer(Strategy):
         if not selected_proxies:
             selected_proxies = all_available_clients
 
-        # Step 5: Create FitIns with configuration
+        # Step 5: Use parameters strategy to determine which parameters to send to clients
+        parameters_msg = ndarrays_to_parameters(
+            self.parameters_strategy.get_parameters(
+                server=self, parameters=parameters_to_ndarrays(parameters)
+            )
+        )
+
+        # Step 6: Create FitIns with configuration
         config = {
             "rounds": server_round,
             "selected_by_server": ",".join(selected_numeric_cids),
         }
-        fit_ins = FitIns(parameters, config)
+        fit_ins = FitIns(parameters_msg, config)
 
         return [(proxy, fit_ins) for proxy in selected_proxies]
 

@@ -9,6 +9,7 @@ from ...conf.structs import Environment
 from ...metrics import MetricsManager
 from ...utils.logger import Logger
 from .fl_client import FLClient
+from .parameters_strategy.factory import ParametersStrategyFactory
 from .training.factory import TrainingStrategyFactory
 
 logger = Logger(__name__)
@@ -48,6 +49,9 @@ class ClientBuilder:
         # Create training strategy
         training_strategy = TrainingStrategyFactory.create(config.client.training_strategy)
 
+        # Create parameters strategy
+        parameters_strategy = ParametersStrategyFactory.create(config.client.parameters_strategy)
+
         # Create metrics manager from config (or use defaults if None)
         metrics_manager = MetricsManager(config.client.metrics)
 
@@ -60,5 +64,6 @@ class ClientBuilder:
             cid=cid,
             config=config,
             training_strategy=training_strategy,
+            parameters_strategy=parameters_strategy,
             metrics_manager=metrics_manager,
         )
