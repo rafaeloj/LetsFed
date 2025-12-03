@@ -97,6 +97,8 @@ class FedPerClient(TrainingStrategy):
             )
 
             # Fitting model with batch size from config and validation data
+            # Note: shuffle=True is deterministic when global seed is set
+            # This ensures better convergence while maintaining reproducibility
             batch_size = client.conf.dataset.batch_size
             history = client.model.fit(
                 client.x_train,
@@ -104,6 +106,7 @@ class FedPerClient(TrainingStrategy):
                 epochs=client.conf.client.epochs,
                 batch_size=batch_size,
                 validation_data=(client.x_validation, client.y_validation),
+                shuffle=True,  # Deterministic shuffle (uses global TF seed)
                 verbose=0,
             )
 

@@ -1,5 +1,6 @@
 # General Configuration
-rounds: 10
+seed: 42
+rounds: 20
 n_clients: 5
 init_clients: 1.0
 gpu: false
@@ -19,7 +20,7 @@ server:
   selection_method:
     name: random  # Options: random, deev, poc, round_robin, letsfed
     params:
-      perc_of_clients: 0.5
+      perc_of_clients: 1.0
 
   # Parameters strategy configuration
   parameters_strategy:
@@ -86,5 +87,5 @@ dataset:
 
 # Model Configuration
 model:
-  type: dnn  # Options: dnn, cnn
+  type: cnn  # Options: dnn, cnn
   path: model

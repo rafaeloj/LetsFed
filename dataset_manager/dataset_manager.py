@@ -14,12 +14,18 @@ logger = Logger(__name__)
 
 
 class DSManager:
-    def __init__(self, n_clients: int, conf: DatasetConfig) -> None:
+    def __init__(self, n_clients: int, conf: DatasetConfig, seed: int = 42) -> None:
         self.path = self._get_path_name(conf, n_clients)
         self.conf = conf
-        self.train_partitioner = self.set_train_partitioner(n_clients=n_clients, conf=conf)
-        self.test_partitioner = self.set_test_partitioner(n_clients=n_clients, conf=conf)
-        logger.info(f"DSManager initialized for {n_clients} clients with dataset '{conf.dataset}'")
+        self.seed = seed
+        self.train_partitioner = self.set_train_partitioner(
+            n_clients=n_clients, conf=conf, seed=seed
+        )
+        self.test_partitioner = self.set_test_partitioner(n_clients=n_clients, conf=conf, seed=seed)
+        logger.info(
+            f"DSManager initialized for {n_clients} clients with "
+            + f"dataset '{conf.dataset}' (seed={seed})"
+        )
 
     def _get_path_name(self, conf: DatasetConfig, n_clients: int) -> str:
         """
@@ -41,7 +47,7 @@ class DSManager:
         return path
 
     def set_train_partitioner(
-        self, n_clients: int, conf: DatasetConfig
+        self, n_clients: int, conf: DatasetConfig, seed: int = 42
     ) -> DirichletPartitioner | IidPartitioner:
         """
         Set the training data partitioner.
@@ -49,6 +55,7 @@ class DSManager:
         Args:
             n_clients: Number of clients
             conf: Dataset configuration
+            seed: Random seed for reproducibility
 
         Returns:
             DirichletPartitioner or IidPartitioner
@@ -56,7 +63,7 @@ class DSManager:
         if conf.train_partitioner.method == "dirichlet":
             logger.info(
                 "Using Dirichlet partitioner for training data "
-                + f"(alpha={conf.train_partitioner.dirichlet_alpha})"
+                + f"(alpha={conf.train_partitioner.dirichlet_alpha}, seed={seed})"
             )
             return DirichletPartitioner(
                 num_partitions=n_clients,
@@ -65,14 +72,21 @@ class DSManager:
                 min_partition_size=conf.train_partitioner.min_partition_size,
                 self_balancing=conf.train_partitioner.self_balancing,
                 shuffle=conf.train_partitioner.shuffle,
+                seed=seed,  # Pass seed to Dirichlet partitioner
             )
         elif conf.train_partitioner.method == "iid":
-            logger.info("Using IID partitioner for training data")
+            logger.info(f"Using IID partitioner for training data (seed={seed})")
+            # IidPartitioner doesn't accept seed parameter directly,
+            # but it uses numpy's random state which is set globally
+            import numpy as np
+
+            np.random.seed(seed)
+            logger.debug(f"NumPy random seed set to {seed} for IID partitioner")
             return IidPartitioner(num_partitions=n_clients)
         raise ValueError(f"Paritioner not implemented: {conf.train_partitioner.method}")
 
     def set_test_partitioner(
-        self, n_clients: int, conf: DatasetConfig
+        self, n_clients: int, conf: DatasetConfig, seed: int = 42
     ) -> DirichletPartitioner | IidPartitioner:
         """
         Set the test data partitioner.
@@ -80,6 +94,7 @@ class DSManager:
         Args:
             n_clients: Number of clients
             conf: Dataset configuration
+            seed: Random seed for reproducibility
 
         Returns:
             DirichletPartitioner or IidPartitioner
@@ -87,7 +102,7 @@ class DSManager:
         if conf.test_partitioner.method == "dirichlet":
             logger.info(
                 "Using Dirichlet partitioner for test data "
-                + f"(alpha={conf.test_partitioner.dirichlet_alpha})"
+                + f"(alpha={conf.test_partitioner.dirichlet_alpha}, seed={seed})"
             )
             return DirichletPartitioner(
                 num_partitions=n_clients,
@@ -96,9 +111,16 @@ class DSManager:
                 min_partition_size=conf.test_partitioner.min_partition_size,
                 self_balancing=conf.test_partitioner.self_balancing,
                 shuffle=conf.test_partitioner.shuffle,
+                seed=seed,  # Pass seed to Dirichlet partitioner
             )
         elif conf.test_partitioner.method == "iid":
-            logger.info("Using IID partitioner for test data")
+            logger.info(f"Using IID partitioner for test data (seed={seed})")
+            # IidPartitioner doesn't accept seed parameter directly,
+            # but it uses numpy's random state which is set globally
+            import numpy as np
+
+            np.random.seed(seed)
+            logger.debug(f"NumPy random seed set to {seed} for IID partitioner")
             return IidPartitioner(num_partitions=n_clients)
         raise ValueError(f"Paritioner not implemented: {conf.test_partitioner.method}")
 

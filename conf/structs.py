@@ -24,6 +24,7 @@ class Environment:
     n_clients: int = MISSING
     init_clients: float = 1.0
     gpu: bool = False
+    seed: int = 42  # Global random seed for reproducibility
 
     # Module configurations
     server: ServerConfig = MISSING

@@ -11,6 +11,7 @@ from pathlib import Path
 from .conf.loader import load_config
 from .utils.docker_compose_manager import DockerComposeManager
 from .utils.logger import Logger
+from .utils.seed import set_global_seed
 
 logger = Logger(__name__)
 
@@ -23,6 +24,10 @@ def main() -> None:
     # Use path relative to this file's location
     config_path = Path(__file__).parent / "conf" / "config.yaml"
     config = load_config(config_path)
+
+    # Set global seed BEFORE any random operations
+    logger.info(f"Setting global seed to {config.seed}")
+    set_global_seed(config.seed)
 
     # Initialize Docker Compose Manager
     logger.info("Initializing Docker Compose Manager...")

@@ -12,6 +12,7 @@ from pathlib import Path
 from .conf.loader import load_config
 from .dataset_manager.dataset_manager import DSManager
 from .utils.logger import Logger
+from .utils.seed import set_global_seed
 
 logger = Logger(__name__)
 
@@ -33,13 +34,17 @@ def main() -> None:
         logger.info(f"Loading configuration from {config_path}")
         config = load_config(config_path)
 
-        # Initialize dataset manager
+        # Set global seed for reproducibility
+        logger.info(f"Setting global seed to {config.seed} for reproducible partitioning")
+        set_global_seed(config.seed)
+
+        # Initialize dataset manager with seed
         logger.info(f"Initializing dataset manager for {config.dataset.dataset}")
         logger.info(f"Number of clients: {config.n_clients}")
         logger.info(f"Train partitioner: {config.dataset.train_partitioner.method}")
         logger.info(f"Test partitioner: {config.dataset.test_partitioner.method}")
 
-        dm = DSManager(n_clients=config.n_clients, conf=config.dataset)
+        dm = DSManager(n_clients=config.n_clients, conf=config.dataset, seed=config.seed)
 
         # Download and partition data
         logger.info("Downloading and partitioning dataset...")

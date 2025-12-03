@@ -89,7 +89,7 @@ class FLClient(fl.client.NumPyClient):
         Load the data.
         """
         logger.info(f"Client {self.cid}: Loading dataset partition")
-        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset)
+        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset, seed=self.conf.seed)
 
         train, validation, test = dm.load_locally(partition_id=int(self.cid))
         keys = list(test.features.keys())
@@ -107,6 +107,18 @@ class FLClient(fl.client.NumPyClient):
         self.x_train = (self.x_train.astype("float32") - 127.5) / 127.5
         self.x_validation = (self.x_validation.astype("float32") - 127.5) / 127.5
         self.x_test = (self.x_test.astype("float32") - 127.5) / 127.5
+
+        # Add channel dimension for CNN models (grayscale images need shape: height x width x 1)
+        # This is required for Conv2D layers which expect 4D input: (batch, height, width, channels)
+        if self.conf.model.type == "cnn" and len(self.x_train.shape) == 3:
+            import numpy as np
+
+            self.x_train = np.expand_dims(self.x_train, axis=-1)
+            self.x_validation = np.expand_dims(self.x_validation, axis=-1)
+            self.x_test = np.expand_dims(self.x_test, axis=-1)
+            logger.debug(
+                f"Client {self.cid}: Reshaped data for CNN - " + f"New shape: {self.x_train.shape}"
+            )
 
         logger.info(
             f"Client {self.cid}: Data loaded and normalized to [-1, 1] - "
@@ -191,10 +203,7 @@ class FLClient(fl.client.NumPyClient):
         )
         loss, size, conf = self.training_strategy.evaluate(self, parameters, config)
         logger.log_metrics(f"/c-data-{self.cid}.csv", data=self.get_log_data(config))
-        logger.debug(
-            f"Client {self.cid}: Evaluation completed - "
-            + f"Loss: {loss:.4f}, Accuracy: {conf.get('acc', 0):.4f}"
-        )
+        logger.debug(f"Client {self.cid}: Evaluation completed")
         return loss, size, conf
 
     def get_log_data(self, config: Config) -> dict[str, Scalar]:

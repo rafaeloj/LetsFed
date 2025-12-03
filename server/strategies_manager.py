@@ -4,6 +4,7 @@ import flwr as fl
 
 from ..conf.loader import load_config
 from ..conf.structs import Environment
+from ..utils.seed import set_global_seed
 from .strategies.server_builder import ServerBuilder
 
 # Configure logging at module level
@@ -16,6 +17,10 @@ logging.basicConfig(
 
 def main() -> None:
     cfg: Environment = load_config("app/conf/config.yaml")
+
+    # Set global seed for reproducibility
+    set_global_seed(cfg.seed)
+
     fl.server.start_server(
         server_address=f"{cfg.server.ip}:{cfg.server.port}",
         config=fl.server.ServerConfig(num_rounds=cfg.rounds),

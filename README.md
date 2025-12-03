@@ -701,7 +701,15 @@ sequenceDiagram
 ```yaml
 server:
   aggregation_method:
-    name: fedavg  # or maxfl
+    name: fedavg              # Options: fedavg, maxfl
+    params: {}                # Strategy-specific parameters
+
+  # MaxFL example:
+  # aggregation_method:
+  #   name: maxfl
+  #   params:
+  #     epsilon: 10
+  #     learning_rate: 0.01
 ```
 
 #### Client Selection Methods
@@ -718,8 +726,24 @@ server:
 ```yaml
 server:
   selection_method:
-    name: letsfed
-    perc_of_clients: 0.3      # Select 30% of clients
+    name: letsfed             # Options: random, deev, poc, round_robin, letsfed
+    params:
+      perc_of_clients: 0.3    # Select 30% of clients
+
+  # DEEV example:
+  # selection_method:
+  #   name: deev
+  #   params:
+  #     perc_of_clients: 0.3
+  #     decay: 0.95
+
+  # LetsFed example (custom methods):
+  # selection_method:
+  #   name: letsfed
+  #   params:
+  #     perc_of_clients: 0.3
+  #     participating_method: random
+  #     non_participating_method: poc
 ```
 
 ### Client-Side Strategies
@@ -739,8 +763,25 @@ server:
 client:
   training_strategy:
     name: letsfed             # Options: normal, letsfed, maxfl, fedper, qffl
-    # LetsFed parameters (if name=letsfed)
-    # threshold: 1.0
+    params: {}                # Strategy-specific parameters
+
+  # LetsFed example:
+  # training_strategy:
+  #   name: letsfed
+  #   params:
+  #     threshold: 1.0
+
+  # MaxFL example:
+  # training_strategy:
+  #   name: maxfl
+  #   params:
+  #     learning_rate: 0.01
+
+  # QFFL example:
+  # training_strategy:
+  #   name: qffl
+  #   params:
+  #     q: 0.5
 ```
 
 ### Parameters Sharing Strategies
@@ -993,24 +1034,24 @@ If no metrics configuration is provided, the following defaults are used:
 # Automatically applied if client.metrics is not specified
 client:
   metrics:  # Optional - uses defaults if omitted
-    accuracy:
-      name: accuracy
-    precision:
-      name: precision
-      average: macro
-      zero_division: 0
-    recall:
-      name: recall
-      average: macro
-      zero_division: 0
-    f1_score:
-      name: f1_score
-      average: macro
-      zero_division: 0
-    auc:
-      name: auc
-      multi_class: ovr
-      average: macro
+    - name: accuracy
+      params: {}
+    - name: precision
+      params:
+        average: macro
+        zero_division: 0
+    - name: recall
+      params:
+        average: macro
+        zero_division: 0
+    - name: f1_score
+      params:
+        average: macro
+        zero_division: 0
+    - name: auc
+      params:
+        multi_class: ovr
+        average: macro
 ```
 
 #### Custom Metrics Configuration
@@ -1019,51 +1060,49 @@ client:
 ```yaml
 client:
   metrics:
-    precision:
-      name: precision
-      average: weighted  # Weight by class support
-      zero_division: 0
-    recall:
-      name: recall
-      average: weighted
-      zero_division: 0
-    f1_score:
-      name: f1_score
-      average: weighted
-      zero_division: 0
-    auc:
-      name: auc
-      average: weighted
+    - name: precision
+      params:
+        average: weighted  # Weight by class support
+        zero_division: 0
+    - name: recall
+      params:
+        average: weighted
+        zero_division: 0
+    - name: f1_score
+      params:
+        average: weighted
+        zero_division: 0
+    - name: auc
+      params:
+        average: weighted
 ```
 
 **Example 2: F2-Score (emphasizes recall)**
 ```yaml
 client:
   metrics:
-    accuracy:
-      name: accuracy
-    fbeta_score:
-      name: fbeta_score
-      beta: 2.0          # Recall weighted 2x more than precision
-      average: macro
-      zero_division: 0
+    - name: accuracy
+      params: {}
+    - name: fbeta_score
+      params:
+        beta: 2.0          # Recall weighted 2x more than precision
+        average: macro
+        zero_division: 0
 ```
 
 **Example 3: Micro averaging (aggregate contributions)**
 ```yaml
 client:
   metrics:
-    precision:
-      name: precision
-      average: micro
-    recall:
-      name: recall
-      average: micro
-    f1_score:
-      name: f1_score
-      average: micro
+    - name: precision
+      params:
+        average: micro
+    - name: recall
+      params:
+        average: micro
     - name: f1_score
-      average: micro
+      params:
+        average: micro
 ```
 
 ### Averaging Strategies
@@ -1146,33 +1185,63 @@ class MyCustomTraining(TrainingStrategy):
 ```python
 class TrainingStrategyFactory:
     @staticmethod
-    def create(config: TrainingConfig) -> TrainingStrategy:  # Module-specific config!
+    def create(config: TrainingConfig) -> TrainingStrategy:
+        """
+        Create training strategy from configuration.
+
+        Args:
+            config: TrainingConfig with 'name' and 'params' fields
+        """
         strategies = {
             "normal": NormalTraining,
             "letsfed": LetsFedTraining,
             "my_custom": MyCustomTraining,  # Add here
         }
         strategy_class = strategies[config.name]
-        return strategy_class(config)  # Pass config to __init__
+
+        # Parse params into strategy-specific config
+        strategy_config = strategy_class.params_from_json(config.params)
+        return strategy_class(strategy_config)
 ```
 
-3. **Add config dataclass** in `client/strategies/training/structs.py`:
+3. **Add config dataclass and parser** in `client/strategies/training/structs.py`:
 
 ```python
 @dataclass
 class MyCustomTrainingConfig:
-    name: str
+    """Configuration for MyCustomTraining strategy"""
     my_parameter: float
+    learning_rate: float = 0.01
     # ... other parameters
 ```
 
-4. **Use in configuration**:
+4. **Implement params parser** in your strategy class:
+
+```python
+class MyCustomTraining(TrainingStrategy):
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> MyCustomTrainingConfig:
+        """Parse JSON parameters into MyCustomTrainingConfig."""
+        return MyCustomTrainingConfig(
+            my_parameter=params.get("my_parameter", 1.0),
+            learning_rate=params.get("learning_rate", 0.01),
+        )
+
+    def __init__(self, config: MyCustomTrainingConfig):
+        """Initialize with parsed config"""
+        self.config = config
+        # ...
+```
+
+5. **Use in configuration**:
 
 ```yaml
 client:
   training_strategy:
     name: my_custom
-    my_parameter: 1.5
+    params:
+      my_parameter: 1.5
+      learning_rate: 0.001
 ```
 
 ### Adding a New Driver
@@ -1232,19 +1301,143 @@ def _get_drivers(self):
 
 ```python
 from ..base import ClientSelectionMethod
+from ..structs import MyCustomSelectionConfig
 
 class MyCustomSelection(ClientSelectionMethod):
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> MyCustomSelectionConfig:
+        """Parse JSON parameters into config"""
+        return MyCustomSelectionConfig(
+            perc_of_clients=params.get("perc_of_clients", 0.3),
+            my_param=params.get("my_param", 1.0),
+        )
+
+    def __init__(self, config: MyCustomSelectionConfig):
+        self.config = config
+
     def select(self, server, client_manager, num_clients):
-        # Implement selection logic
+        # Implement selection logic using self.config
         # ...
         return selected_clients
 ```
 
-2. **Register in factory** and update config as shown above.
+2. **Add config dataclass** in `server/strategies/client_selection_method/structs.py`:
+
+```python
+@dataclass
+class MyCustomSelectionConfig:
+    """Configuration for MyCustomSelection"""
+    perc_of_clients: float
+    my_param: float
+```
+
+3. **Register in factory** (`server/strategies/client_selection_method/factory.py`):
+
+```python
+class ClientSelectionFactory:
+    @staticmethod
+    def create(config: SelectionConfig) -> ClientSelectionMethod:
+        strategies = {
+            "random": RandomSelection,
+            "letsfed": LetsFedSelection,
+            "my_custom": MyCustomSelection,  # Add here
+        }
+        strategy_class = strategies[config.name]
+        strategy_config = strategy_class.params_from_json(config.params)
+        return strategy_class(strategy_config)
+```
+
+4. **Use in configuration**:
+
+```yaml
+server:
+  selection_method:
+    name: my_custom
+    params:
+      perc_of_clients: 0.4
+      my_param: 2.5
+```
 
 ### Adding a New Aggregation Method
 
-Similar process in `server/strategies/aggregate_method/types/`.
+1. **Create implementation** in `server/strategies/aggregate_method/types/`:
+
+```python
+from ..base import AggregationMethod
+from ..structs import MyCustomAggregationConfig
+
+class MyCustomAggregation(AggregationMethod):
+    @staticmethod
+    def params_from_json(params: dict[str, Any]) -> MyCustomAggregationConfig:
+        """Parse JSON parameters into config"""
+        return MyCustomAggregationConfig(
+            epsilon=params.get("epsilon", 1.0),
+        )
+
+    def __init__(self, config: MyCustomAggregationConfig):
+        self.config = config
+
+    def agg_fit(self, server, results, failures):
+        # Implement aggregation logic using self.config
+        # ...
+        return aggregated_parameters, metrics
+```
+
+2. **Add config, register in factory, and use in YAML** following the same pattern.
+
+### Adding a New Metric
+
+1. **Create implementation** in `metrics/types/`:
+
+```python
+from ..base import Metric
+from .structs import MyCustomMetricConfig
+
+class MyCustomMetric(Metric):
+    def __init__(self, config: MyCustomMetricConfig):
+        self.config = config
+        self.name = "my_custom"
+
+    def calculate(self, y_true: np.ndarray, y_pred_proba: np.ndarray) -> float:
+        # Implement metric calculation using self.config
+        return metric_value
+```
+
+2. **Add config dataclass** in `metrics/types/structs.py`:
+
+```python
+@dataclass
+class MyCustomMetricConfig:
+    """Configuration for MyCustomMetric"""
+    threshold: float = 0.5
+    mode: str = "default"
+```
+
+3. **Register in factory** (`metrics/factory.py`):
+
+```python
+class MetricFactory:
+    @staticmethod
+    def create_metric(config: dict[str, Any]) -> Metric:
+        name = config.get("name")
+        params = config.get("params", {})
+
+        if name == "my_custom":
+            metric_config = MyCustomMetricConfig(**params)
+            return MyCustomMetric(metric_config)
+        # ... other metrics
+```
+
+4. **Use in configuration**:
+
+```yaml
+client:
+  metrics:
+    - name: my_custom
+      params:
+        threshold: 0.7
+        mode: "custom"
+```
 
 ### Architecture Benefits
 
@@ -1298,10 +1491,11 @@ logs/
 
 #### Client Metrics
 - Round number
-- Training accuracy/loss (`g_fit_acc`, `g_fit_loss`)
-- Evaluation accuracy/loss (`g_eval_acc`, `g_eval_loss`)
+- Training accuracy/loss (`fit_train_accuracy`, `fit_train_loss`)
+- Validation accuracy/loss (`fit_val_accuracy`, `fit_val_loss`)
+- Test accuracy/loss (`eval_test_accuracy`, `eval_test_loss`)
 - Selection status (`selected`)
-- Participation state (`participating_state`, `desired_state`)
+- Participation state (`participating_state`)
 - Strategy-specific metrics (e.g., `qk` for MaxFL, `willing` for LetsFed)
 
 #### Server Metrics
@@ -1403,8 +1597,53 @@ Each module has its own `structs.py` with dataclass configurations:
 - `server/strategies/structs.py` - Server-specific config
 - `server/strategies/aggregate_method/structs.py` - Aggregation method configs
 - `server/strategies/client_selection_method/structs.py` - Selection method configs
+- `server/strategies/parameters_strategy/structs.py` - Parameters strategy configs
 - `client/strategies/structs.py` - Client-specific config
 - `client/strategies/training/structs.py` - Training strategy configs
+- `client/strategies/parameters_strategy/structs.py` - Parameters strategy configs
+- `metrics/structs.py` - Metrics configuration
+
+### Configuration Pattern
+
+**All factory-based components** (strategies, aggregation, selection, parameters, metrics) follow a **consistent configuration pattern**:
+
+```yaml
+component:
+  name: strategy_name      # Required: identifies which implementation to use
+  params: {}               # Required: strategy-specific parameters (can be empty)
+```
+
+**Why this pattern?**
+- ✅ **Consistency**: Same structure across all configurable components
+- ✅ **Extensibility**: Easy to add new parameters without breaking existing configs
+- ✅ **Type Safety**: Parameters are validated and parsed into typed dataclasses
+- ✅ **Factory Pattern**: `name` selects the class, `params` configures the instance
+- ✅ **Clear Separation**: Strategy identification (`name`) vs configuration (`params`)
+
+**Example:**
+```yaml
+# Server aggregation
+server:
+  aggregation_method:
+    name: maxfl           # Which strategy
+    params:               # How to configure it
+      epsilon: 10
+      learning_rate: 0.01
+
+# Client training
+client:
+  training_strategy:
+    name: letsfed         # Which strategy
+    params:               # How to configure it
+      threshold: 1.0
+
+# Metrics (list of configs)
+  metrics:
+    - name: precision     # Which metric
+      params:             # How to configure it
+        average: macro
+        zero_division: 0
+```
 
 
 ### Complete Configuration Example
@@ -1416,6 +1655,7 @@ n_clients: 30                 # Total number of clients
 init_clients: 1.0             # Fraction of clients to initialize
 gpu: false                    # Enable GPU acceleration
 log_path: logs                # Path for log files
+seed: 42                      # Global random seed for reproducibility
 
 # Server configuration
 server:
@@ -1425,19 +1665,46 @@ server:
   # Aggregation strategy
   aggregation_method:
     name: fedavg              # Options: fedavg, maxfl
-    # MaxFL parameters (if name=maxfl)
-    # epsilon: 10
-    # learning_rate: 0.01
+    params: {}                # Strategy-specific parameters
+
+  # MaxFL example:
+  # aggregation_method:
+  #   name: maxfl
+  #   params:
+  #     epsilon: 10
+  #     learning_rate: 0.01
 
   # Client selection strategy
   selection_method:
     name: letsfed             # Options: random, deev, poc, round_robin, letsfed
-    perc_of_clients: 0.3      # Percentage of clients to select per round
-    # DEEV parameters (if name=deev)
-    # decay: 0.95
-    # LetsFed parameters (if name=letsfed)
-    # participating_method: random
-    # non_participating_method: poc
+    params:
+      perc_of_clients: 0.3    # Percentage of clients to select per round
+
+  # DEEV example:
+  # selection_method:
+  #   name: deev
+  #   params:
+  #     perc_of_clients: 0.3
+  #     decay: 0.95
+
+  # LetsFed example (custom methods):
+  # selection_method:
+  #   name: letsfed
+  #   params:
+  #     perc_of_clients: 0.3
+  #     participating_method: random
+  #     non_participating_method: poc
+
+  # Parameters sharing strategy
+  parameters_strategy:
+    name: normal              # Options: normal, layerwise
+    params: {}
+
+  # LayerWise example:
+  # parameters_strategy:
+  #   name: layerwise
+  #   params:
+  #     num_shared_layers: 5  # Share only first 5 layers
 
 # Client configuration
 client:
@@ -1447,8 +1714,51 @@ client:
   # Training strategy
   training_strategy:
     name: letsfed             # Options: normal, letsfed, maxfl, fedper, qffl
-    # LetsFed parameters (if name=letsfed)
-    # threshold: 1.0
+    params: {}                # Strategy-specific parameters
+
+  # LetsFed example:
+  # training_strategy:
+  #   name: letsfed
+  #   params:
+  #     threshold: 1.0
+
+  # MaxFL example:
+  # training_strategy:
+  #   name: maxfl
+  #   params:
+  #     learning_rate: 0.01
+
+  # Parameters sharing strategy
+  parameters_strategy:
+    name: normal              # Options: normal, layerwise
+    params: {}
+
+  # LayerWise example:
+  # parameters_strategy:
+  #   name: layerwise
+  #   params:
+  #     num_shared_layers: 5  # Must match server configuration
+
+  # Metrics configuration
+  metrics:
+    - name: accuracy
+      params: {}
+    - name: precision
+      params:
+        average: macro
+        zero_division: 0
+    - name: recall
+      params:
+        average: macro
+        zero_division: 0
+    - name: f1_score
+      params:
+        average: macro
+        zero_division: 0
+    - name: auc
+      params:
+        multi_class: ovr
+        average: macro
 
   participating: true         # Initial participation state
 
@@ -1465,6 +1775,78 @@ model:
 ```
 
 ## 🛠️ Development
+
+### Reproducibility
+
+The framework provides comprehensive seed management for reproducible experiments:
+
+#### Global Seed Configuration
+
+Set the `seed` parameter in `config.yaml` to ensure reproducibility:
+
+```yaml
+# General Configuration
+seed: 42  # Global random seed for reproducibility
+```
+
+#### What Gets Seeded
+
+The seed affects:
+- ✅ **Python's random module** - Client selection, data shuffling
+- ✅ **NumPy** - Data partitioning, numerical operations
+- ✅ **TensorFlow/Keras** - Model initialization, training operations
+- ✅ **Dataset partitioning** - Consistent data splits across runs
+- ✅ **Client selection** - Reproducible client sampling
+
+#### Client-Specific Seeds
+
+Each client automatically receives a **derived seed** based on:
+```python
+client_seed = hash(f"client_{client_id}") + base_seed
+```
+
+This ensures:
+- Different clients have different seeds (diversity)
+- Same client gets same seed across runs (reproducibility)
+- Deterministic but distributed randomness
+
+#### Usage
+
+```python
+from utils.seed import set_global_seed, set_component_seed
+
+# Server: Set global seed
+set_global_seed(config.seed)
+
+# Client: Set client-specific seed
+set_component_seed(config.seed, "client", client_id=0)
+```
+
+#### Reproducibility Guarantees
+
+| Component | Reproducible? | Notes |
+|-----------|---------------|-------|
+| **Data Partitioning** | ✅ Yes | Same partitions across runs |
+| **Model Initialization** | ✅ Yes | Same initial weights |
+| **Training** | ✅ Yes (CPU) | Deterministic on CPU |
+| **Training** | ⚠️ Partial (GPU) | Some GPU ops non-deterministic |
+| **Client Selection** | ✅ Yes | Same clients selected |
+| **Aggregation** | ✅ Yes | Deterministic computation |
+
+#### GPU Considerations
+
+For **full reproducibility**, use **CPU mode**:
+```yaml
+gpu: false  # Ensures full determinism
+```
+
+With GPUs, some operations may be non-deterministic due to:
+- Parallel reduction operations
+- Atomic operations
+- Floating-point precision differences
+
+⚠️ **Note**: The framework enables `TF_DETERMINISTIC_OPS` which forces TensorFlow to use deterministic GPU algorithms where possible, but this may impact performance.
+
 
 ### Project Philosophy
 

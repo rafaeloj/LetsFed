@@ -123,7 +123,7 @@ class FLServer(Strategy):
         Load the data.
         """
         logger.debug("Loading server dataset partition (partition 0)")
-        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset)
+        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset, seed=self.conf.seed)
 
         train, validation, test = dm.load_locally(partition_id=0)
         keys = list(test.features.keys())
@@ -141,6 +141,16 @@ class FLServer(Strategy):
         self.x_train = (self.x_train.astype("float32") - 127.5) / 127.5
         self.x_validation = (self.x_validation.astype("float32") - 127.5) / 127.5
         self.x_test = (self.x_test.astype("float32") - 127.5) / 127.5
+
+        # Add channel dimension for CNN models (grayscale images need shape: height x width x 1)
+        # This is required for Conv2D layers which expect 4D input: (batch, height, width, channels)
+        if self.conf.model.type == "cnn" and len(self.x_train.shape) == 3:
+            import numpy as np
+
+            self.x_train = np.expand_dims(self.x_train, axis=-1)
+            self.x_validation = np.expand_dims(self.x_validation, axis=-1)
+            self.x_test = np.expand_dims(self.x_test, axis=-1)
+            logger.debug(f"Server: Reshaped data for CNN - New shape: {self.x_train.shape}")
 
         logger.info(
             "Server dataset loaded - "
@@ -257,7 +267,7 @@ class FLServer(Strategy):
 
         all_available_clients = client_manager.sample(
             num_clients=num_available,  # Max available clients (in flower gRPC environment)
-            min_num_clients=int(self.conf.n_clients * self.conf.init_clients),
+            min_num_clients=1,
         )
         logger.debug(f"Sampled clients: {len(all_available_clients)}")
 
