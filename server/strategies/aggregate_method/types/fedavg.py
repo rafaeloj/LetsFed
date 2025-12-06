@@ -76,9 +76,15 @@ class FedAVG(AggregationMethod):
             logger.warning("FedAvg aggregation: No results to aggregate")
             return None, {}
 
+        # Sort results by client ID for reproducibility
+        # This ensures deterministic aggregation order regardless of when clients finish training
+        sorted_results = sorted(results, key=lambda x: int(x[1].metrics.get("cid", 0)))
+        cid_order = [r[1].metrics.get("cid") for r in sorted_results]
+        logger.debug(f"FedAvg aggregation: Processing clients in order: {cid_order}")
+
         # Aggregate weights from selected and participating clients
         weights_results = []
-        for _, fit_res in results:
+        for _, fit_res in sorted_results:
             cid = fit_res.metrics["cid"]
             if Utils.is_select_by_server(cid, server.selected_clients):
                 if fit_res.metrics["participating_state"]:
@@ -118,9 +124,12 @@ class FedAVG(AggregationMethod):
         if not results:
             return None, {}
 
+        # Sort results by client ID for reproducibility
+        sorted_results = sorted(results, key=lambda x: int(x[1].metrics.get("cid", 0)))
+
         # Aggregate loss from selected and participating clients
         loss_to_aggregated = []
-        for _, eval_res in results:
+        for _, eval_res in sorted_results:
             client_id = eval_res.metrics["cid"]
             if Utils.is_select_by_server(client_id, server.selected_clients):
                 if eval_res.metrics["participating_state"]:

@@ -1,6 +1,6 @@
 # General Configuration
 seed: 42
-rounds: 20
+rounds: 10
 n_clients: 5
 init_clients: 1.0
 gpu: false
@@ -20,7 +20,7 @@ server:
   selection_method:
     name: random  # Options: random, deev, poc, round_robin, letsfed
     params:
-      perc_of_clients: 1.0
+      perc_of_clients: 0.5
 
   # Parameters strategy configuration
   parameters_strategy:
