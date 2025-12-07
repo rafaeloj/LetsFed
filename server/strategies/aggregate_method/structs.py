@@ -30,13 +30,19 @@ class FedAvgAggregationMethodConfig:
 class MaxFLAggregationMethodConfig:
     """MaxFL aggregation method configuration."""
 
-    epsilon: float = 10.0
-    learning_rate: float = 0.01
+    epsilon: float = 0.1
+    learning_rate: float = 1.0
 
 
 @dataclass
 class QFFLAggregationMethodConfig:
-    """QFFL aggregation method configuration."""
+    """
+    q-FFL aggregation method configuration.
 
-    rho: float = 0.1
-    learning_rate: float = 0.01
+    Args:
+        q: Fairness parameter. Higher q gives more weight to clients with higher loss.
+           q=0: uniform weighting (equivalent to FedAvg)
+           q>0: fairness-aware weighting (clients with higher loss get more weight)
+    """
+
+    q: float = 0.5  # Fairness parameter (0 = FedAvg, >0 = fairness-aware)

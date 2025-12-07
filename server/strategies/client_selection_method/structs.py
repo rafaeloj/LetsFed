@@ -23,29 +23,29 @@ class SelectionMethodConfig:
 class RandomSelectionMethodConfig:
     """Random selection method configuration."""
 
-    perc_of_clients: float = 0.3
+    perc_of_clients: float = 0.5
 
 
 @dataclass
 class DeevSelectionMethodConfig:
     """DEEV selection method configuration."""
 
-    decay: float = 0.95
+    decay: float = 0.05
 
 
 @dataclass
 class PoCSelectionMethodConfig:
     """PoC selection method configuration."""
 
-    perc_of_clients: float = 0.3
+    perc_of_clients: float = 0.5
 
 
 @dataclass
 class RoundRobinSelectionMethodConfig:
     """Round Robin selection method configuration."""
 
-    perc_of_clients: float = 0.3
-    n_clients: int = 10
+    perc_of_clients: float = 0.5
+    n_clients: int = 5
 
 
 @dataclass

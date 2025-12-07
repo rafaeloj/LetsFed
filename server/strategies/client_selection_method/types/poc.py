@@ -62,13 +62,24 @@ class POC(ClientSelectionMethod):
             logger.info(f"Round {server_round}: POC selecting all clients")
             return list_of_clients
 
+        # Get accuracy metric from clients_metrics
+        # Try to use 'accuracy' first, fallback to other metrics if needed
+        if "accuracy" in server.clients_metrics:
+            metric_key = "accuracy"
+        else:
+            raise ValueError("POC selection requires 'accuracy' metric in clients_metrics")
+
         lc: list[tuple[str, float]] = [
-            (cid, server.clients_acc[int(cid)]) for cid in list_of_clients
+            (cid, server.clients_metrics[metric_key][int(cid)]) for cid in list_of_clients
         ]
         lc.sort(key=lambda x: x[1])
         selected_clients = []
-        for cid, acc in lc:
-            if acc < server.clients_acc_avg:
+
+        # Get average accuracy from clients_metrics_avg
+        avg_metric = server.clients_metrics_avg.get(metric_key)
+
+        for cid, metric_value in lc:
+            if metric_value <= avg_metric:
                 selected_clients.append(cid)
 
         clients2select = math.ceil(float(len(list_of_clients)) * float(self.config.perc_of_clients))

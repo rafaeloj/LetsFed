@@ -48,7 +48,6 @@ class LetsFedClient(TrainingStrategy):
             LetsFedTrainingStrategyConfig instance.
         """
         return LetsFedTrainingStrategyConfig(
-            learning_rate=params.get("learning_rate", 0.01),
             threshold_accuracy=params.get("threshold_accuracy", 1.0),
         )
 

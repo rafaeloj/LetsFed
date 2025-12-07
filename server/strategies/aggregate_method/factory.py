@@ -11,6 +11,7 @@ from .base import AggregationMethod
 from .structs import AggregationMethodConfig
 from .types.fedavg import FedAVG
 from .types.maxfl import MaxFL
+from .types.qffl import QFFL
 
 logger = Logger(__name__)
 
@@ -26,6 +27,7 @@ class AggregationFactory:
     _registry: dict[str, Type[AggregationMethod]] = {
         "fedavg": FedAVG,
         "maxfl": MaxFL,
+        "qffl": QFFL,
     }
 
     @classmethod

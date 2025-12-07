@@ -41,7 +41,7 @@ class DEEV(ClientSelectionMethod):
         Returns:
             DeevSelectionMethodConfig instance.
         """
-        return DeevSelectionMethodConfig(decay=params.get("decay", 0.95))
+        return DeevSelectionMethodConfig(decay=params.get("decay", 0.05))
 
     def select(
         self,
@@ -65,14 +65,25 @@ class DEEV(ClientSelectionMethod):
             logger.info(f"Round {server_round}: DEEV selecting all clients")
             return list_of_clients
 
-        # Select clients with accuracy below average
+        # Get accuracy metric from clients_metrics
+        # Try to use 'accuracy' first, fallback to other metrics if needed
+        if "accuracy" in server.clients_metrics:
+            metric_key = "accuracy"
+        else:
+            metric_key = list(server.clients_metrics.keys())[0]
+
+        # Select clients with metric value below average
         selected_clients: list[str] = []
         lc: list[tuple[str, float]] = [
-            (cid, server.clients_acc[int(cid)]) for cid in list_of_clients
+            (cid, server.clients_metrics[metric_key][int(cid)]) for cid in list_of_clients
         ]
         lc.sort(key=lambda x: x[1])
-        for cid, acc in lc:
-            if acc < server.clients_acc_avg:
+
+        # Get average metric from clients_metrics_avg
+        avg_metric = server.clients_metrics_avg.get(metric_key)
+
+        for cid, metric_value in lc:
+            if metric_value <= avg_metric:
                 selected_clients.append(cid)
 
         if self.config.decay > 0.0:

@@ -40,7 +40,7 @@ class NormalClient(TrainingStrategy):
         Returns:
             NormalTrainingStrategyConfig instance.
         """
-        return NormalTrainingStrategyConfig(learning_rate=params.get("learning_rate", 0.01))
+        return NormalTrainingStrategyConfig()
 
     def fit(
         self, client: "FLClient", parameters: NDArrays, config: Config

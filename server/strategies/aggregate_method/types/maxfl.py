@@ -52,22 +52,32 @@ class MaxFL(AggregationMethod):
             MaxFLAggregationMethodConfig instance.
         """
         return MaxFLAggregationMethodConfig(
-            epsilon=params.get("epsilon", 10.0),
-            learning_rate=params.get("learning_rate", 0.01),
+            epsilon=params.get("epsilon", 0.1),
+            learning_rate=params.get("learning_rate", 1.0),
         )
 
     def _get_learning_rate(self, q_models_value: list[float]) -> float:
         """
-        Method to get the learning rate based on q_models values.
+        Calculate adaptive learning rate for model aggregation interpolation.
+
+        The learning rate determines the interpolation weight between the global model
+        and the aggregated client models: new_weights = (1-lr)*w_global + lr*w_avg
 
         Args:
-            q_models_value: List of q_model values from clients.
+            q_models_value: List of qk quality values from participating clients.
 
         Returns:
-            The calculated learning rate.
+            The calculated learning rate for aggregation (typically in range [0, 1]).
+            Higher sum(qk) -> lower LR -> more conservative aggregation.
+            Lower sum(qk) -> higher LR -> more trust in client updates.
         """
-        lr = self.config.learning_rate / (sum(q_models_value) + self.config.epsilon)
-        logger.debug(f"Computed learning rate: {lr:.6f} (sum_qk={sum(q_models_value):.4f})")
+        sum_qk = sum(q_models_value)
+        lr = self.config.learning_rate / (sum_qk + self.config.epsilon)
+        logger.debug(
+            f"Computed aggregation LR: {lr:.6f} "
+            + f"(base_lr={self.config.learning_rate}, sum_qk={sum_qk:.4f}, "
+            + f"epsilon={self.config.epsilon})"
+        )
         return lr
 
     def agg_fit(
@@ -118,16 +128,21 @@ class MaxFL(AggregationMethod):
             return None, {}
 
         # Aggregate weights from selected and participating clients.
-        avg_qk = qk_s / len(server.selected_clients)
+        # Use len(weights_results) not len(selected_clients) since only
+        # participating clients contribute to qk_s
+        num_participating = len(weights_results)
+        avg_qk = qk_s / num_participating
         server.data_to_log["qk_s"] = avg_qk
         logger.info(
-            f"Round {server_round}: Aggregating {len(weights_results)} client models "
-            + f"(avg_qk={avg_qk:.4f})"
+            f"Round {server_round}: Aggregating {num_participating} client models "
+            + f"(avg_qk={avg_qk:.4f}, selected={len(server.selected_clients)})"
         )
 
         weights_avg = aggregate(weights_results)
         learning_rate = self._get_learning_rate(q_models_value)
 
+        # Equivalent to: new_weights = (1 - lr) * w_global + lr * w_avg
+        # Interpolation between global model and aggregated model
         new_weights = [
             weight - (learning_rate * (weight - weight_avg))  # Gradient descent
             for weight, weight_avg in zip(server.model.get_weights(), weights_avg, strict=True)

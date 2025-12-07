@@ -63,12 +63,18 @@ class RandomSelection(ClientSelectionMethod):
             )
             return list_of_clients
 
+        # Create a deterministic Random instance for this specific round
+        # This ensures reproducibility regardless of other random operations
+        round_rng = random.Random(server.conf.seed + server_round)  # noqa: S311
+
         perc = math.ceil(len(list_of_clients) * self.config.perc_of_clients)
-        selected_clients = random.sample(list_of_clients, perc)
+        selected_clients = round_rng.sample(list_of_clients, perc)
 
         logger.debug(
-            f"Random selection: {len(selected_clients)}/{len(list_of_clients)} clients "
-            + f"({self.config.perc_of_clients * 100:.0f}%)"
+            f"Random selection (Round {server_round}): "
+            + f"{len(selected_clients)}/{len(list_of_clients)} clients "
+            + f"({self.config.perc_of_clients * 100:.0f}%) "
+            + f"seed={server.conf.seed + server_round}"
         )
 
         return selected_clients

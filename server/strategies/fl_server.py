@@ -98,8 +98,8 @@ class FLServer(Strategy):
         self.cid_to_uuid: Dict[str, str] = {}
 
         # Load data and model
-        if conf.server.aggregation_method.name.lower() == "maxfl":
-            logger.info("Loading server-side data and model for MaxFL aggregation")
+        if conf.server.aggregation_method.name.lower() in ["maxfl", "qffl"]:
+            logger.info("Loading server-side data and model for MaxFL/QFFL aggregation")
             self.model: keras.Model
             self.x_train, self.y_train = None, None
             self.x_validation, self.y_validation = None, None

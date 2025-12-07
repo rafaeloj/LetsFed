@@ -45,9 +45,7 @@ class QFFLClient(TrainingStrategy):
         Returns:
             QFFLTrainingStrategyConfig instance.
         """
-        return QFFLTrainingStrategyConfig(
-            learning_rate=params.get("learning_rate", 0.01), eta=params.get("eta", 1.0)
-        )
+        return QFFLTrainingStrategyConfig(eta=params.get("eta", 1.0))
 
     def fit(
         self, client: "FLClient", parameters: NDArrays, config: Config
@@ -127,14 +125,16 @@ class QFFLClient(TrainingStrategy):
             )
             client.fit_val_metrics["loss"] = np.mean(history.history.get("val_loss", [0]))
 
-            # Calculate delta parameters
+            # Calculate delta parameters and scale by eta
+            # delta = (current - previous) / eta
+            # eta controls the step size: larger eta = smaller updates
+            eta = self.config.eta
             delta_parameters = [
-                curr - prev
+                (curr - prev) / eta
                 for curr, prev in zip(
                     client.get_parameters(config), prev_model_parameters, strict=True
                 )
             ]
-            delta_parameters = delta_parameters * (1 / self.config.eta)  ## QFFL
 
             # Log training metrics dynamically
             train_metrics_str = ", ".join(
@@ -147,6 +147,9 @@ class QFFLClient(TrainingStrategy):
                 f"Client {client.cid}: Training completed - "
                 + f"Train [{train_metrics_str}], Val [{val_metrics_str}]"
             )
+
+            # Add training loss to fit_response for QFFL aggregation
+            fit_response["loss"] = client.fit_train_metrics["loss"]
 
             return delta_parameters, client.x_train.shape[0], fit_response
 

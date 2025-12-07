@@ -54,39 +54,53 @@ class MaxFLQkDriver(Driver):
             context (DriverContext): Context for storing driver results.
         """
         logger.debug(f"Client {client.cid}: MaxFLQkDriver started")
-        pre_training_epochs = client.conf.server.aggregation_method.pre_training_epochs
+        pre_training_epochs = client.training_strategy.config.pre_training_epochs
 
-        # Pre-training on client local data to compute the real loss
-        logger.debug(f"Client {client.cid}: Training local model for {pre_training_epochs} epochs")
+        # Step 1: Compute true_loss - train local model from global parameters
+        # This represents the performance gain from local training
+        logger.debug(
+            f"Client {client.cid}: Training local model from global params "
+            + f"for {pre_training_epochs} epochs"
+        )
         local_model = copy.deepcopy(client.model)
+        local_model.set_weights(parameters)  # Start from global parameters
         local_model.fit(
             client.x_train,
             client.y_train,
             epochs=pre_training_epochs,
+            verbose=0,
         )
-        true_loss, acc = local_model.evaluate(client.x_validation, client.y_validation)
-        logger.debug(f"Client {client.cid}: Local model - Loss: {true_loss:.4f}, Acc: {acc:.4f}")
+        true_loss, local_acc = local_model.evaluate(
+            client.x_validation, client.y_validation, verbose=0
+        )
+        logger.debug(
+            f"Client {client.cid}: Local model (trained from global) - "
+            + f"Loss: {true_loss:.4f}, Acc: {local_acc:.4f}"
+        )
 
-        # Generating the global fit loss
-        logger.debug(f"Client {client.cid}: Training global model for {pre_training_epochs} epochs")
+        # Step 2: Compute g_loss - evaluate global model WITHOUT local training
+        # This represents the baseline performance of the global model
+        logger.debug(f"Client {client.cid}: Evaluating global model (no training)")
         global_model = copy.deepcopy(client.model)
-        global_model.set_weights(parameters)
-        global_model.fit(
-            client.x_train,
-            client.y_train,
-            epochs=pre_training_epochs,
+        global_model.set_weights(parameters)  # Use global parameters as-is
+        g_loss, global_acc = global_model.evaluate(
+            client.x_validation, client.y_validation, verbose=0
         )
-        g_loss, g_acc = global_model.evaluate(client.x_validation, client.y_validation)
-        logger.debug(f"Client {client.cid}: Global model - Loss: {g_loss:.4f}, Acc: {g_acc:.4f}")
+        logger.debug(
+            f"Client {client.cid}: Global model (no training) - "
+            + f"Loss: {g_loss:.4f}, Acc: {global_acc:.4f}"
+        )
 
-        # Compute qk using sigmoid function
-        loss_diff = np.sum(g_loss) - np.sum(true_loss)
-        loss_weight = self.sigmoid(loss_diff)
-        qk = loss_weight * (1 - loss_weight)
+        # Step 3: Compute qk using sigmoid function
+        # loss_diff > 0: local training IMPROVED the model (qk > 0.5, should participate)
+        # loss_diff = 0: no improvement (qk = 0.5, neutral)
+        # loss_diff < 0: local training WORSENED the model (qk < 0.5, should NOT participate)
+        loss_diff = g_loss - true_loss  # How much local training improved the model
+        qk = self.sigmoid(loss_diff)
 
         logger.info(
             f"Client {client.cid}: MaxFLQkDriver computed qk = {float(qk):.4f} "
-            + f"(loss_diff={loss_diff:.4f})"
+            + f"(loss_diff={loss_diff:.4f}, threshold=0.5)"
         )
 
         # Store result in context instead of directly modifying client

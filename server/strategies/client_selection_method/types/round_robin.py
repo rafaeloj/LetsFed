@@ -96,16 +96,21 @@ class RoundRobinSelection(ClientSelectionMethod):
             + f"({self.config.perc_of_clients * 100:.1f}% of {len(list_of_clients)})"
         )
 
-        # Update scores
-        for cid_value_index in top_values_of_cid:
-            self.how_many_time_selected[cid_value_index] += 1
+        # Update scores - increment the count for the ACTUAL client IDs selected
+        for idx in top_values_of_cid:
+            actual_cid = clients_cid_int[idx]  # Map index to actual CID
+            self.how_many_time_selected[actual_cid] += 1
 
-        # Get the indices of the selected clients
-        top_clients = [str(cid) for cid in top_values_of_cid]
+        # Get the actual client IDs of the selected clients
+        top_clients = [str(clients_cid_int[idx]) for idx in top_values_of_cid]
 
         logger.info(
             f"Round {server_round}: RoundRobin selected {len(top_clients)} clients - "
-            + f"CIDs: {', '.join(top_clients[:5])}{'...' if len(top_clients) > 5 else ''}"
+            + f"CIDs: {sorted([int(c) for c in top_clients])}"
+        )
+        logger.debug(
+            f"Selection counts after round {server_round}: "
+            + f"{dict(enumerate(self.how_many_time_selected.astype(int)))}"
         )
 
         return top_clients

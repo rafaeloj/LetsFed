@@ -49,7 +49,6 @@ class MaxFLClient(TrainingStrategy):
             MaxFLTrainingStrategyConfig instance.
         """
         return MaxFLTrainingStrategyConfig(
-            learning_rate=params.get("learning_rate", 0.01),
             maxfl_qk_threshold=params.get("maxfl_qk_threshold", 0.5),
             pre_training_epochs=params.get("pre_training_epochs", 10),
         )
@@ -205,18 +204,22 @@ class MaxFLClient(TrainingStrategy):
                 logger.info(f"Client {client.cid}: Computed qk = {self.qk:.4f}")
 
             # Check if client should participate based on qk threshold
+            # With qk = sigmoid(loss_diff), where loss_diff = g_loss - true_loss:
+            # - qk > 0.5: local training improved the model (should participate)
+            # - qk = 0.5: no improvement (neutral)
+            # - qk < 0.5: local training worsened the model (should NOT participate)
             qk_threshold = self.config.maxfl_qk_threshold
-            if hasattr(self, "qk") and self.qk < qk_threshold:
+            if hasattr(self, "qk") and self.qk >= qk_threshold:
                 logger.info(
                     f"Client {client.cid}: Will participate "
-                    + f"(qk={self.qk:.4f} < threshold={qk_threshold})"
+                    + f"(qk={self.qk:.4f} >= threshold={qk_threshold})"
                 )
                 client.set_participating_state(True)
                 client.set_parameters(parameters)
             else:
                 logger.info(
                     f"Client {client.cid}: Will NOT participate "
-                    + f"(qk={self.qk:.4f} >= threshold={qk_threshold})"
+                    + f"(qk={self.qk:.4f} < threshold={qk_threshold})"
                 )
                 client.set_participating_state(False)
         else:

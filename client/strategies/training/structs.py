@@ -19,14 +19,13 @@ class TrainingStrategyConfig:
 class NormalTrainingStrategyConfig:
     """Normal training strategy configuration."""
 
-    learning_rate: float = 0.01
+    pass
 
 
 @dataclass
 class LetsFedTrainingStrategyConfig:
     """LetsFed training strategy configuration."""
 
-    learning_rate: float = 0.01
     threshold_accuracy: float = 1.0
 
 
@@ -34,7 +33,6 @@ class LetsFedTrainingStrategyConfig:
 class MaxFLTrainingStrategyConfig:
     """MaxFL training strategy configuration."""
 
-    learning_rate: float = 0.01
     maxfl_qk_threshold: float = 0.5
     pre_training_epochs: int = 10
 
@@ -43,12 +41,11 @@ class MaxFLTrainingStrategyConfig:
 class FedPerTrainingStrategyConfig:
     """FedPer training strategy configuration."""
 
-    learning_rate: float = 0.01
+    pass
 
 
 @dataclass
 class QFFLTrainingStrategyConfig:
     """QFFL training strategy configuration."""
 
-    learning_rate: float = 0.01
-    eta: float = 0.1
+    eta: float = 1.0

@@ -44,7 +44,7 @@ class FedPerClient(TrainingStrategy):
         Returns:
             FedPerTrainingStrategyConfig instance.
         """
-        return FedPerTrainingStrategyConfig(learning_rate=params.get("learning_rate", 0.01))
+        return FedPerTrainingStrategyConfig()
 
     def fit(
         self, client: "FLClient", parameters: NDArrays, config: Config
