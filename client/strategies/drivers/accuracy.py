@@ -63,13 +63,13 @@ class AccuracyDriver(Driver):
         willing = self._client_willing(
             global_loss=g_tmp_loss,
             client_loss=c_tmp_loss,
-            threshold=client.conf.client.training_strategy.threshold_accuracy,
+            threshold=client.training_strategy.config.threshold_accuracy,
         )
 
         logger.info(
             f"Client {client.cid}: AccuracyDriver - "
-            + f"Willing: {willing} (ratio={c_tmp_loss / g_tmp_loss:.4f}, "
-            + f"threshold={client.conf.client.training_strategy.threshold_accuracy})"
+            + f"Willing: {willing} (ratio={g_tmp_loss / c_tmp_loss:.4f}, "
+            + f"threshold={client.training_strategy.config.threshold_accuracy})"
         )
 
         # Store result in context instead of directly modifying client
@@ -79,7 +79,7 @@ class AccuracyDriver(Driver):
         self, global_loss: float, client_loss: float, threshold: float = None
     ) -> bool:
         """
-        Check if the client loss is better than the global loss.
+        Check if the global loss is better than the client loss.
 
         Args:
             global_loss (float): The global model loss.
@@ -87,6 +87,6 @@ class AccuracyDriver(Driver):
             threshold (float): The threshold for improvement.
 
         Returns:
-            bool: True if the client loss is better than the global loss, False otherwise.
+            bool: True if the global loss is better than the client loss, False otherwise.
         """
-        return (client_loss / global_loss) > threshold
+        return (global_loss / client_loss) >= threshold

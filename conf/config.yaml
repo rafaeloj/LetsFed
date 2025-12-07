@@ -13,16 +13,21 @@ server:
 
   # Aggregation configuration
   aggregation_method:
-    name: qffl  # Options: fedavg, maxfl, qffl
-    params: {
-      q: 0.5
-    }
+    name: fedavg  # Options: fedavg, maxfl, qffl
+    params: {}
 
   # Selection configuration
   selection_method:
-    name: poc  # Options: random, deev, poc, round_robin, letsfed
+    name: letsfed  # Options: random, deev, poc, round_robin, letsfed
     params:
-      perc_of_clients: 0.5
+      participating_method:
+        name: random
+        params:
+          perc_of_clients: 0.5
+      non_participating_method:
+        name: random
+        params:
+          perc_of_clients: 0.5
 
   # Parameters strategy configuration
   parameters_strategy:
@@ -34,9 +39,9 @@ client:
   epochs: 10
   learning_rate: 0.001  # Global learning rate used by ModelManager
   training_strategy:
-    name: qffl  # Options: normal, letsfed, maxfl, fedper, qffl
+    name: letsfed  # Options: normal, letsfed, maxfl, fedper, qffl
     params: {
-      eta: 1.0
+      threshold_accuracy: 1.0
     }
 
   # Parameters strategy configuration

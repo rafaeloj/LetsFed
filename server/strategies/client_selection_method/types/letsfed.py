@@ -57,12 +57,12 @@ class LetsFedSelection(ClientSelectionMethod):
             LetsFedSelectionMethodConfig instance.
         """
         participating_method = SelectionMethodConfig(
-            name=params.get("participating_method", "name"),
-            params=params.get("participating_params", "params"),
+            name=params.get("participating_method").get("name"),
+            params=params.get("participating_method").get("params"),
         )
         non_participating_method = SelectionMethodConfig(
-            name=params.get("non_participating_method", "name"),
-            params=params.get("non_participating_params", "params"),
+            name=params.get("non_participating_method").get("name"),
+            params=params.get("non_participating_method").get("params"),
         )
         return LetsFedSelectionMethodConfig(
             participating_method=participating_method,
@@ -132,7 +132,8 @@ class LetsFedSelection(ClientSelectionMethod):
         """
         logger.debug(f"Round {server_round}: Starting LetsFed client selection")
 
-        non_participating_clients = np.where(not server.client_participating_state)[0].astype(str)
+        # Use ~ for numpy array negation (bitwise NOT)
+        non_participating_clients = np.where(~server.client_participating_state)[0].astype(str)
         participating_clients = np.where(server.client_participating_state)[0].astype(str)
 
         logger.info(
