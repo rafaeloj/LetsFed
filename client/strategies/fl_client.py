@@ -114,6 +114,12 @@ class FLClient(fl.client.NumPyClient):
             partition_id=int(self.cid), conf=self.conf
         )
 
+        # Create a non-shuffled version of train dataset for accurate metric calculation
+        # This ensures predictions align with true labels when calculating training metrics
+        self.train_dataset_no_shuffle, _, _ = create_federated_datasets(
+            partition_id=int(self.cid), conf=self.conf, shuffle_train=False
+        )
+
         # Extract metadata from the first batch for model initialization
         # Get a single batch to determine input shape and number of classes
         for x_batch, y_batch in self.train_dataset.take(1):

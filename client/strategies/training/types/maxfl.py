@@ -133,17 +133,27 @@ class MaxFLClient(TrainingStrategy):
                 )
 
                 # Calculate training metrics
-                y_train_pred_proba = client.model.predict(client.train_dataset, verbose=0)
-                # Get true labels from train dataset
-                y_train_true = np.concatenate([y for _, y in client.train_dataset], axis=0)
+                # Important: Extract X and y from train_dataset to avoid shuffle issues
+                # The train_dataset has reshuffle_each_iteration=True, which would cause
+                # misalignment between predictions and true labels if we iterate multiple times
+                x_train_batches = []
+                y_train_batches = []
+                for x_batch, y_batch in client.train_dataset:
+                    x_train_batches.append(x_batch)
+                    y_train_batches.append(y_batch)
+
+                x_train = np.concatenate(x_train_batches, axis=0)
+                y_train_true = np.concatenate(y_train_batches, axis=0)
+
+                y_train_pred_proba = client.model.predict(x_train, verbose=0)
                 client.fit_train_metrics = client.metrics_manager.calculate_metrics(
                     y_train_true, y_train_pred_proba
                 )
                 client.fit_train_metrics["loss"] = np.mean(history.history["loss"])
 
                 # Calculate validation metrics
+                # (validation dataset doesn't have shuffle, so it's safe)
                 y_val_pred_proba = client.model.predict(client.val_dataset, verbose=0)
-                # Get true labels from validation dataset
                 y_val_true = np.concatenate([y for _, y in client.val_dataset], axis=0)
                 client.fit_val_metrics = client.metrics_manager.calculate_metrics(
                     y_val_true, y_val_pred_proba
@@ -225,14 +235,13 @@ class MaxFLClient(TrainingStrategy):
         else:
             logger.debug(f"Client {client.cid}: Using existing weights (not selected)")
 
-        # Evaluate the model
+        # Evaluate the model (test dataset doesn't have shuffle, so it's safe)
         eval_pred_probs = client.model.predict(client.test_dataset, verbose=0)
         eval_loss = client.model.evaluate(client.test_dataset, verbose=0)[0]
-        # Get true labels from test dataset
         y_test_true = np.concatenate([y for _, y in client.test_dataset], axis=0)
         client.eval_test_metrics = client.metrics_manager.calculate_metrics(
             y_test_true, eval_pred_probs
-        )  # noqa: E501
+        )
         client.eval_test_metrics["loss"] = float(eval_loss)
 
         # Check for invalid values
