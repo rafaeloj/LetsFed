@@ -1251,7 +1251,7 @@ The framework implements a **modern data loading system** using TensorFlow's `tf
 
 ```mermaid
 graph TB
-    subgraph "Data Loading Pipeline"
+    subgraph DataLoadingPipeline["Data Loading Pipeline"]
         DSM[DSManager]
         FDL[FederatedDataLoader]
         TP[TransformPipeline]
@@ -1266,7 +1266,7 @@ graph TB
         FDL -->|Creates| TES[Test Dataset]
     end
 
-    subgraph "Client Usage"
+    subgraph ClientUsage["Client Usage"]
         Client[FLClient]
         Model[Keras Model]
 
@@ -1279,8 +1279,8 @@ graph TB
         Client -->|model.predict| Model
     end
 
-    style "Data Loading Pipeline" fill:#e8f5e9
-    style "Client Usage" fill:#fff4e1
+    style DataLoadingPipeline fill:#e8f5e9
+    style ClientUsage fill:#fff4e1
 ```
 
 ### FederatedDataLoader
