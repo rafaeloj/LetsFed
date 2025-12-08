@@ -1,6 +1,6 @@
 # General Configuration
 seed: 42
-rounds: 10
+rounds: 30
 n_clients: 5
 init_clients: 1.0
 gpu: false
@@ -13,15 +13,23 @@ server:
 
   # Aggregation configuration
   aggregation_method:
-    name: fedavg  # Options: fedavg, maxfl, qffl
+    name: letsfed  # Options: fedavg, maxfl, qffl, letsfed
     params: {}
 
   # Selection configuration
   selection_method:
-    name: round_robin  # Options: random, deev, poc, round_robin, letsfed
+    name: letsfed  # Options: random, deev, poc, round_robin, letsfed
     params:
-      perc_of_clients: 0.5
-      n_clients: 5
+      participating_method:
+        name: round_robin
+        params:
+          perc_of_clients: 0.5
+          n_clients: 5
+      non_participating_method:
+        name: round_robin
+        params:
+          perc_of_clients: 0.5
+          n_clients: 5
 
   # Parameters strategy configuration
   parameters_strategy:
@@ -33,8 +41,10 @@ client:
   epochs: 10
   learning_rate: 0.001  # Global learning rate used by ModelManager
   training_strategy:
-    name: normal  # Options: normal, letsfed, maxfl, fedper, qffl
-    params: {}
+    name: letsfed  # Options: normal, letsfed, maxfl, fedper, qffl
+    params: {
+      threshold_accuracy: 0.90
+    }
 
   # Parameters strategy configuration
   parameters_strategy:

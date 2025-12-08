@@ -10,6 +10,7 @@ from ....utils.logger import Logger
 from .base import AggregationMethod
 from .structs import AggregationMethodConfig
 from .types.fedavg import FedAVG
+from .types.letsfed import LetsFed
 from .types.maxfl import MaxFL
 from .types.qffl import QFFL
 
@@ -28,6 +29,7 @@ class AggregationFactory:
         "fedavg": FedAVG,
         "maxfl": MaxFL,
         "qffl": QFFL,
+        "letsfed": LetsFed,
     }
 
     @classmethod

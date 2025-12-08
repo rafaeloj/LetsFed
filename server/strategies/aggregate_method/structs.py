@@ -27,6 +27,13 @@ class FedAvgAggregationMethodConfig:
 
 
 @dataclass
+class LetsFedAggregationMethodConfig:
+    """LetsFed aggregation method configuration - no extra parameters."""
+
+    pass
+
+
+@dataclass
 class MaxFLAggregationMethodConfig:
     """MaxFL aggregation method configuration."""
 

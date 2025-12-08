@@ -90,6 +90,11 @@ class LetsFedClient(TrainingStrategy):
             "participating_state": client.get_participating_state(),
         }
 
+        # Initialize interest_metric in data_to_log if not present
+        # This ensures the CSV header includes this field from the first round
+        if "interest_metric" not in client.data_to_log:
+            client.data_to_log["interest_metric"] = 0.0
+
         # Calculate and store model size and parameter stats
         model_size = sum([layer.nbytes for layer in parameters])
         model_total_params = sum(w.size for w in parameters)
@@ -218,8 +223,12 @@ class LetsFedClient(TrainingStrategy):
         if client.selected:
             logger.debug(f"Client {client.cid}: Applying drivers for evaluation")
             # Set global model weights and apply drivers
-            self.apply_drivers(client, parameters, config)
+            modifications = self.apply_drivers(client, parameters, config)
             self._manager_client_state(client)
+
+            # Log interest_metric if it was computed
+            if "interest_metric" in modifications:
+                client.data_to_log["interest_metric"] = modifications["interest_metric"]
 
             if client.get_participating_state():
                 logger.debug(f"Client {client.cid}: Setting global parameters for evaluation")

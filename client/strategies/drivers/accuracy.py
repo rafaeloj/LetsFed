@@ -1,6 +1,7 @@
 import copy
 from typing import TYPE_CHECKING
 
+import numpy as np
 from flwr.common import (
     Config,
     NDArrays,
@@ -52,8 +53,17 @@ class AccuracyDriver(Driver):
         g_model = copy.deepcopy(client.model)
         g_model.set_weights(parameters)
 
+        # Calculate global model metrics
         g_tmp_loss, _ = g_model.evaluate(client.val_dataset, verbose=0)
+        y_val_pred_proba = g_model.predict(client.val_dataset, verbose=0)
+        y_val_true = np.concatenate([y for _, y in client.val_dataset], axis=0)
+        global_val_metrics = client.metrics_manager.calculate_metrics(y_val_true, y_val_pred_proba)
+
+        # Calculate client model metrics
         c_tmp_loss, _ = client.model.evaluate(client.val_dataset, verbose=0)
+        y_val_pred_proba = client.model.predict(client.val_dataset, verbose=0)
+        y_val_true = np.concatenate([y for _, y in client.val_dataset], axis=0)
+        client_val_metrics = client.metrics_manager.calculate_metrics(y_val_true, y_val_pred_proba)
 
         logger.debug(
             f"Client {client.cid}: AccuracyDriver - "
@@ -61,8 +71,9 @@ class AccuracyDriver(Driver):
         )
 
         willing = self._client_willing(
-            global_loss=g_tmp_loss,
-            client_loss=c_tmp_loss,
+            g_metric=global_val_metrics.get("f1_score"),
+            c_metric=client_val_metrics.get("f1_score"),
+            context=context,
             threshold=client.training_strategy.config.threshold_accuracy,
         )
 
@@ -76,7 +87,7 @@ class AccuracyDriver(Driver):
         context.set("willing", willing)
 
     def _client_willing(
-        self, global_loss: float, client_loss: float, threshold: float = None
+        self, g_metric: float, c_metric: float, context: DriverContext, threshold: float = None
     ) -> bool:
         """
         Check if the global loss is better than the client loss.
@@ -89,4 +100,7 @@ class AccuracyDriver(Driver):
         Returns:
             bool: True if the global loss is better than the client loss, False otherwise.
         """
-        return (global_loss / client_loss) >= threshold
+        interest_metric = g_metric / c_metric
+        context.set("interest_metric", interest_metric)
+
+        return interest_metric >= threshold
