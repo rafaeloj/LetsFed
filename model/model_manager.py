@@ -86,9 +86,7 @@ class ModelManager:
         logger.debug("Building CNN model architecture")
         model: keras.Model = tf.keras.models.Sequential(
             [
-                tf.keras.layers.Conv2D(
-                    32, (3, 3), activation="relu", input_shape=self.input_shape[1:]
-                ),
+                tf.keras.layers.Conv2D(32, (3, 3), activation="relu", input_shape=self.input_shape),
                 tf.keras.layers.MaxPooling2D((2, 2)),
                 tf.keras.layers.Dropout(0.25),
                 tf.keras.layers.BatchNormalization(),

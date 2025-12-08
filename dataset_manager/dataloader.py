@@ -8,15 +8,17 @@ client and server implementations.
 Uses TensorFlow's tf.data.Dataset for native Keras compatibility.
 """
 
-from typing import Callable, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
 
-from ..conf.structs import Environment
 from ..utils.logger import Logger
 from .dataset_manager import DSManager
 from .transforms import TransformPipeline
+
+if TYPE_CHECKING:
+    from ..conf.structs import Environment
 
 logger = Logger(__name__)
 
@@ -61,7 +63,7 @@ class FederatedDataLoader:
     def __init__(
         self,
         partition_id: int,
-        conf: Environment,
+        conf: "Environment",
     ) -> None:
         """
         Initialize the federated dataloader.
@@ -316,7 +318,7 @@ class FederatedDataLoader:
 
 def create_federated_datasets(
     partition_id: int,
-    conf: Environment,
+    conf: "Environment",
     batch_size: Optional[int] = None,
     shuffle_train: Optional[bool] = None,
 ) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
