@@ -277,8 +277,8 @@ class FLServer(Strategy):
         # We need this to ensure we don't sample more clients than are available, and to
         # be abble to map the client CI to ClientProxy objects
         all_available_clients = client_manager.sample(
-            num_clients=1,
-            min_num_clients=1,
+            num_clients=max(1, int(self.conf.n_clients * self.conf.init_clients)),
+            min_num_clients=max(1, int(self.conf.n_clients * self.conf.init_clients)),
         )
         logger.debug(f"Sampled clients: {len(all_available_clients)}")
 
@@ -403,8 +403,8 @@ class FLServer(Strategy):
 
         # Get all available clients
         all_available_clients = client_manager.sample(
-            num_clients=1,
-            min_num_clients=1,
+            num_clients=max(1, int(self.conf.n_clients * self.conf.init_clients)),
+            min_num_clients=max(1, int(self.conf.n_clients * self.conf.init_clients)),
         )
         logger.debug(f"Available clients for evaluation: {len(all_available_clients)}")
 
