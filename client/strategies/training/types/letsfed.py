@@ -34,6 +34,7 @@ class LetsFedClient(TrainingStrategy):
         """
         super().__init__(config)
         self.add_drivers(self._get_drivers())
+        self.interest_metric = 0.0
         logger.info("LetsFedClient training strategy initialized with drivers")
 
     @staticmethod
@@ -88,6 +89,7 @@ class LetsFedClient(TrainingStrategy):
         fit_response = {
             "cid": client.cid,
             "participating_state": client.get_participating_state(),
+            "interest_metric": self.interest_metric,
         }
 
         # Initialize interest_metric in data_to_log if not present
@@ -229,6 +231,10 @@ class LetsFedClient(TrainingStrategy):
             # Log interest_metric if it was computed
             if "interest_metric" in modifications:
                 client.data_to_log["interest_metric"] = modifications["interest_metric"]
+                self.interest_metric = modifications["interest_metric"]
+                logger.info(
+                    f"Client {client.cid}: Computed interest_metric = {self.interest_metric:.4f}"
+                )
 
             if client.get_participating_state():
                 logger.debug(f"Client {client.cid}: Setting global parameters for evaluation")

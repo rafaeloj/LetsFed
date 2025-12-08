@@ -86,21 +86,28 @@ class LetsFed(AggregationMethod):
         weights_results = []
         for _, fit_res in sorted_results:
             cid = fit_res.metrics["cid"]
-            # interest_metric = fit_res.metrics["interest_metric"]
+            interest_metric = fit_res.metrics["interest_metric"]
+            aggregation_weight = 1 / interest_metric if interest_metric != 0 else 1
             if Utils.is_select_by_server(cid, server.selected_clients):
                 if fit_res.metrics["participating_state"]:
                     logger.debug(
                         f"LetsFed aggregation: Client {cid} participating in round {server_round}"
                     )
                     weights_results.append(
-                        (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
+                        (
+                            parameters_to_ndarrays(fit_res.parameters),
+                            fit_res.num_examples * aggregation_weight,
+                        )  # noqa: E501
                     )
                 else:
                     logger.debug(
                         f"LetsFed aggregation: Client {cid} not participating in round {server_round}"  # noqa: E501
                     )
                     weights_results.append(
-                        (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
+                        (
+                            parameters_to_ndarrays(fit_res.parameters),
+                            fit_res.num_examples * aggregation_weight,
+                        )  # noqa: E501
                     )
 
         if len(weights_results) == 0:
