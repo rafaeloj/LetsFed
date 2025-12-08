@@ -1,4 +1,5 @@
 import flwr as fl
+import tensorflow as tf
 from flwr.common import (
     Config,
     NDArrays,
@@ -7,7 +8,7 @@ from flwr.common import (
 from keras import Model
 
 from ...conf.structs import Environment
-from ...dataset_manager.dataset_manager import DSManager
+from ...dataset_manager.dataloader import create_federated_datasets
 from ...metrics import MetricsManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
@@ -44,9 +45,20 @@ class FLClient(fl.client.NumPyClient):
 
         # Load data and model
         self.model: Model
-        self.x_train, self.y_train = None, None
-        self.x_validation, self.y_validation = None, None
-        self.x_test, self.y_test = None, None
+
+        # TensorFlow datasets for training/validation/test
+        self.train_dataset: tf.data.Dataset
+        self.val_dataset: tf.data.Dataset
+        self.test_dataset: tf.data.Dataset
+
+        # Dataset metadata
+        self.labels: list[str]
+        self.num_classes: int
+        self.input_shape: tuple
+        self.train_size: int
+        self.val_size: int
+        self.test_size: int
+
         self._load_data()
         self._load_model()
 
@@ -70,9 +82,7 @@ class FLClient(fl.client.NumPyClient):
 
         logger.info(
             f"Client {cid} initialized successfully with "
-            + f"{len(self.x_train)} training samples, "
-            + f"{len(self.x_validation)} validation samples, "
-            + f"{len(self.x_test)} test samples"
+            + "train/val/test datasets using TensorFlow"
         )
 
     def _load_model(self) -> None:
@@ -80,50 +90,53 @@ class FLClient(fl.client.NumPyClient):
         Load the model.
         """
         logger.debug(f"Client {self.cid}: Loading model")
-        mm = ModelManager(conf=self.conf, input_shape=self.x_train.shape)
+        mm = ModelManager(conf=self.conf, input_shape=self.input_shape)
         self.model = mm.get_model()
         logger.info(f"Client {self.cid}: Model loaded successfully")
 
     def _load_data(self) -> None:
         """
-        Load the data.
+        Load the data using TensorFlow datasets.
+
+        This method creates tf.data.Dataset objects for train/validation/test
+        using the create_federated_datasets factory function.
+
+        The TensorFlow datasets are used for training (model.fit) and
+        evaluation (model.evaluate, model.predict) as they provide:
+        - Native Keras compatibility
+        - Optimized performance with batching, shuffling, prefetching
+        - Memory efficiency for large datasets
         """
-        logger.info(f"Client {self.cid}: Loading dataset partition")
-        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset, seed=self.conf.seed)
+        logger.info(f"Client {self.cid}: Loading dataset partition {self.cid}")
 
-        train, validation, test = dm.load_locally(partition_id=int(self.cid))
-        keys = list(test.features.keys())
+        # Create TensorFlow datasets using factory function
+        self.train_dataset, self.val_dataset, self.test_dataset = create_federated_datasets(
+            partition_id=int(self.cid), conf=self.conf
+        )
 
-        # Get label names
-        self.labels = test.features["label"].names
+        # Extract metadata from the first batch for model initialization
+        # Get a single batch to determine input shape and number of classes
+        for x_batch, y_batch in self.train_dataset.take(1):
+            # Store input shape (excluding batch dimension)
+            self.input_shape = x_batch.shape[1:]
+            # Determine number of classes from labels
+            self.num_classes = len(tf.unique(y_batch)[0])
 
-        self.x_train, self.y_train = train[keys[0]], train[keys[1]]
-        self.x_validation, self.y_validation = validation[keys[0]], validation[keys[1]]
-        self.x_test, self.y_test = test[keys[0]], test[keys[1]]
+        # Calculate dataset sizes by counting samples in each dataset
+        # Note: This unbatches and counts all samples, done once during initialization
+        self.train_size = sum(1 for _ in self.train_dataset.unbatch())
+        self.val_size = sum(1 for _ in self.val_dataset.unbatch())
+        self.test_size = sum(1 for _ in self.test_dataset.unbatch())
 
-        # Normalize image data to [-1, 1] range for better convergence
-        # This centers the data around 0, which works better with gradient descent
-        # and modern weight initialization methods (Xavier/He)
-        self.x_train = (self.x_train.astype("float32") - 127.5) / 127.5
-        self.x_validation = (self.x_validation.astype("float32") - 127.5) / 127.5
-        self.x_test = (self.x_test.astype("float32") - 127.5) / 127.5
-
-        # Add channel dimension for CNN models (grayscale images need shape: height x width x 1)
-        # This is required for Conv2D layers which expect 4D input: (batch, height, width, channels)
-        if self.conf.model.type == "cnn" and len(self.x_train.shape) == 3:
-            import numpy as np
-
-            self.x_train = np.expand_dims(self.x_train, axis=-1)
-            self.x_validation = np.expand_dims(self.x_validation, axis=-1)
-            self.x_test = np.expand_dims(self.x_test, axis=-1)
-            logger.debug(
-                f"Client {self.cid}: Reshaped data for CNN - " + f"New shape: {self.x_train.shape}"
-            )
+        # Set labels - will be populated from config or dataset metadata
+        # For now, create generic labels based on num_classes
+        self.labels = [f"class_{i}" for i in range(self.num_classes)]
 
         logger.info(
-            f"Client {self.cid}: Data loaded and normalized to [-1, 1] - "
-            + f"Train: {len(self.x_train)}, Val: {len(self.x_validation)}, "
-            + f"Test: {len(self.x_test)} samples"
+            f"Client {self.cid}: TensorFlow datasets created - "
+            + f"Input shape: {self.input_shape}, "
+            + f"Classes: {self.num_classes}, "
+            + f"Sizes (train/val/test): {self.train_size}/{self.val_size}/{self.test_size}"
         )
 
     def get_participating_state(self) -> bool:

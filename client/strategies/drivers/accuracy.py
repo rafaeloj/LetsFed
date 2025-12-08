@@ -52,8 +52,8 @@ class AccuracyDriver(Driver):
         g_model = copy.deepcopy(client.model)
         g_model.set_weights(parameters)
 
-        g_tmp_loss, _ = g_model.evaluate(client.x_validation, client.y_validation, verbose=0)
-        c_tmp_loss, _ = client.model.evaluate(client.x_validation, client.y_validation, verbose=0)
+        g_tmp_loss, _ = g_model.evaluate(client.val_dataset, verbose=0)
+        c_tmp_loss, _ = client.model.evaluate(client.val_dataset, verbose=0)
 
         logger.debug(
             f"Client {client.cid}: AccuracyDriver - "

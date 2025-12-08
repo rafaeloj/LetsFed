@@ -96,31 +96,30 @@ class FedPerClient(TrainingStrategy):
                 f"Client {client.cid}: Starting training for {client.conf.client.epochs} epochs"
             )
 
-            # Fitting model with batch size from config and validation data
-            # Note: shuffle=True is deterministic when global seed is set
-            # This ensures better convergence while maintaining reproducibility
-            batch_size = client.conf.dataset.batch_size
+            # Fitting model using TensorFlow datasets
+            # The datasets are already batched, shuffled, and prefetched
             history = client.model.fit(
-                client.x_train,
-                client.y_train,
+                client.train_dataset,
                 epochs=client.conf.client.epochs,
-                batch_size=batch_size,
-                validation_data=(client.x_validation, client.y_validation),
-                shuffle=True,  # Deterministic shuffle (uses global TF seed)
+                validation_data=client.val_dataset,
                 verbose=0,
             )
 
             # Calculate training metrics
-            y_train_pred_proba = client.model.predict(client.x_train, verbose=0)
+            y_train_pred_proba = client.model.predict(client.train_dataset, verbose=0)
+            # Get true labels from train dataset
+            y_train_true = np.concatenate([y for _, y in client.train_dataset], axis=0)
             client.fit_train_metrics = client.metrics_manager.calculate_metrics(
-                client.y_train, y_train_pred_proba
+                y_train_true, y_train_pred_proba
             )
             client.fit_train_metrics["loss"] = np.mean(history.history["loss"])
 
             # Calculate validation metrics
-            y_val_pred_proba = client.model.predict(client.x_validation, verbose=0)
+            y_val_pred_proba = client.model.predict(client.val_dataset, verbose=0)
+            # Get true labels from validation dataset
+            y_val_true = np.concatenate([y for _, y in client.val_dataset], axis=0)
             client.fit_val_metrics = client.metrics_manager.calculate_metrics(
-                client.y_validation, y_val_pred_proba
+                y_val_true, y_val_pred_proba
             )
             client.fit_val_metrics["loss"] = np.mean(history.history.get("val_loss", [0]))
 
@@ -136,7 +135,8 @@ class FedPerClient(TrainingStrategy):
                 + f"Train [{train_metrics_str}], Val [{val_metrics_str}]"
             )
 
-        return client.get_parameters(config), client.x_train.shape[0], fit_response
+        # Return training parameters with dataset size from client metadata
+        return client.get_parameters(config), client.train_size, fit_response
 
     def evaluate(
         self, client: "FLClient", parameters: NDArrays, config: Config
@@ -170,10 +170,12 @@ class FedPerClient(TrainingStrategy):
             logger.debug(f"Client {client.cid}: Using existing weights (not selected)")
 
         # Evaluate the model
-        eval_pred_probs = client.model.predict(client.x_test, verbose=0)
-        eval_loss = client.model.evaluate(client.x_test, client.y_test, verbose=0)[0]
+        eval_pred_probs = client.model.predict(client.test_dataset, verbose=0)
+        eval_loss = client.model.evaluate(client.test_dataset, verbose=0)[0]
+        # Get true labels from test dataset
+        y_test_true = np.concatenate([y for _, y in client.test_dataset], axis=0)
         client.eval_test_metrics = client.metrics_manager.calculate_metrics(
-            client.y_test, eval_pred_probs
+            y_test_true, eval_pred_probs
         )  # noqa: E501
         client.eval_test_metrics["loss"] = float(eval_loss)
 
@@ -207,4 +209,5 @@ class FedPerClient(TrainingStrategy):
             **client.eval_test_metrics,  # Include all metrics dynamically
         }
 
-        return client.eval_test_metrics["loss"], client.x_test.shape[0], evaluation_response
+        # Return evaluation metrics with dataset size from client metadata
+        return client.eval_test_metrics["loss"], client.test_size, evaluation_response

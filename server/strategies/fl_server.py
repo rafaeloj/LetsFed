@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import keras
 import numpy as np
+import tensorflow as tf
 from flwr.common import (
     EvaluateIns,
     EvaluateRes,
@@ -17,7 +18,7 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import Strategy
 
 from ...conf.structs import Environment
-from ...dataset_manager.dataset_manager import DSManager
+from ...dataset_manager.dataloader import create_federated_datasets
 from ...metrics import MetricsManager
 from ...model.model_manager import ModelManager
 from ...utils.logger import Logger
@@ -101,9 +102,20 @@ class FLServer(Strategy):
         if conf.server.aggregation_method.name.lower() in ["maxfl", "qffl"]:
             logger.info("Loading server-side data and model for MaxFL/QFFL aggregation")
             self.model: keras.Model
-            self.x_train, self.y_train = None, None
-            self.x_validation, self.y_validation = None, None
-            self.x_test, self.y_test = None, None
+
+            # TensorFlow datasets for training/validation/test
+            self.train_dataset: tf.data.Dataset
+            self.val_dataset: tf.data.Dataset
+            self.test_dataset: tf.data.Dataset
+
+            # Dataset metadata
+            self.input_shape: tuple
+            self.num_classes: int
+            self.labels: list[str]
+            self.train_size: int
+            self.val_size: int
+            self.test_size: int
+
             self._load_data()
             self._load_model()
 
@@ -114,47 +126,50 @@ class FLServer(Strategy):
         Load the model.
         """
         logger.debug(f"Loading server model (type: {self.conf.model.type})")
-        mm = ModelManager(conf=self.conf, input_shape=self.x_train.shape)
+        mm = ModelManager(conf=self.conf, input_shape=self.input_shape)
         self.model = mm.get_model()
         logger.info("Server model loaded successfully")
 
     def _load_data(self) -> None:
         """
-        Load the data.
+        Load the data using TensorFlow datasets.
+
+        This method creates tf.data.Dataset objects for train/validation/test
+        using the create_federated_datasets factory function (partition 0 for server).
+
+        The TensorFlow datasets are used for training and evaluation as they
+        provide native Keras compatibility and optimized performance.
         """
         logger.debug("Loading server dataset partition (partition 0)")
-        dm = DSManager(n_clients=self.conf.n_clients, conf=self.conf.dataset, seed=self.conf.seed)
 
-        train, validation, test = dm.load_locally(partition_id=0)
-        keys = list(test.features.keys())
+        # Create TensorFlow datasets using factory function
+        self.train_dataset, self.val_dataset, self.test_dataset = create_federated_datasets(
+            partition_id=0, conf=self.conf
+        )
 
-        # Get label names
-        self.labels = test.features["label"].names
+        # Extract metadata from the first batch for model initialization
+        # Get a single batch to determine input shape and number of classes
+        for x_batch, y_batch in self.train_dataset.take(1):
+            # Store input shape (excluding batch dimension)
+            self.input_shape = x_batch.shape[1:]
+            # Determine number of classes from labels
+            self.num_classes = len(tf.unique(y_batch)[0])
 
-        self.x_train, self.y_train = train[keys[0]], train[keys[1]]
-        self.x_validation, self.y_validation = validation[keys[0]], validation[keys[1]]
-        self.x_test, self.y_test = test[keys[0]], test[keys[1]]
+        # Calculate dataset sizes by counting samples in each dataset
+        # Note: This unbatches and counts all samples, done once during initialization
+        self.train_size = sum(1 for _ in self.train_dataset.unbatch())
+        self.val_size = sum(1 for _ in self.val_dataset.unbatch())
+        self.test_size = sum(1 for _ in self.test_dataset.unbatch())
 
-        # Normalize image data to [-1, 1] range for better convergence
-        # This centers the data around 0, which works better with gradient descent
-        # and modern weight initialization methods (Xavier/He)
-        self.x_train = (self.x_train.astype("float32") - 127.5) / 127.5
-        self.x_validation = (self.x_validation.astype("float32") - 127.5) / 127.5
-        self.x_test = (self.x_test.astype("float32") - 127.5) / 127.5
-
-        # Add channel dimension for CNN models (grayscale images need shape: height x width x 1)
-        # This is required for Conv2D layers which expect 4D input: (batch, height, width, channels)
-        if self.conf.model.type == "cnn" and len(self.x_train.shape) == 3:
-            import numpy as np
-
-            self.x_train = np.expand_dims(self.x_train, axis=-1)
-            self.x_validation = np.expand_dims(self.x_validation, axis=-1)
-            self.x_test = np.expand_dims(self.x_test, axis=-1)
-            logger.debug(f"Server: Reshaped data for CNN - New shape: {self.x_train.shape}")
+        # Set labels - will be populated from config or dataset metadata
+        # For now, create generic labels based on num_classes
+        self.labels = [f"class_{i}" for i in range(self.num_classes)]
 
         logger.info(
-            "Server dataset loaded - "
-            + f"Train: {len(self.x_train)}, Val: {len(self.x_validation)}, Test: {len(self.x_test)}"
+            "Server TensorFlow datasets created - "
+            + f"Input shape: {self.input_shape}, "
+            + f"Classes: {self.num_classes}, "
+            + f"Sizes (train/val/test): {self.train_size}/{self.val_size}/{self.test_size}"
         )
 
     def _update_cid_mapping(self, proxy: ClientProxy, numeric_cid: str) -> None:

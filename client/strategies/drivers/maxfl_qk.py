@@ -65,14 +65,11 @@ class MaxFLQkDriver(Driver):
         local_model = copy.deepcopy(client.model)
         local_model.set_weights(parameters)  # Start from global parameters
         local_model.fit(
-            client.x_train,
-            client.y_train,
+            client.train_dataset,
             epochs=pre_training_epochs,
             verbose=0,
         )
-        true_loss, local_acc = local_model.evaluate(
-            client.x_validation, client.y_validation, verbose=0
-        )
+        true_loss, local_acc = local_model.evaluate(client.val_dataset, verbose=0)
         logger.debug(
             f"Client {client.cid}: Local model (trained from global) - "
             + f"Loss: {true_loss:.4f}, Acc: {local_acc:.4f}"
@@ -83,9 +80,7 @@ class MaxFLQkDriver(Driver):
         logger.debug(f"Client {client.cid}: Evaluating global model (no training)")
         global_model = copy.deepcopy(client.model)
         global_model.set_weights(parameters)  # Use global parameters as-is
-        g_loss, global_acc = global_model.evaluate(
-            client.x_validation, client.y_validation, verbose=0
-        )
+        g_loss, global_acc = global_model.evaluate(client.val_dataset, verbose=0)
         logger.debug(
             f"Client {client.cid}: Global model (no training) - "
             + f"Loss: {g_loss:.4f}, Acc: {global_acc:.4f}"
