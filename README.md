@@ -258,34 +258,6 @@ graph TB
     style Builder Pattern fill:#fff4e1
     style Strategy Pattern + Dependency Injection fill:#e8f5e9
     style Chain of Responsibility + Context Object fill:#f3e5f5
-        SB -->|uses| AF
-        SB -->|uses| CSF
-        CB -->|uses| TSF
-    end
-
-    subgraph "Strategy Pattern + Dependency Injection"
-        FLS[FLServer]
-        FLC[FLClient]
-        SB -->|builds| FLS
-        CB -->|builds| FLC
-        FLS -->|delegates to| AGG
-        FLS -->|delegates to| SEL
-        FLC -->|delegates to| TRN
-    end
-
-    subgraph "Chain of Responsibility + Context Object"
-        TRN -->|configures| DRV[Drivers]
-        DRV -->|pipeline| D1[AccuracyDriver]
-        DRV -->|pipeline| D2[CuriosityDriver]
-        DRV -->|pipeline| D3[MaxFLQkDriver]
-        DRV -->|uses| CTX[DriverContext]
-        CTX -->|explicit modifications| FLC
-    end
-
-    style Factory Pattern fill:#e1f5ff
-    style Builder Pattern fill:#fff4e1
-    style Strategy Pattern + Dependency Injection fill:#e8f5e9
-    style Chain of Responsibility + Context Object fill:#f3e5f5
 ```
 
 ### 1. Strategy Pattern + Dependency Injection
