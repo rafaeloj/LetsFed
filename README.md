@@ -258,7 +258,6 @@ graph TB
     style Builder Pattern fill:#fff4e1
     style Strategy Pattern + Dependency Injection fill:#e8f5e9
     style Chain of Responsibility + Context Object fill:#f3e5f5
-```
         SB -->|uses| AF
         SB -->|uses| CSF
         CB -->|uses| TSF
