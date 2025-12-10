@@ -1030,121 +1030,14 @@ The **LetsFed Framework** is a modular and extensible Federated Learning researc
 - **📊 Comprehensive Logging**: Automatic metrics tracking for analysis
 - **🎯 Type Safety**: Full type hints throughout the codebase
 
-### 3.3 Project Structure
 
-```
-LetsFed/
-├── 🖥️  server/                       # Federated Learning Server
-│   ├── strategies/
-│   │   ├── fl_server.py              # Main server (uses ClientManager for CID/ClientProxy mapping)
-│   │   ├── server_builder.py         # ServerBuilder (Dependency Injection via Builder)
-│   │   ├── structs.py                # Server-specific config dataclasses
-│   │   ├── aggregate_method/         # Aggregation strategies (Factory Pattern)
-│   │   │   ├── base.py               # Base aggregation interface
-│   │   │   ├── factory.py            # AggregationFactory
-│   │   │   ├── structs.py            # Aggregation config dataclasses
-│   │   │   └── types/
-│   │   │       ├── fedavg.py         # FedAvg aggregation
-│   │   │       ├── maxfl.py          # MaxFL aggregation
-│   │   │       └── letsfed.py        # LetsFed interest-weighted aggregation
-│   │   ├── client_selection_method/  # Selection strategies (Factory Pattern)
-│   │   │   ├── base.py               # Base selection interface
-│   │   │   ├── factory.py            # ClientSelectionFactory
-│   │   │   ├── structs.py            # Selection config dataclasses
-│   │   │   └── types/
-│   │   │       ├── random.py         # Random selection
-│   │   │       ├── deev.py           # DEEV selection
-│   │   │       ├── poc.py            # Power of Choice
-│   │   │       ├── round_robin.py    # Round Robin
-│   │   │       └── letsfed.py        # LetsFed selection
-│   │   └── parameters_strategy/      # Parameters sharing strategies
-│   │       ├── base.py               # Base parameters strategy interface
-│   │       ├── factory.py            # ParametersStrategyFactory
-│   │       └── types/
-│   │           ├── normal.py         # Normal strategy (shares all parameters)
-│   │           └── layerwise.py      # LayerWise strategy (shares first K layers)
-│   ├── strategies_manager.py         # Server entrypoint
-│   ├── Dockerfile                    # Server container (CPU)
-│   └── Dockerfile.gpu                # Server container (GPU)
-│
-├── 📱 client/                         # Federated Learning Client
-│   ├── strategies/
-│   │   ├── fl_client.py              # Main client (participation decided in evaluate())
-│   │   ├── client_builder.py         # ClientBuilder (Dependency Injection via Builder)
-│   │   ├── structs.py                # Client-specific config dataclasses
-│   │   ├── training/                 # Training strategies (Factory Pattern)
-│   │   │   ├── base.py               # Base training (manages drivers)
-│   │   │   ├── factory.py            # TrainingStrategyFactory
-│   │   │   ├── structs.py            # Training config dataclasses
-│   │   │   └── types/
-│   │   │       ├── normal.py         # Standard FedAvg training
-│   │   │       ├── letsfed.py        # LetsFed training
-│   │   │       ├── maxfl.py          # MaxFL training
-│   │   │       ├── fedper.py         # FedPer training
-│   │   │       └── qffl.py           # QFFL training
-│   │   ├── parameters_strategy/      # Parameters sharing strategies
-│   │   │   └── types/
-│   │   │       ├── normal.py         # Normal strategy
-│   │   │       └── layerwise.py      # LayerWise strategy
-│   │   └── drivers/                  # Modular behaviors (Chain of Responsibility)
-│   │       ├── driver.py             # Base driver interface
-│   │       ├── context.py            # DriverContext for explicit side effects
-│   │       ├── accuracy.py           # Accuracy-based decision driver
-│   │       ├── curiosity.py          # Curiosity-driven participation
-│   │       └── maxfl_qk.py           # MaxFL quality metric
-│   ├── strategies_manager.py         # Client entrypoint
-│   ├── Dockerfile                    # Client container (CPU)
-│   └── Dockerfile.gpu                # Client container (GPU)
-│
-├── ⚙️  conf/                          # Central Configuration
-│   ├── config.yaml                   # Main configuration file
-│   ├── loader.py                     # Config loader with validation
-│   └── structs.py                    # Top-level config dataclasses
-│
-├── 📊 dataset_manager/                # Dataset Handling & TensorFlow DataLoaders
-│   ├── dataset_manager.py            # Dataset partitioning logic (DSManager)
-│   ├── dataloader.py                 # FederatedDataLoader with tf.data.Dataset
-│   ├── transforms.py                 # TransformPipeline (normalization, reshaping)
-│   └── structs.py                    # Dataset configuration dataclasses
-│
-├── 🧠 model/                          # Model Management
-│   └── model_manager.py              # Model factory (CNN, DNN)
-│
-├── 📈 metrics/                        # Metrics Calculation System
-│   ├── base.py                       # Abstract Metric base class
-│   ├── factory.py                    # MetricFactory for creating metrics
-│   ├── manager.py                    # MetricsManager for metric pipeline
-│   ├── structs.py                    # Metrics configuration dataclasses
-│   └── types/                        # Metric implementations
-│       ├── accuracy.py               # Accuracy metric
-│       ├── precision.py              # Precision metric
-│       ├── recall.py                 # Recall metric
-│       ├── f1_score.py               # F1-Score metric
-│       ├── fbeta_score.py            # F-Beta Score metric
-│       └── auc.py                    # AUC-ROC metric
-│
-├── 🛠️  utils/                         # Utilities
-│   ├── logger.py                     # Metrics logging system
-│   ├── docker_compose_manager.py     # Dynamic compose generator
-│   └── utils.py                      # Helper functions
-│
-├── 🚀 run_experiments.py              # Experiment orchestration script
-├── 📋 requirements-client.txt         # Client dependencies
-├── 📋 requirements-server.txt         # Server dependencies
-├── 🐳 docker-compose.yml              # Container orchestration
-├── 🔨 build.sh                        # Build script
-├── 🧹 cleanup.sh                      # Cleanup Docker containers/networks
-└── 🧪 test/                           # Testing and analysis
-    └── federated_learning_analysis.ipynb  # Results analysis notebook
-```
-
-### 3.4 Architecture & Design Patterns
+### 3.3 Architecture & Design Patterns
 
 The framework implements a sophisticated architecture using multiple design patterns to ensure modularity, extensibility, and maintainability.
 
 ![Architecture & Design Patterns](test/outputs/Architecture-Design-Patterns.png)
 
-### 3.5 Strategy Pattern + Dependency Injection
+### 3.4 Strategy Pattern + Dependency Injection
 
 The core classes (`FLServer` and `FLClient`) are **generic implementations** that delegate behavior to injected strategies. Server and client are created via **Builder classes**, which inject strategies created by their respective factories.
 
@@ -1162,18 +1055,18 @@ The core classes (`FLServer` and `FLClient`) are **generic implementations** tha
 - Different behaviors are achieved through **strategy composition**
 - Strategies are created by **Factory Pattern** and **injected via Builder Pattern**
 
-### 3.6 Factory Pattern
+### 3.5 Factory Pattern
 
 Used for creating different strategy implementations. **Important**: Factories receive **module-specific config dataclasses**. Each module has its own `structs.py` with configuration dataclasses.
 
 ![Factory Pattern](test/outputs/factory_pattern.png)
 
-### 3.7 Builder/Injection Pattern
+### 3.6 Builder/Injection Pattern
 
 Simplifies construction of `FLServer` and `FLClient` with all dependencies. **Server and client use Builder pattern** (dependency injection). All the strategies (training strategies, selection strategies, aggregation strategies, paramters strategies) created with the factory pattern are injected into the `FLServer` and `FLClient`.
 
 
-### 3.8 Chain of Responsibility (Drivers)
+### 3.7 Chain of Responsibility (Drivers)
 
 Training strategies compose behaviors through a **pipeline of drivers** managed by the strategy itself.
 
@@ -1192,16 +1085,16 @@ Training strategies compose behaviors through a **pipeline of drivers** managed 
 - ✅ **Explicit Side Effects**: Clear what each driver modifies
 
 
-### 3.9 Federated Learning Flow
+### 3.8 Federated Learning Flow
 
 ![Federated Learning Flow](test/outputs/Federated_Learning_Flow.png)
 
 
-### 3.10 Server-Side Strategies
+### 3.9 Server-Side Strategies
 
 - Implemented strategies on server side
 
-#### 3.10.1 Aggregation Methods
+#### 3.9.1 Aggregation Methods
 
 | Strategy | Description | Use Case |
 |----------|-------------|----------|
@@ -1210,7 +1103,7 @@ Training strategies compose behaviors through a **pipeline of drivers** managed 
 | **LetsFed** | Interest-weighted aggregation with non-participating clients | Dynamic participation scenarios, incentivizing client engagement |
 
 
-#### 3.10.2 Client Selection Methods
+#### 3.9.2 Client Selection Methods
 
 | Strategy | Description | Key Feature |
 |----------|-------------|-------------|
@@ -1221,11 +1114,11 @@ Training strategies compose behaviors through a **pipeline of drivers** managed 
 | **LetsFed** | Voluntary participation | Respects client autonomy |
 
 
-### 3.11 Client-Side Strategies
+### 3.10 Client-Side Strategies
 
 - Implemented strategies on client side
 
-#### 3.11.1 Training Strategies
+#### 3.10.1 Training Strategies
 
 | Strategy | Description | Special Features |
 |----------|-------------|------------------|
@@ -1236,7 +1129,7 @@ Training strategies compose behaviors through a **pipeline of drivers** managed 
 | **QFFL** | Fair federated learning | Fairness-aware training |
 
 
-### 3.12 Parameters Sharing Strategies
+### 3.11 Parameters Sharing Strategies
 
 The framework includes a **modular parameters strategy system** that controls **how model parameters are shared** between server and clients. This enables different approaches for model personalization, communication efficiency, and privacy.
 
@@ -1255,7 +1148,7 @@ The framework includes a **modular parameters strategy system** that controls **
 | **LayerWise** | Shares/Updates only first K layers | First K layers only | Model personalization, reduced communication |
 
 
-#### 3.12.1 Benefits of LayerWise Strategy
+#### 3.11.1 Benefits of LayerWise Strategy
 
 | Benefit | Description |
 |---------|-------------|
@@ -1266,13 +1159,13 @@ The framework includes a **modular parameters strategy system** that controls **
 | **Bandwidth Efficiency** | Critical for resource-constrained environments |
 
 
-### 3.13 Metrics System
+### 3.12 Metrics System
 
 The framework includes a **robust and extensible metrics calculation system** following the **Factory Pattern** and **dependency injection** principles. All client training strategies use the `MetricsManager` for consistent metric calculation across training, validation, and evaluation phases.
 
 ![Metrics System](test/outputs/metrics_system.png)
 
-#### 3.13.1 Available Metrics
+#### 3.12.1 Available Metrics
 
 | Metric | Description | Parameters | Requires Probabilities |
 |--------|-------------|------------|----------------------|
@@ -1284,7 +1177,7 @@ The framework includes a **robust and extensible metrics calculation system** fo
 | **AUC** | Area under ROC curve | `multi_class`, `average` | **Yes** |
 
 
-### 3.14 Dataset Management & TensorFlow DataLoaders
+### 3.13 Dataset Management & TensorFlow DataLoaders
 
 The framework implements a **modern data loading system** using TensorFlow's `tf.data.Dataset` API for optimal performance and native Keras compatibility. This eliminates code duplication and provides a single source of truth for data handling across clients and server.
 
@@ -1308,7 +1201,7 @@ The framework implements a **modern data loading system** using TensorFlow's `tf
 | `standard` | Centered | Statistical models | `(x - μ) / σ` |
 
 
-### 3.15 Extending the Framework
+### 3.14 Extending the Framework
 
 The framework is designed for easy extensibility adding new components when nedded.
 
@@ -1321,12 +1214,12 @@ This actions are similar for the strategies (for training, selecting clientes, a
 **Key Principle**: You extend behavior by **adding new classes**, not by **modifying existing ones** (Open/Closed Principle).
 
 
-### 3.16 Container Architecture
+### 3.15 Container Architecture
 
 ![Container Architecture](test/outputs/container_architecture.png)
 
 
-### 3.17 Reproducibility
+### 3.16 Reproducibility
 
 The framework provides comprehensive seed management for reproducible experiments:
 
@@ -1344,7 +1237,7 @@ The framework provides comprehensive seed management for reproducible experiment
 | **Aggregation** | ✅ Yes | Deterministic computation |
 
 
-### 3.18 Project Philosophy
+### 3.17 Project Philosophy
 
 This framework follows key software engineering principles:
 
