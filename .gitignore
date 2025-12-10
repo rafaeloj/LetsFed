@@ -35,8 +35,7 @@ Thumbs.db
 logs/
 logs*/
 *.log
-outputs/
-outputs*/
+
 
 # ============================================
 # Experiments and Results
