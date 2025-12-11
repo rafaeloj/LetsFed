@@ -349,7 +349,13 @@ Instead of requiring all clients to synchronize with the latest global model, SA
 
 Only up-to-date and deprecated clients are forced to synchronize; tolerable clients can continue working on their previous local results. This is formalized as:
 
-$$w_k(t) = \begin{cases} w(t-1) & \text{if } k \in \bigcup_{v=t-1} M_v \text{ or } k \in \bigcup_{v<t-\tau} M_v \\ w_k(t-1) & \text{if } k \in \bigcup_{t-\tau \leq v < t-1} M_v \end{cases}$$
+$$
+w_k(t) =
+\begin{cases}
+w(t-1) & \text{if } k \in \bigcup\limits_{v=t-1} M_v \text{ or } k \in \bigcup\limits_{v < t-\tau} M_v \\[6pt]
+w_k(t-1) & \text{if } k \in \bigcup\limits_{t-\tau \leq v < t-1} M_v
+\end{cases}
+$$
 
 **2. Post-Training Client Selection:**
 
@@ -892,7 +898,7 @@ The next section details the implementation of our experimental framework, which
 
 This section provides a comprehensive description of the software framework developed for this research. The framework was designed following software engineering best practices, enabling modular experimentation with different Federated Learning strategies while maintaining code quality, extensibility, and reproducibility.
 
-> **📦 Source Code Repository**
+> **Source Code Repository**
 >
 > The complete source code for the LetsFed Framework, including all implementations, configurations, and experimental scripts described in this work, is publicly available on GitHub:
 >
@@ -906,20 +912,20 @@ The **LetsFed Framework** is a modular and extensible Federated Learning researc
 
 ### 3.2 Key Features
 
-- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Injection Pattern and Chain of Responsibility
-- **🔌 Extensible Design**: Plugin-based driver system with DriverContext for composable and testable behaviors
+- **Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Injection Pattern and Chain of Responsibility
+- **Extensible Design**: Plugin-based driver system with DriverContext for composable and testable behaviors
   - Drivers managed by strategies
   - DriverContext transfers results without polluting client/server state
   - Strategy state encapsulated in constructors (`__init__`)
-- **🎛️ Multiple Strategy Support**:
+- **Multiple Strategy Support**:
   - **Aggregation**: FedAvg, MaxFL, QFFL, LetsFed (interest-weighted)
   - **Client Selection**: Random, DEEV, PoC, Round Robin, LetsFed
   - **Training**: Normal, LetsFed, MaxFL, FedPer, QFFL
   - **Parameters Sharing**: Normal (all parameters), LayerWise (first K layers)
-- **🐳 Containerized Deployment**: Orchestrated via docker compose management
-- **⚙️ Modular Configuration**: Each module has its own configuration dataclasses
-- **📊 Comprehensive Logging**: Automatic metrics tracking for analysis
-- **🎯 Type Safety**: Full type hints throughout the codebase
+- **Containerized Deployment**: Orchestrated via docker compose management
+- **Modular Configuration**: Each module has its own configuration dataclasses
+- **Comprehensive Logging**: Automatic metrics tracking for analysis
+- **Type Safety**: Full type hints throughout the codebase
 
 
 ### 3.3 Architecture & Design Patterns
@@ -1132,20 +1138,20 @@ The framework provides comprehensive seed management for reproducible experiment
 
 This framework follows key software engineering principles:
 
-- **🎯 SOLID Principles**
+- **SOLID Principles**
   - Single Responsibility: Each class has one clear purpose
   - Open/Closed: Extend via new classes, not modifications
   - Liskov Substitution: Strategies are interchangeable
   - Interface Segregation: Focused, minimal interfaces
   - Dependency Inversion: Depend on abstractions, not concretions
 
-- **🎨 Design Patterns**
+- **Design Patterns**
   - Strategy Pattern for algorithm selection
   - Factory Pattern for strategy creation (receives module-specific configs)
   - Builder/Injection Pattern for server/client construction (dependency injection)
   - Chain of Responsibility for driver pipeline (managed by strategies)
 
-- **📦 Modular Design**
+- **Modular Design**
   - Clear separation of concerns
   - Composable components
   - Minimal coupling, high cohesion
