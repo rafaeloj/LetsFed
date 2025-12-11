@@ -257,9 +257,7 @@ The heterogeneity of data distribution across clients is one of the most signifi
 - **High variance in aggregated updates**: Different clients optimize for different local optima
 - **Global model performing worse than local models**: After aggregation, the model may not serve any client well
 
-This last point is particularly relevant to the LetsFed framework [8], as it provides the theoretical justification for allowing clients to opt out of participation when the global model does not benefit them. In extreme Non-IID scenarios (such as the pathological partition where each client only has examples of 2 digits), the divergence between local models becomes substantial, requiring more communication rounds to achieve target accuracy.
-
-McMahan et al. [1] created pathological Non-IID partitions by sorting MNIST data by digit label, dividing it into 200 shards of size 300, and assigning each of 100 clients 2 shards. This setup, where most clients only have examples of two digits, enabled exploration of how algorithms break on highly Non-IID data.
+This last point is particularly relevant to the LetsFed framework [8], as it provides the theoretical justification for allowing clients to opt out of participation when the global model does not benefit them. In extreme Non-IID scenarios, the divergence between local models becomes substantial, requiring more communication rounds to achieve target accuracy.
 
 ### 2.2 Communication Efficiency in Federated Learning
 
@@ -305,11 +303,6 @@ DGC was validated on multiple tasks:
 | Speech Recognition | DeepSpeech | 488MB | 0.74MB | ~600× |
 | Language Modeling | LSTM | - | - | ~462× |
 
-On CIFAR-10 with ResNet-110:
-- With 4 GPUs (batch size 128): Baseline accuracy 93.75%, DGC accuracy 93.87% (+0.12%)
-- With 32 GPUs (batch size 1024): Baseline accuracy 93.10%, DGC accuracy 93.18% (+0.08%)
-
-The results demonstrated that deep gradient compression enables large-scale distributed training on inexpensive commodity 1Gbps Ethernet infrastructure.
 
 **Relevance to This Work:**
 
@@ -469,7 +462,7 @@ The rapid growth of distributed systems in computer networks has heightened conc
 
 The solution combines three key strategies:
 
-1. **Small Language Models (SLMs)**: Using the SmolLM family with 135M, 360M, and 1.7B parameters instead of full LLMs. These pre-trained models reduce training costs while maintaining semantic understanding.
+1. **Small Language Models (SLMs)**: Using small pre-trained models reduce training costs while maintaining semantic understanding.
 
 2. **Parameter-Efficient Fine-Tuning (PEFT) with LoRA**: Low-Rank Adaptation inserts low-rank matrices into transformer layers, allowing adaptation without updating all pre-trained weights:
 
@@ -492,21 +485,6 @@ The approach uses a standardized preprocessing pipeline:
 
 Detection is based on prediction error increase. The model learns to represent normal log behavior, and anomalies are detected when prediction accuracy falls below threshold β for top-K predictions.
 
-**Empirical Results:**
-
-On the HDFS dataset with 50 rounds, 50 clients, 10% selection per round:
-
-| Model | Rank | Max F1 | Communication Reduction |
-|-------|------|--------|------------------------|
-| SmolLM-135M | 2 | >0.98 | ~4000× |
-| SmolLM-360M | 8 | >0.98 | - |
-| SmolLM-1.7B | 32 | >0.98 | - |
-
-Key findings:
-- Full fine-tuning shows training instability compared to LoRA
-- Smaller models benefit more from larger LoRA ranks
-- Larger models require fewer adaptations (lower rank sufficient)
-- Up to 4000× reduction in transmitted message size
 
 **Relevance to This Work:**
 
@@ -570,21 +548,6 @@ where α controls decay rate. This reduces communication after the model has lar
 
 Only selected layers are transmitted, reducing both uplink and downlink communication. This approach is particularly effective when combined with personalization.
 
-**Experimental Results:**
-
-On Human Activity Recognition datasets:
-- **Communication Reduction**: Up to 95% compared to literature approaches
-- **Convergence**: Good convergence even in non-IID scenarios
-- **Processing Overhead**: Minimized computation costs
-
-Comparison with baselines:
-| Method | Communication Reduction | Convergence Quality |
-|--------|------------------------|-------------------|
-| FedAvg | Baseline | Moderate |
-| POC | ~30% | Good |
-| DEEV | ~50% | Good |
-| ACSP-FL | Up to 95% | Good |
-
 **Connection to LetsFed:**
 
 ACSP-FL and LetsFed represent complementary perspectives:
@@ -640,22 +603,6 @@ FedSCCS supports multiple selection strategies within each cluster:
 2. **Random selection**: One random client per cluster
 3. **Biased selection**: Clients with worst previous performance
 
-**Experimental Results:**
-
-On MotionSense HAR dataset with 24 participants:
-
-| Method | Accuracy | Communication Cost |
-|--------|----------|-------------------|
-| FedAvg | Baseline | High |
-| KCenter | Lower | Moderate |
-| FedSim | Lower in high heterogeneity | Moderate |
-| FedSCCS | Superior | Reduced (50%+) |
-
-Key findings:
-- CKA-based similarity outperforms gradient-based methods
-- Hierarchical clustering enables flexible generalization-specialization tradeoff
-- Multi-model management improves performance in heterogeneous scenarios
-
 **Comparison with LetsFed:**
 
 FedSCCS and LetsFed address heterogeneity differently:
@@ -696,14 +643,6 @@ Based on these theoretical insights, PoC works as follows:
 2. **Estimate Local Losses**: Send current global model to candidates; they compute and return their local loss
 3. **Select Highest Loss Clients**: From candidates, select m clients with largest loss values
 
-**Experimental Results:**
-
-| Metric | PoC vs Random Selection |
-|--------|------------------------|
-| Convergence Speed | Up to 3× faster |
-| Test Accuracy | Up to 10% higher |
-| Communication Efficiency | Comparable overhead |
-
 **Trade-off Between Speed and Bias:**
 
 The analysis reveals a fundamental trade-off: larger ρ (more biased selection) yields faster convergence but may introduce solution bias. In practice, experiments show this bias term often remains negligible.
@@ -740,13 +679,6 @@ The gradient yields dynamic aggregation weights qₖ(w) = (1 - F̃ₖ(w))F̃ₖ(
 - Give low weight to clients where Fₖ(w) ≫ ρₖ (too far from satisfaction)
 - Give highest weight to "borderline" clients where Fₖ(w) ≈ ρₖ
 
-**Experimental Results:**
-
-| Metric | MaxFL vs Baselines |
-|--------|-------------------|
-| Test Accuracy (Seen Clients) | 22-40% improvement |
-| Test Accuracy (Unseen Clients) | 18-50% improvement |
-| GM-Appeal | Significantly higher |
 
 **Relationship to This Work:**
 
@@ -774,18 +706,6 @@ $$\min_w f_q(w) = \sum_{k=1}^{m} \frac{p_k}{q+1} F_k^{q+1}(w)$$
 - **q > 0**: Devices with higher loss receive higher relative weight
 - **q → ∞**: Minimax fairness (optimizing for the single worst device)
 
-**The q-FedAvg Solver:**
-
-Efficient solver with dynamic step-sizes and local updates for communication efficiency.
-
-**Experimental Results:**
-
-| Dataset | q | Variance Reduction | Average Accuracy |
-|---------|---|-------------------|------------------|
-| Synthetic | 1 | 35% | Maintained |
-| Vehicle | 5 | 83% | Maintained |
-
-Key finding: **45% average variance reduction** while maintaining overall accuracy.
 
 **Relevance to This Work:**
 
@@ -806,7 +726,7 @@ Arivazhagan, Aggarwal, Singh, and Choudhary [12] proposed **FedPer** in their 20
 FedPer views deep learning models as composed of two parts:
 
 1. **Base Layers (W_B)**: Shared across all clients, trained via federated averaging
-   - Capture general features and "wisdom of the crowd"
+   - Capture general features
 
 2. **Personalization Layers (W_Pⱼ)**: Unique to each client j, trained locally via SGD
    - Adapt to individual user data and preferences
@@ -822,21 +742,6 @@ $$L(W_B, W_{P_1}, ..., W_{P_N}) = \frac{1}{N} \sum_{j=1}^{N} E_{(x,y)\sim P_j}[l
 - Personalization layers remain local (never transmitted)
 - All parameters updated locally during SGD
 
-**Experimental Results:**
-
-*On non-identically partitioned CIFAR-10:*
-
-| Configuration | FedAvg | FedPer | Improvement |
-|--------------|--------|--------|-------------|
-| k=4 (high non-IID) | ~40% | ~70% | +30 points |
-| k=8 (moderate) | ~60% | ~78% | +18 points |
-| k=10 (near IID) | ~73% | ~80% | +7 points |
-
-Key findings:
-- FedPer significantly outperforms FedAvg in convergence speed and final accuracy
-- Greater improvement with higher data heterogeneity
-- FedPer also reduces variance across clients (fairer performance)
-- Having at least one personalization layer helps
 
 **Relevance to This Work:**
 
@@ -919,24 +824,6 @@ Client executes:
       return wᵢ, |dᵢ|
 ```
 
-**Experimental Results:**
-
-On MNIST with 100 clients, Dirichlet partitioning (α=0.1):
-
-| Metric | LetsFed vs POC | LetsFed vs FedAvg | LetsFed vs DEEV |
-|--------|---------------|------------------|-----------------|
-| Accuracy Improvement | Up to 40% | Up to 35% | Up to 10% |
-| DTW Reduction | Up to 50% | Up to 29% | Up to 11% |
-
-Key findings:
-- LetsFed achieves 10-40% superior performance compared to baselines in DCP environments
-- Data Transmission Waste (DTW) reduced by 11-50%
-- The Invitation Method effectively balances selection between participating and non-participating clients
-- Flexible IM rate allows tradeoff adjustment between misselection risk and invitation probability
-
-**Retention Rate Analysis:**
-
-The paper analyzed the percentage of clients in $C_\iota$ (retention rate) over communication rounds. Higher retention indicates the global model is attractive to more clients.
 
 #### 2.10.2 Identified Limitations and Improvement Opportunities
 
@@ -1011,17 +898,17 @@ This section provides a comprehensive description of the software framework deve
 
 ### 3.1 Overview
 
-The **LetsFed Framework** is a modular and extensible Federated Learning research platform built on [Flower](https://flower.dev/), designed for experimenting with dynamic client participation scenarios. The framework implements multiple aggregation, selection, and training strategies following modern design patterns.
+The **LetsFed Framework** is a modular and extensible Federated Learning research platform built on [Flower](https://flower.dev/), designed for experimenting with dynamic client participation scenarios. The framework implements multiple aggregation, selection, training and parameters strategies following modern design patterns.
 
 ### 3.2 Key Features
 
-- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Injection Pattern, Chain of Responsibility, and Context Object Pattern
+- **🏗️ Modular Architecture**: Built with Strategy Pattern, Factory Pattern, Injection Pattern and Chain of Responsibility
 - **🔌 Extensible Design**: Plugin-based driver system with DriverContext for composable and testable behaviors
   - Drivers managed by strategies
   - DriverContext transfers results without polluting client/server state
   - Strategy state encapsulated in constructors (`__init__`)
 - **🎛️ Multiple Strategy Support**:
-  - **Aggregation**: FedAvg, MaxFL, LetsFed (interest-weighted)
+  - **Aggregation**: FedAvg, MaxFL, QFFL, LetsFed (interest-weighted)
   - **Client Selection**: Random, DEEV, PoC, Round Robin, LetsFed
   - **Training**: Normal, LetsFed, MaxFL, FedPer, QFFL
   - **Parameters Sharing**: Normal (all parameters), LayerWise (first K layers)
@@ -1051,19 +938,19 @@ The core classes (`FLServer` and `FLClient`) are **generic implementations** tha
 ![Strategy Pattern + Dependency Injection](test/outputs/Strategy_Pattern_Dependency_Injection.png)
 
 **Key Points:**
-- `FLServer` and `FLClient` are **single, generic classes** (not interfaces)
+- `FLServer` and `FLClient` are **single, generic classes**
 - Different behaviors are achieved through **strategy composition**
 - Strategies are created by **Factory Pattern** and **injected via Builder Pattern**
 
 ### 3.5 Factory Pattern
 
-Used for creating different strategy implementations. **Important**: Factories receive **module-specific config dataclasses**. Each module has its own `structs.py` with configuration dataclasses.
+Used for creating different strategy implementations. **Important**: Factories receive **module-specific config dataclasses**. Each module has its own `structs.py` file with configuration dataclasses.
 
 ![Factory Pattern](test/outputs/factory_pattern.png)
 
 ### 3.6 Builder/Injection Pattern
 
-Simplifies construction of `FLServer` and `FLClient` with all dependencies. **Server and client use Builder pattern** (dependency injection). All the strategies (training strategies, selection strategies, aggregation strategies, paramters strategies) created with the factory pattern are injected into the `FLServer` and `FLClient`.
+Simplifies construction of `FLServer` and `FLClient` with all dependencies. **Server and client use Builder pattern** (dependency injection). All the strategies (training strategies, selection strategies, aggregation strategies, parameters strategies) created with the factory pattern are injected into the `FLServer` and `FLClient`.
 
 
 ### 3.7 Chain of Responsibility (Drivers)
@@ -1078,11 +965,11 @@ Training strategies compose behaviors through a **pipeline of drivers** managed 
 ![Chain of Responsibility (Drivers)](test/outputs/Chain_of_Responsibility.png)
 
 **Benefits:**
-- ✅ **Reusability**: Share drivers across strategies
-- ✅ **Modularity**: Each driver has a single responsibility
-- ✅ **Composability**: Mix and match drivers freely
-- ✅ **Testability**: Easy to test without complex mocks
-- ✅ **Explicit Side Effects**: Clear what each driver modifies
+- **Reusability**: Share drivers across strategies
+- **Modularity**: Each driver has a single responsibility
+- **Composability**: Mix and match drivers freely
+- **Testability**: Easy to test without complex mocks
+- **Explicit Side Effects**: Clear what each driver modifies
 
 
 ### 3.8 Federated Learning Flow
@@ -1131,7 +1018,7 @@ Training strategies compose behaviors through a **pipeline of drivers** managed 
 
 ### 3.11 Parameters Sharing Strategies
 
-The framework includes a **modular parameters strategy system** that controls **how model parameters are shared** between server and clients. This enables different approaches for model personalization, communication efficiency, and privacy.
+The framework includes a **modular parameters strategy system** that controls **how model parameters are shared** between server and clients. This enables different approaches for model personalization, communication efficiency, compression and privacy.
 
 **Interface Methods:**
 
@@ -1205,9 +1092,9 @@ The framework implements a **modern data loading system** using TensorFlow's `tf
 
 The framework is designed for easy extensibility adding new components when nedded.
 
-Create the implementation -> Register in factory -> Add config dataclass -> Use in configuration file
+Create the component implementation -> Register in factory -> Add config dataclass -> Updates Buider component (if necessary) -> Use in configuration file
 
-This actions are similar for the strategies (for training, selecting clientes, aggregating weights, and passing parameters), as well as for metrics implementations.
+This actions are similar for all the strategies (for training, selecting clients, aggregating weights, and parameters strategies), as well as for custom metrics implementations.
 
 ![Extending the Framework](test/outputs/extensible_architecture.png)
 
@@ -1229,12 +1116,12 @@ The framework provides comprehensive seed management for reproducible experiment
 
 | Component | Reproducible | Notes |
 |-----------|---------------|-------|
-| **Data Partitioning** | ✅ Yes | Same partitions across runs |
-| **Model Initialization** | ✅ Yes | Same initial weights |
-| **Training** | ✅ Yes (CPU) | Deterministic on CPU |
-| **Training** | ⚠️ Partial (GPU) | Some GPU ops non-deterministic |
-| **Client Selection** | ✅ Yes | Same clients selected |
-| **Aggregation** | ✅ Yes | Deterministic computation |
+| **Data Partitioning** | Yes | Same partitions across runs |
+| **Model Initialization** | Yes | Same initial weights |
+| **Training** | Yes (CPU) | Deterministic on CPU |
+| **Training** | Partial (GPU) | Some GPU ops non-deterministic |
+| **Client Selection** | Yes | Same clients selected |
+| **Aggregation** | Yes | Deterministic computation |
 
 
 ### 3.17 Project Philosophy
@@ -1253,7 +1140,6 @@ This framework follows key software engineering principles:
   - Factory Pattern for strategy creation (receives module-specific configs)
   - Builder/Injection Pattern for server/client construction (dependency injection)
   - Chain of Responsibility for driver pipeline (managed by strategies)
-  - Context Object Pattern for explicit side effects and testability
 
 - **📦 Modular Design**
   - Clear separation of concerns
@@ -1535,7 +1421,7 @@ The implementation in LetsFed builds upon these concepts while integrating with 
 
 ## 5. Experimental Analysis
 
-This section presents a comprehensive and rigorous experimental evaluation of the proposed improvements to the LetsFed framework. We employ a multi-dimensional analytical approach that examines convergence dynamics, fairness properties, and the fundamental trade-offs inherent to federated learning systems. The analysis integrates quantitative metrics with theoretical insights to provide actionable conclusions for practitioners and researchers.
+This section presents a comprehensive experimental evaluation of the proposed improvements to the LetsFed framework. We employ a multi-dimensional analytical approach that examines convergence dynamics, fairness properties, and the fundamental trade-offs inherent to federated learning systems. The analysis integrates quantitative metrics with theoretical insights to provide actionable conclusions for practitioners and researchers.
 
 ### 5.1 Experimental Design and Methodology
 
@@ -1558,7 +1444,7 @@ All experiments were conducted using the **Fashion-MNIST** dataset, which consis
 
 #### 5.1.2 Data Heterogeneity Modeling
 
-Data was distributed across 5 clients using **Dirichlet distribution** with α = 1.0 to create realistic non-IID partitions:
+Data was distributed across 5 clients using **Dirichlet distribution** with α = 1.0 to create a moderate non-IID partitions:
 
 ```yaml
 train_partitioner:
@@ -1578,10 +1464,8 @@ The Dirichlet distribution Dir(α) is parameterized by concentration parameter �
 - **α = 1.0**: Moderate heterogeneity (used in this work)—creates realistic variation where clients have different but overlapping class preferences
 - **α → 0**: Extreme non-IID (each client approaches single-class data)
 
-With α = 1.0, our experiments model a **realistic federated scenario** where data heterogeneity exists but is not pathological. This choice represents typical enterprise or cross-silo FL settings, as opposed to extreme cross-device scenarios where α < 0.5 might be more appropriate.
+With α = 1.0, our experiments model a **realistic federated scenario** where data heterogeneity exists but is not pathological. This choice represents typical enterprise or **cross-silo** FL settings, as opposed to extreme **cross-device** scenarios where α < 0.5 might be more appropriate.
 
-**Statistical Properties:**
-The expected Kullback-Leibler divergence between any two client distributions under Dir(1.0) is approximately 0.3-0.5 nats, creating sufficient heterogeneity to challenge aggregation strategies while maintaining learnability.
 
 #### 5.1.3 Model Architecture
 
@@ -1632,7 +1516,7 @@ We conducted **9 experiments** covering a systematic exploration of strategy com
 
 ### 5.2 Convergence Analysis: A Multi-Metric Perspective
 
-Convergence analysis in federated learning extends beyond simple accuracy tracking. In heterogeneous environments, a strategy that converges quickly on aggregate metrics may simultaneously diverge on minority classes or create unfair outcomes for specific clients. Our analysis employs a **four-dimensional metric space** (Accuracy, F1-Score, Loss, AUC) to capture these nuances.
+Convergence analysis in federated learning extends beyond simple accuracy tracking. In heterogeneous environments, a strategy that converges quickly on aggregate metrics may simultaneously diverge on minority classes or create unfair outcomes for specific clients. Our analysis employs a **four-dimensional classification metric space** (Accuracy, F1-Score, Loss, AUC) to capture these nuances, besides two fairness metrics (Coefficient of Variation and Ginni Coefficient).
 
 #### 5.2.1 Temporal Dynamics of Learning
 
@@ -1651,7 +1535,7 @@ Figure 5.1 shows the evolution of key metrics across all 30 training rounds for 
 2. **Power of Choice Dynamics:**
    - PoC achieves **82.13% accuracy** but exhibits **bimodal convergence behavior**: rapid initial gains (rounds 1-10) followed by stagnation
    - **Theoretical Interpretation**: PoC's greedy selection of high-performing clients creates a **feedback loop** that progressively excludes clients with minority data distributions, leading to model specialization rather than generalization
-   - Loss convergence shows anomalies (0.68 final loss vs. 0.33-0.35 for baselines), suggesting potential overfitting to selected clients' data
+   - Loss convergence shows anomalies (0.68 final loss vs. 0.33-0.35 for baselines), suggesting potential overfitting to selected clients data
 
 3. **Original LetsFed Pathology (accuracy_100_thr):**
    - The **strict threshold (τ = 1.0)** creates a **participation collapse**: clients reject aggregated parameters whenever any metric degrades
@@ -1712,9 +1596,11 @@ The heatmap reveals three distinct **strategy clusters**:
 
 #### 5.2.3 Initial vs Final State Analysis
 
+Table 5.2 compares metrics convergence with comparison of initial and final metric values
 Figure 5.3 compares initial and final metric values for each experiment.
 
 ![Convergence Table](test/outputs/topico-5-tabela-convergencia-multiplas-metricas.png)
+*Table 5.2: Metrics convergence with comparison of initial and final metric values.*
 
 ![Initial vs Final Comparison](test/outputs/topico-5-comparacao-inicial-final-multiplas-metricas.png)
 *Figure 5.3: Comparison of initial (red) and final (green) metric values for all experiments.*
@@ -1760,12 +1646,18 @@ The Gini coefficient, borrowed from economics, measures inequality on a [0,1] sc
 **Relationship Between CV and Gini:**
 For normally distributed selection counts, Gini ≈ 0.56 × CV. Deviations from this relationship indicate skewed selection distributions.
 
-#### 5.3.2 Empirical Selection Distribution Analysis
+#### 5.3.2 Empirical Selection Distribution Analysis and Fairness-Performance Analysis
 
 Figure 5.4 shows how many times each client was selected across all rounds for each experiment.
 
 ![Client Selection Distribution](test/outputs/topico-6-distribuicao-selecoes-clientes.png)
 *Figure 5.4: Distribution of client selections across rounds. The red dashed line indicates the mean.*
+
+![Fairness Comparison](test/outputs/topico-6-tabela-fairness.png)
+*Table 5.2: Fairness metrics for each experiment. Lower values indicate fairer selection.*
+
+![Fairness Comparison](test/outputs/topico-6-comparacao-fairness-cv-gini.png)
+*Figure 5.5: Fairness comparison using Coefficient of Variation and Gini Coefficient. Lower values are better.*
 
 **Quantitative Fairness Results:**
 
@@ -1788,30 +1680,8 @@ Figure 5.4 shows how many times each client was selected across all rounds for e
 
 3. **Interest-Weighted Aggregation Trade-off**: The weighted aggregation strategy (CV = 0.30) has **slightly worse selection fairness** but compensates through **aggregation fairness**—giving higher weight to underserved clients in the global model update.
 
-#### 5.3.3 Fairness-Performance Pareto Analysis
 
-![Fairness Comparison](test/outputs/topico-6-tabela-fairness.png)
-*Table 5.2: Fairness metrics for each experiment. Lower values indicate fairer selection.*
-
-![Fairness Comparison](test/outputs/topico-6-comparacao-fairness-cv-gini.png)
-*Figure 5.5: Fairness comparison using Coefficient of Variation and Gini Coefficient. Lower values are better.*
-
-**Pareto Frontier Analysis:**
-
-Plotting accuracy vs. fairness (1 - Gini) reveals the **Pareto frontier** of achievable trade-offs:
-
-| Strategy | Accuracy | Fairness Score | Pareto Status |
-|----------|----------|----------------|---------------|
-| Round Robin | 87.51% | 0.987 | **Pareto Optimal** |
-| Random | 87.25% | 0.952 | Dominated by RR |
-| F1-Score 85% | 86.97% | 0.878 | **Pareto Optimal** |
-| F1-Score Weighted | 86.98% | 0.874 | Near-optimal |
-| PoC | 82.13% | 0.494 | **Dominated** |
-| Accuracy 100% | 81.82% | 0.922 | **Dominated** |
-
-**Key Insight**: Round Robin and F1-Score 85% define the Pareto frontier. Any strategy not on this frontier can be improved in at least one dimension without sacrificing the other. Notably, **PoC is severely Pareto-dominated**—both lower performance AND lower fairness than multiple alternatives.
-
-#### 5.3.4 Fairness Implications for System Design
+#### 5.3.3 Fairness Implications for System Design
 
 **1. Selection Mechanism Design:**
 The stark contrast between PoC (Gini = 0.51) and Random (Gini = 0.05) demonstrates that **greedy selection strategies create pathological fairness outcomes**. System designers must choose between:
@@ -1902,7 +1772,7 @@ Under non-IID data distribution (Dirichlet α = 1.0), we expect clients to achie
 
 4. **Interest-Weighted Aggregation Achieves Best Equity**: With the smallest range (3.4%) and lowest variance ratio (0.71×), interest-weighted aggregation successfully implements a **compensatory fairness mechanism** that benefits all clients more equitably.
 
-#### 5.4.3 Client Trajectory Pattern Taxonomy
+#### 5.4.3 Client Trajectory Pattern
 
 Analyzing the temporal patterns across all 9 experiments reveals **six distinct learning archetypes**:
 
@@ -1976,7 +1846,7 @@ Beyond final performance, the **rate** at which individual clients improve revea
 
 3. **F1-Score Variants Achieve Uniform Speed**: Both F1-Score 85% and Interest-Weighted show low standard deviation (1.1-1.5 rounds) in convergence time, meaning all clients reach performance milestones at similar rates.
 
-#### 5.4.5 Client Autonomy and System Efficiency
+#### 5.4.5 Client Participation Statistics
 
 **Effective Participation Rates Across All Strategies:**
 
@@ -1992,27 +1862,6 @@ Under LetsFed variants, clients self-select into participation based on the inte
 | F1-Score LetsFed Agg | ~68% | 55% | 82% | Low |
 | F1-Score Weighted | ~70% | 58% | 85% | Low |
 
-**Communication Efficiency Analysis:**
-
-| Strategy | Participation Rate | Final Accuracy | Communication Saved | Accuracy/Communication |
-|----------|-------------------|----------------|---------------------|------------------------|
-| Round Robin | 100% | 87.51% | 0% | 0.875 |
-| Random | 100% | 87.25% | 0% | 0.873 |
-| Accuracy 100% | 35% | 81.82% | 65% | **2.34** |
-| Accuracy 90% | 55% | 81.71% | 45% | 1.49 |
-| F1-Score 90% | 65% | 82.14% | 35% | 1.26 |
-| F1-Score 85% | 75% | 86.97% | 25% | 1.16 |
-| F1-Score Weighted | 70% | 86.98% | 30% | **1.24** |
-
-**Efficiency Insights:**
-
-1. **False Economy of Strict Thresholds**: Accuracy 100% achieves the highest communication savings (65%) but at catastrophic performance cost. The 2.34 Accuracy/Communication ratio is misleading—achieving 81.82% accuracy with 35% communication is worse than achieving 86.97% with 75% communication.
-
-2. **Optimal Operating Point**: **F1-Score 85%** achieves the best absolute trade-off—75% participation (25% communication savings) yields 86.97% accuracy (only 0.54% below Round Robin). This represents a **Pareto-efficient** configuration.
-
-3. **Interest-Weighted as Second-Best**: With 70% participation and 86.98% accuracy, interest-weighted aggregation achieves slightly better efficiency (1.24 vs 1.16) while providing superior fairness properties.
-
-4. **Diminishing Returns of Communication Reduction**: Beyond ~30% communication savings, performance degradation accelerates non-linearly. The 35% → 65% communication reduction from F1-Score 85% to Accuracy 100% costs **5.15% absolute accuracy**.
 
 #### 5.4.6 Per-Client Summary and Implications
 
@@ -2024,9 +1873,7 @@ Under LetsFed variants, clients self-select into participation based on the inte
 
 3. **Aggregation Mechanisms Can Implement Active Fairness**: Interest-weighted aggregation demonstrates that aggregation is not merely a technical operation but a **policy lever** for achieving equitable outcomes.
 
-4. **Communication Savings Have Non-Linear Costs**: Moderate participation reduction (25-30%) is essentially "free" in terms of performance; aggressive reduction (>50%) causes disproportionate harm.
-
-5. **Individual Client Trajectories Reveal Hidden Pathologies**: Aggregate metrics would rate PoC as "acceptable" (82.13% mean accuracy), but per-client analysis reveals its fundamental unfairness—some clients are actively harmed by participation.
+4. **Individual Client Trajectories Reveal Hidden Pathologies**: Aggregate metrics would rate PoC as "acceptable" (82.13% mean accuracy), but per-client analysis reveals its fundamental unfairness—some clients are actively harmed by participation.
 
 ### 5.5 Multi-Dimensional Comparative Analysis
 
@@ -2137,92 +1984,7 @@ Based on our analysis, we propose a **decision tree** for strategy selection:
 | Cross-silo enterprise FL | F1-Score Weighted | Balance autonomy and model quality |
 | Research prototype | Random | Simple baseline with good properties |
 
-### 5.6 Theoretical Discussion and Implications
-
-This section synthesizes experimental observations with theoretical frameworks from distributed systems, game theory, and machine learning optimization.
-
-#### 5.6.1 The Decision Metric Selection Problem
-
-**Why F1-Score Dominates Accuracy:**
-
-Our experiments demonstrate that **F1-Score is categorically superior** to Accuracy as the decision metric for client participation. This finding can be explained through information-theoretic and statistical lenses:
-
-**Information-Theoretic Analysis:**
-
-Let $H(Y|X)$ denote the conditional entropy of true labels $Y$ given predictions $X$. Under class imbalance:
-- **Accuracy** can remain high while $H(Y|X)$ increases (uncertainty about minority classes)
-- **F1-Score** correlates more strongly with $H(Y|X)$ reduction across all classes
-
-The ratio $R = \frac{\text{F1}_{\text{global}}}{\text{F1}_{\text{local}}}$ used in LetsFed more accurately captures whether aggregation **truly improved** the model's predictive distribution.
-
-**Empirical Evidence:**
-
-| Metric | Improvement (Accuracy-based) | Improvement (F1-based) | Ratio |
-|--------|------------------------------|------------------------|-------|
-| Accuracy | 25.43% | 61.63% | 2.42× |
-| F1-Score | 24.81% | 60.97% | 2.46× |
-| AUC | 1.60% | 1.23% | 0.77× |
-| Loss Reduction | 0.42 | 0.85 | 2.02× |
-
-The consistent ~2.4× improvement across accuracy and F1-score metrics confirms that **the decision mechanism, not just the target metric, determines overall convergence quality**.
-
-#### 5.6.2 Threshold Dynamics and Participation Economics
-
-**The Threshold Selection Dilemma:**
-
-The participation threshold τ creates a fundamental trade-off:
-- **τ → 1.0**: Clients accept only Pareto improvements, maximizing individual utility but creating **collective action problems**
-- **τ → 0**: Clients accept any model, maximizing participation but potentially **degrading local models**
-
-**Nash Equilibrium Analysis:**
-
-In a game-theoretic framing, each client's participation decision can be modeled as:
-$$u_i(\text{participate}) = \mathbb{E}[\Delta \text{perf}_i] - c_i$$
-
-Where $\Delta \text{perf}_i$ is expected performance change and $c_i$ is participation cost (computation, communication, privacy).
-
-With τ = 1.0, clients only participate when $\mathbb{E}[\Delta \text{perf}_i] > 0$, but non-IID data ensures this is often **negative in the short term**. The system reaches a **low-participation equilibrium** where few clients contribute, degrading the global model, which further reduces participation incentives.
-
-With τ = 0.85-0.90, clients accept **temporary individual loss** for **expected long-term gains**, breaking the negative feedback loop.
-
-**Experimental Validation:**
-
-| Threshold | Avg Participation | Final Accuracy | Efficiency (Acc/Participation) |
-|-----------|-------------------|----------------|--------------------------------|
-| 1.00 | ~35% | 81.82% | 2.34 |
-| 0.90 | ~55% | 82.14% | 1.49 |
-| 0.85 | ~75% | 86.97% | 1.16 |
-| Baseline | 100% | 87.51% | 0.88 |
-
-The efficiency metric reveals that **moderate thresholds (0.85-0.90) achieve optimal accuracy per unit participation**—clients who choose to participate contribute more effectively than forced participants.
-
-#### 5.6.3 Aggregation as a Fairness Mechanism
-
-**Interest-Weighted Aggregation Theory:**
-
-Standard FedAvg weights contributions by sample count: $w_i = \frac{n_i}{\sum_j n_j}$
-
-Interest-weighted aggregation modifies this: $w_i' = \frac{n_i \cdot (1 - I_i)}{\sum_j n_j \cdot (1 - I_j)}$
-
-Where $I_i$ is client $i$'s interest metric (satisfaction with global model).
-
-**Mechanism Effect:**
-- **Satisfied clients** ($I_i \approx 1$): Reduced weight, preventing over-representation
-- **Unsatisfied clients** ($I_i \approx 0$): Increased weight, steering global model toward their needs
-
-This creates a **negative feedback loop** that drives the system toward **Nash equilibrium with equitable outcomes** rather than winner-take-all dynamics.
-
-**Empirical Validation:**
-
-| Aggregation | Selection Gini | Outcome Variance | Combined Fairness |
-|-------------|----------------|------------------|-------------------|
-| FedAvg (RR) | 0.013 | 2.1% | 0.987 |
-| FedAvg (F1-85%) | 0.122 | 1.8% | 0.878 |
-| Interest-Weighted | 0.126 | 1.5% | 0.874 |
-
-Despite slightly worse selection fairness (Gini 0.126 vs. 0.122), interest-weighted aggregation achieves **lower outcome variance** (1.5% vs. 1.8%), demonstrating successful fairness compensation.
-
-#### 5.6.4 The Fundamental Trade-offs in Federated Learning
+### 5.6 The Fundamental Trade-offs in Federated Learning
 
 Our experiments reveal **four fundamental trade-offs** that any FL system must navigate:
 
@@ -2278,19 +2040,7 @@ Our comprehensive experimental analysis yields the following **key findings**:
 
 5. **Round Robin Remains a Strong Baseline**: For systems where fairness is paramount, Round Robin's simplicity and perfect equity make it an excellent choice. Its performance (87.51%) is competitive with all adaptive strategies.
 
-#### 5.7.2 Quantitative Summary
-
-| Dimension | Best Strategy | Value | Runner-up | Delta |
-|-----------|--------------|-------|-----------|-------|
-| Accuracy | Round Robin | 87.51% | F1-85% | -0.54% |
-| F1-Score | Round Robin | 87.51% | F1-Weighted | -0.88% |
-| AUC | Round Robin | 99.23% | Random | -0.02% |
-| Selection Fairness | Round Robin | Gini=0.013 | Random | +0.035 |
-| Outcome Fairness | F1-Weighted | σ=1.5% | F1-85% | +0.3% |
-| Improvement Rate | F1-Weighted | 61.64% | F1-85% | -0.01% |
-| Balanced Score | Round Robin | 0.881 | F1-Weighted | -0.008 |
-
-#### 5.7.3 Recommendations for Practitioners
+#### 5.7.2 Recommendations
 
 1. **Default Choice**: Start with **Round Robin** for guaranteed fairness and competitive performance.
 
@@ -2378,23 +2128,17 @@ Several promising directions for future research emerge from this work:
 
 #### 6.4.2 Medium-Term Research
 
-6. **Hybrid Strategies**: Combine LetsFed's client autonomy with server-side quality-based selection for optimal performance-fairness balance.
+6. **Communication Efficiency**: Integrate gradient compression techniques with LetsFed and the layerwise parameters strategy to further reduce communication overhead.
 
-7. **Communication Efficiency**: Integrate gradient compression techniques with LetsFed and the layerwise parameters strategy to further reduce communication overhead.
-
-8. **Personalization Integration**: Combine the layerwise parameters strategy with interest-weighted aggregation for improved per-client performance while maintaining global knowledge transfer.
+7. **Personalization Integration**: Combine the layerwise parameters strategy with interest-weighted aggregation for improved per-client performance while maintaining global knowledge transfer.
 
 8. **Differential Privacy**: Add formal privacy guarantees while maintaining the benefits of dynamic participation.
 
 #### 6.4.3 Long-Term Vision
 
-9. **Incentive Mechanisms**: Develop game-theoretic frameworks where the interest metric translates into actual incentives (economic, resource, or otherwise).
+9. **Federated Learning with LLMs**: Adapt LetsFed principles to the unique challenges of federated fine-tuning of large language models.
 
-10. **Federated Learning with LLMs**: Adapt LetsFed principles to the unique challenges of federated fine-tuning of large language models.
-
-11. **Multi-Task Federated Learning**: Extend the framework to scenarios where different clients have different but related tasks.
-
-12. **Continual Federated Learning**: Develop mechanisms for handling concept drift and continuous learning in long-running federations.
+10. **Multi-Task Federated Learning**: Extend the framework to scenarios where different clients have different but related tasks.
 
 
 ### 6.5 Final Remarks
@@ -2403,7 +2147,7 @@ This work demonstrates that the core insight of LetsFed—that clients should ha
 
 The proposed improvements to LetsFed achieve the best overall balance between model performance, convergence speed, fairness, and client autonomy. By replacing accuracy with F1-score, relaxing the participation threshold, and introducing interest-weighted aggregation, we create a more practical and effective framework for federated learning in heterogeneous, real-world scenarios.
 
-As federated learning continues to grow in importance—driven by privacy regulations, data sovereignty concerns, and the proliferation of edge devices—frameworks like LetsFed that respect client autonomy while achieving competitive performance will become increasingly relevant. We hope this work contributes to that evolution.
+As federated learning continues to grow in importance—driven by privacy regulations, data sovereignty concerns, and the proliferation of edge devices—frameworks like LetsFed that respect client autonomy while achieving competitive performance will become increasingly relevant.
 
 ---
 
