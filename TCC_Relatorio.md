@@ -868,6 +868,10 @@ The literature review reveals several complementary approaches to FL challenges:
 | de Souza et al. [6] | Client Selection | ACSP-FL adaptive selection with personalization (95% comm. reduction) | Server-side selection baseline, partial model sharing inspiration |
 | Talasso et al. [7] | Heterogeneity | FedSCCS hierarchical clustering with CKA similarity | Alternative approach: multiple models vs. LetsFed's opt-out mechanism |
 | Jarczewski et al. [8] | Dynamic Participation | LetsFed framework, client autonomy in participation | Direct foundation of this work |
+| Nishio & Yonetani [9] | Client Selection | FedCS proactive aggregation, resource-aware selection | PoC-based selection strategy implemented in LetsFed framework |
+| Chen et al. [10] | Incentive Mechanism | MaxFL optimal contracts, type-aware incentives | MaxFL training and aggregation strategies integrated |
+| Li et al. [11] | Fairness | q-FFL fair resource allocation, fairness-accuracy tradeoff | QFFL aggregation strategy for equitable performance |
+| Arivazhagan et al. [12] | Personalization | FedPer base+personalized layers, local adaptation | FedPer training strategy for heterogeneous data handling |
 
 **Research Gap:**
 
